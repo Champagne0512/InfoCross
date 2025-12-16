@@ -77,15 +77,15 @@ export async function registerUser(payload: RegisterPayload): Promise<UserProfil
 
   await waitProfileRow(user.id)
 
-  const { error: updateError } = (await supabase
-    .from('profiles')
+  const profilesTable = supabase.from('profiles') as any
+  const { error: updateError } = await profilesTable
     .update({
       username: payload.username,
       college: payload.college,
       major: payload.major,
       tags: payload.tags,
     } as ProfileUpdate)
-    .eq('id', user.id)) as { error: any }
+    .eq('id', user.id)
 
   if (updateError) throw updateError
 

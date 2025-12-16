@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,97 +6,173 @@
 
 @layer base {
   :root {
-    font-family: 'Inter', sans-serif;
-    background-color: #fafafa;
-    color: #0f172a;
-    font-feature-settings: 'ss03' on, 'cv11' on;
+    font-family: 'Manrope', sans-serif;
+    color: #374151;
+    background-color: #FDFCF8;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply min-h-screen bg-canvas text-ink;
+    @apply bg-cream text-charcoal min-h-screen;
   }
 
   #app {
-    @apply min-h-screen bg-canvas;
+    @apply min-h-screen bg-cream;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-    font-weight: 600;
-    color: #0f172a;
+  /* 字体类 */
+  .font-sans {
+    font-family: 'Manrope', 'Outfit', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* 标题样式 */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-semibold;
+  }
+
+  h1 {
+    @apply text-hero;
+  }
+
+  h2 {
+    @apply text-display;
+  }
+
+  h3 {
+    @apply text-h1;
+  }
+
+  h4 {
+    @apply text-h2;
+  }
+
+  h5 {
+    @apply text-h3;
   }
 
   p {
-    @apply text-[15px] leading-7 text-ink-soft;
+    @apply text-body font-sans;
   }
 }
 
 @layer components {
-  .dashboard {
-    @apply mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10;
+  /* 莫兰迪卡片 */
+  .morandi-card {
+    @apply bg-white rounded-morandi shadow-morandi transition-all duration-300;
   }
 
-  .panel {
-    @apply rounded-xl bg-surface p-6 shadow-card;
+  .morandi-card:hover {
+    @apply shadow-morandi-hover -translate-y-1;
   }
 
-  .pill-button {
-    @apply rounded-pill border border-border px-4 py-2 font-mono text-xs uppercase tracking-[0.3em] text-ink-soft transition;
+  /* 莫兰迪按钮 */
+  .morandi-button {
+    @apply px-6 py-3 rounded-soft font-sans font-medium transition-all duration-300;
   }
 
-  .pill-button.is-active {
-    @apply border-ink bg-ink text-white;
+  .morandi-button:hover {
+    @apply scale-105 shadow-morandi-lg;
   }
 
-  .category-chip {
-    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-[0.3em];
+  .morandi-button-primary {
+    @apply morandi-button bg-charcoal text-white;
   }
 
-  .ai-ribbon {
-    @apply mt-4 flex items-center gap-2 rounded-lg bg-intelligence/10 px-3 py-2 font-mono text-xs uppercase tracking-[0.3em] text-intelligence;
+  .morandi-button-secondary {
+    @apply morandi-button bg-morandi-green text-white;
   }
 
-  .avatar-stack {
-    @apply flex -space-x-2;
+  /* AI 标签 */
+  .ai-tag {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full font-mono text-mono;
+    @apply border border-morandi-lavender text-morandi-lavender;
   }
 
-  .avatar-stack span {
-    @apply flex h-8 w-8 items-center justify-center rounded-full border border-white bg-neutral text-xs font-semibold text-ink;
+  .ai-tag::before {
+    content: '✨';
+    @apply text-sm;
   }
 
-  .tag-pill {
-    @apply inline-flex items-center rounded-full border border-border bg-neutral px-3 py-1 text-xs font-medium text-ink-soft;
+  /* 普通标签 */
+  .normal-tag {
+    @apply inline-flex items-center px-3 py-1 rounded-full font-mono text-mono;
+    @apply bg-morandi-green/10 text-morandi-green border border-morandi-green/30;
   }
 
-  .tag-pill.is-accent {
-    @apply border-intelligence bg-intelligence/10 text-intelligence;
+  /* 左侧导航 */
+  .sidebar-nav {
+    @apply fixed left-0 top-0 h-screen w-60 bg-cream border-r border-slate/20;
+    @apply flex flex-col p-6 z-50;
   }
 
-  .tldr-card {
-    @apply rounded-xl border-2 border-intelligence/40 bg-surface p-4 shadow-subtle;
-  }
-}
-
-@layer utilities {
-  .font-data {
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+  /* 主内容区 */
+  .main-content {
+    @apply ml-60 min-h-screen p-8;
   }
 
-  .hero-title {
-    font-size: clamp(2.5rem, 4vw, 3.5rem);
-    line-height: 1.15;
+  /* 数据磁贴 */
+  .data-tile {
+    @apply px-4 py-2 rounded-soft bg-white/80 backdrop-blur-sm;
+    @apply border border-slate/20 font-mono text-mono;
   }
 
-  .bento-grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* 渐变文字 */
+  .gradient-text {
+    @apply bg-gradient-to-r from-morandi-lavender to-morandi-blue bg-clip-text text-transparent;
+  }
+
+  /* 莫兰迪输入框 */
+  .morandi-input {
+    @apply w-full px-4 py-3 rounded-soft bg-white;
+    @apply border border-slate/20 focus:border-morandi-blue focus:outline-none;
+    @apply transition-all duration-300;
+  }
+
+  /* 便利贴卡片 */
+  .sticky-note {
+    @apply rounded-morandi p-6 transition-all duration-300;
+    @apply hover:rotate-1 hover:scale-105;
+  }
+
+  .sticky-note-green {
+    @apply sticky-note bg-morandi-green/10;
+  }
+
+  .sticky-note-blue {
+    @apply sticky-note bg-morandi-blue/10;
+  }
+
+  .sticky-note-clay {
+    @apply sticky-note bg-morandi-clay/10;
+  }
+
+  /* 能力雷达图 */
+  .radar-container {
+    @apply morandi-card p-8;
+  }
+
+  /* 勋章墙 */
+  .medal-wall {
+    @apply grid grid-cols-8 gap-4 p-6 morandi-card;
+  }
+
+  .medal {
+    @apply w-16 h-16 rounded-full flex items-center justify-center;
+    @apply transition-all duration-300;
+  }
+
+  .medal-lit {
+    @apply medal bg-morandi-lavender text-white;
+  }
+
+  .medal-dim {
+    @apply medal bg-slate/10 border-2 border-dashed border-slate/30;
   }
 }
