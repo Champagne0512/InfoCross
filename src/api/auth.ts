@@ -11,6 +11,14 @@ export interface RegisterPayload {
   tags: string[]
 }
 
+export interface UpdateProfilePayload {
+  username: string
+  college: string
+  major: string
+  tags: string[]
+  avatarUrl?: string
+}
+
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
@@ -109,4 +117,41 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
   return requireProfile(user.id)
+}
+
+export async function updateProfile(userId: string, payload: UpdateProfilePayload): Promise<UserProfile> {
+  const updates: ProfileUpdate = {
+    username: payload.username,
+    college: payload.college,
+    major: payload.major,
+    tags: payload.tags,
+    avatar_url: payload.avatarUrl,
+  }
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+
+  if (updateError) throw updateError
+
+  return requireProfile(userId)
+}
+
+export async function uploadAvatar(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Date.now()}.${fileExt}`
+  const filePath = `${userId}/${fileName}` // 每位用户在 bucket 中一个独立文件夹，匹配 RLS 策略
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file)
+
+  if (uploadError) throw uploadError
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(filePath)
+
+  return publicUrl
 }
