@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: 'Inter', 'PingFang SC', 'Noto Sans SC', sans-serif;
+    color: #0f172a;
+    background-color: #f8fafc;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-primary min-h-screen;
+  }
+
+  #app {
+    @apply min-h-screen bg-surface;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-h1;
+  }
+
+  h2 {
+    @apply text-h2;
+  }
+
+  h3 {
+    @apply text-h2;
+  }
+
+  p {
+    @apply text-body;
+  }
+
+  .caption {
+    @apply text-caption;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-subtle;
+  }
+
+  .ai-shimmer {
+    background: linear-gradient(120deg, transparent, rgba(217, 249, 157, 0.4), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .bento-card {
+    @apply bg-white border border-border rounded-card shadow-subtle transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-float;
+  }
+
+  .ai-tag {
+    @apply bg-accent text-accent-fg px-2 py-1 text-xs font-mono uppercase tracking-[0.2em] rounded-button;
+  }
+
+  .normal-tag {
+    @apply bg-[#F1F5F9] text-primary px-2 py-1 text-xs font-mono uppercase tracking-[0.2em] rounded-button border border-border;
+  }
+
+  .loading-skeleton {
+    @apply animate-pulse bg-surface rounded-card;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-link bg-clip-text text-transparent;
+  }
+
+  .nav-link {
+    @apply text-xs font-mono uppercase tracking-[0.3em] transition-colors duration-200;
+  }
+
+  .ai-insight-panel {
+    @apply rounded-card border border-border bg-[#F7FEE7] p-6 shadow-subtle;
+  }
+
+  .hero-section {
+    @apply rounded-card border border-border bg-white p-8 shadow-subtle;
+  }
+}
+
+@layer utilities {
+  .text-display {
+    @apply text-5xl font-bold leading-tight tracking-tight;
+  }
+
+  .text-h1 {
+    @apply text-3xl font-semibold leading-tight tracking-tight;
+  }
+
+  .text-h2 {
+    @apply text-xl font-medium leading-snug;
+  }
+
+  .text-body {
+    @apply text-base leading-relaxed text-primary;
+  }
+
+  .text-caption {
+    @apply text-xs font-mono uppercase tracking-[0.3em] text-text-secondary;
+  }
+
+  .rounded-card {
+    @apply rounded-2xl;
+  }
+
+  .rounded-button {
+    @apply rounded-lg;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

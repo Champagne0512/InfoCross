@@ -1,0 +1,3 @@
+project_id = "infocross-local"
+api = { port = 54321 }
+db = { port = 54322 }
