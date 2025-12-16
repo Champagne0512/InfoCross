@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { formatEventTime, formatRelativeTime } from '@/utils/date'
 import TagBadge from './TagBadge.vue'
+import AiIcon from '@/components/common/AiIcon.vue'
 import type { Article } from '@/types/models'
 
 const props = defineProps<{
@@ -92,7 +93,7 @@ const isResearch = computed(() => props.article.category === 'research')
       <!-- AI 分数和操作 -->
       <div class="flex items-center justify-between pt-6 border-t border-slate/10">
         <div class="flex items-center gap-3">
-          <span class="text-morandi-lavender">✨</span>
+          <AiIcon size="sm" color="#B4A8BF" />
           <span class="font-mono text-mono text-morandi-lavender text-sm font-medium">AI 匹配度 {{ (article.aiScore * 100).toFixed(0) }}%</span>
         </div>
         <button 

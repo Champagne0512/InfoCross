@@ -99,14 +99,14 @@
     @apply px-5 py-3 bg-transparent border border-slate/20 text-slate hover:bg-slate/5 hover:text-charcoal hover:border-slate/40 rounded-soft font-sans font-medium transition-all duration-300;
   }
 
-  /* AI 标签 - 灰紫色，带有 ✨ 图标 */
+  /* AI 标签 - 灰紫色，带有 AI 图标 */
   .ai-tag {
     @apply inline-flex items-center gap-1 px-3 py-1 rounded-full font-mono text-mono text-xs uppercase tracking-wider;
     @apply border border-morandi-lavender text-morandi-lavender bg-morandi-lavender/10;
   }
 
   .ai-tag::before {
-    content: '✨';
+    content: '🧠';
     @apply text-xs;
   }
 

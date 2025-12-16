@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import ArticleCard from '@/components/business/ArticleCard.vue'
 import InsightPanel from '@/components/business/InsightPanel.vue'
 import AppButton from '@/components/common/AppButton.vue'
+import AiIcon from '@/components/common/AiIcon.vue'
 import { fetchArticles, fetchRecommendedArticles } from '@/api/article'
 import type { Article } from '@/types/models'
 import { buildMockInsights } from '@/utils/ai-parser'
@@ -141,7 +142,7 @@ async function handleBookmark(article: Article) {
           <div v-if="heroInsights.length" class="morandi-card p-6">
             <div class="text-center mb-6">
               <div class="w-10 h-10 rounded-full bg-morandi-lavender/10 flex items-center justify-center text-morandi-lavender mx-auto mb-3">
-                ✨
+                <AiIcon size="lg" color="#B4A8BF" />
               </div>
               <p class="font-mono text-mono text-morandi-lavender mb-2">AI INSIGHT</p>
               <h3 class="text-h2 font-sans font-semibold text-charcoal">跨学科提示</h3>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AiIcon from '@/components/common/AiIcon.vue'
 
 const chartRef = ref<HTMLDivElement>()
 
@@ -98,7 +99,7 @@ onMounted(() => {
       <div class="flex items-center">
         <div>
           <div class="flex items-center gap-2 mb-4">
-            <span class="text-morandi-lavender">✨</span>
+            <AiIcon size="sm" color="#B4A8BF" />
             <span class="font-mono text-mono text-morandi-lavender text-sm">AI 分析</span>
           </div>
           <p class="text-body font-sans text-slate leading-relaxed">
