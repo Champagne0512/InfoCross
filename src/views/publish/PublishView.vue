@@ -17,6 +17,7 @@ const form = reactive({
 
 const creating = ref(false)
 const successMessage = ref('')
+const skillGaps = ['财务分析', 'UI 设计', '文案策划']
 
 async function submit() {
   creating.value = true
@@ -45,7 +46,7 @@ async function submit() {
 
 function useAiAssist() {
   if (!form.content) {
-    form.content = '上传海报后，AI 将自动识别时间、地点并生成摘要。'
+    form.content = '上传海报后，AI 将自动识别时间、地点并生成 TL;DR 与标签。'
   }
   if (!form.eventTime) {
     form.eventTime = new Date().toISOString().slice(0, 16)
@@ -55,30 +56,23 @@ function useAiAssist() {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto space-y-8">
-    <div class="glass-card p-8">
-      <header class="space-y-6">
-        <p class="font-mono text-mono text-neon-cyan uppercase tracking-wider">Publish Center</p>
-        <h1 class="text-hero font-display font-bold gradient-text">发布活动·AI 辅助录入</h1>
-        <p class="text-body font-body text-text-secondary max-w-3xl">
-          上传海报或复制活动详情，AI 会自动识别并生成摘要/标签。
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)]">
+    <section class="panel">
+      <header class="space-y-3">
+        <p class="font-data text-xs text-intelligence">CANVAS · 组队发布</p>
+        <h1 class="text-2xl font-semibold text-ink">技能互补型招募画布</h1>
+        <p class="text-sm text-ink-soft">
+          便利贴式表单 + 实时预览。填写信息后右侧即可看到卡片成品，AI 将自动生成 TL;DR 与技能缺口。
         </p>
-        <div class="flex gap-3">
-          <TagBadge label="OCR" :accent="true" />
-          <TagBadge label="摘要" :accent="true" />
-          <TagBadge label="pgvector" />
-          <TagBadge label="Auto-Tag" :accent="true" />
-        </div>
       </header>
-
-      <form class="mt-12 space-y-8" @submit.prevent="submit">
-        <div class="grid gap-6 md:grid-cols-2">
-          <AppInput label="活动标题" v-model="form.title" placeholder="Supabase 破壁沙龙" />
-          <label class="flex flex-col gap-2 font-mono text-mono text-text-secondary uppercase tracking-wider">
-            类别
-            <select 
-              v-model="form.category" 
-              class="px-4 py-3 rounded-button glass-card border-glass-border focus:border-neon-cyan/50 focus:shadow-glow-cyan focus:outline-none transition-all duration-300 font-body text-body"
+      <form class="mt-6 space-y-6" @submit.prevent="submit">
+        <div class="grid gap-4 md:grid-cols-2">
+          <AppInput label="活动标题" v-model="form.title" placeholder="AI 伦理破壁研讨会" />
+          <label class="flex flex-col gap-2 text-sm font-medium text-ink">
+            <span class="font-data text-xs text-ink-soft">类别</span>
+            <select
+              v-model="form.category"
+              class="rounded-xl border border-border bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none"
             >
               <option value="lecture">讲座 Lecture</option>
               <option value="competition">比赛 Competition</option>
@@ -87,29 +81,59 @@ function useAiAssist() {
             </select>
           </label>
           <AppInput label="时间" v-model="form.eventTime" type="datetime-local" :mono="true" />
-          <AppInput label="地点" v-model="form.location" placeholder="信息楼 B103" />
-          <AppInput label="标签 (逗号分隔)" v-model="form.tags" placeholder="AI, 创新, 跨学科" />
+          <AppInput label="地点" v-model="form.location" placeholder="图书馆 B1" />
+          <AppInput label="标签 (逗号分隔)" v-model="form.tags" placeholder="AI, 伦理, 设计, 摄影" />
         </div>
-
-        <label class="flex flex-col gap-2 text-body font-body font-medium text-text-primary">
-          <span class="font-mono text-mono text-text-secondary uppercase tracking-wider">正文内容</span>
+        <label class="flex flex-col gap-2 text-sm font-medium text-ink">
+          <span class="font-data text-xs text-ink-soft">正文内容</span>
           <textarea
             v-model="form.content"
             rows="6"
-            class="w-full p-4 rounded-button glass-card border-glass-border focus:border-neon-cyan/50 focus:shadow-glow-cyan focus:outline-none transition-all duration-300 font-body text-body resize-none"
+            class="rounded-xl border border-border bg-surface p-4 text-base text-ink outline-none transition focus:border-ink"
             placeholder="粘贴活动详情或描述海报信息..."
           />
         </label>
-
         <div class="flex flex-wrap gap-4">
-          <AppButton variant="neon" type="submit" :loading="creating">提交信息</AppButton>
-          <AppButton variant="glass" type="button" @click="useAiAssist">AI 辅助填充</AppButton>
+          <AppButton type="submit" :loading="creating">提交信息</AppButton>
+          <AppButton variant="ghost" type="button" @click="useAiAssist">AI 辅助填充</AppButton>
         </div>
-        <p v-if="successMessage" class="font-mono text-mono text-neon-cyan uppercase tracking-wider flex items-center gap-2 animate-glow">
-          <span>✦</span>
-          {{ successMessage }}
-        </p>
+        <p v-if="successMessage" class="font-data text-xs text-intelligence">{{ successMessage }}</p>
       </form>
-    </div>
+    </section>
+    <aside class="space-y-4">
+      <div class="rounded-2xl border border-border bg-surface p-5 shadow-subtle">
+        <p class="font-data text-xs text-ink-soft">实时预览</p>
+        <div class="mt-4 rounded-2xl border border-border bg-white p-5 shadow-sheet">
+          <div class="flex items-center justify-between">
+            <span class="category-chip bg-intelligence/10 text-intelligence">{{ form.category }}</span>
+            <span class="font-data text-[0.6rem] text-ink-soft">{{ form.eventTime || '待定' }}</span>
+          </div>
+          <h3 class="mt-3 text-xl font-semibold text-ink">{{ form.title || '活动标题预览' }}</h3>
+          <p class="mt-2 line-clamp-3 text-sm text-ink-soft">
+            {{ form.content || 'AI 将在此生成摘要...' }}
+          </p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <TagBadge v-for="tag in form.tags.split(',').filter(Boolean)" :key="tag" :label="tag" />
+          </div>
+          <div class="ai-ribbon mt-5">
+            <span class="font-data text-[0.6rem] text-intelligence">破壁推荐理由</span>
+            <span class="text-xs text-intelligence">为你的 {{ form.tags.split(',')[0] || '兴趣' }} 提供补全视角</span>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-dashed border-border bg-neutral p-5">
+        <p class="font-data text-xs text-ink-soft">技能缺口</p>
+        <ul class="mt-4 space-y-3">
+          <li
+            v-for="gap in skillGaps"
+            :key="gap"
+            class="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-subtle"
+          >
+            <span class="font-semibold text-ink">{{ gap }}</span>
+            <button class="text-sm text-intelligence underline">申请填补</button>
+          </li>
+        </ul>
+      </div>
+    </aside>
   </div>
 </template>

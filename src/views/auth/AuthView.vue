@@ -18,38 +18,39 @@ async function submit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center relative">
-    <!-- 背景光效 -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute top-0 left-0 w-96 h-96 bg-neon-purple/20 rounded-full filter blur-3xl animate-float"></div>
-      <div class="absolute bottom-0 right-0 w-96 h-96 bg-neon-cyan/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 3s;"></div>
+  <div class="relative flex min-h-[80vh] items-center justify-center overflow-hidden">
+    <div class="absolute inset-0 opacity-70">
+      <div class="absolute -left-24 top-0 h-[28rem] w-[28rem] rounded-full bg-gradient-aurora blur-[200px]" />
+      <div class="absolute bottom-0 right-0 h-[26rem] w-[26rem] rounded-full bg-gradient-to-tr from-neon-cyan/30 to-neon-purple/30 blur-[200px]" />
     </div>
-    
-    <div class="w-full max-w-5xl mx-6 relative z-10">
-      <div class="glass-card overflow-hidden md:grid md:grid-cols-2">
-        <!-- 左侧品牌区 -->
-        <div class="flex flex-col items-center justify-center p-12 bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10">
-          <div class="space-y-8 text-center">
-            <p class="font-mono text-mono text-neon-cyan uppercase tracking-wider">Nexus</p>
-            <h1 class="text-hero font-display font-bold gradient-text">连接不同学科的人</h1>
-            <p class="text-body font-body text-text-secondary max-w-sm">
-              通过 Supabase Auth 管理账号，AI 标签帮助你突破信息茧房。
-            </p>
-            <div class="flex justify-center gap-4 pt-4">
-              <div class="data-tile">AI Powered</div>
-              <div class="data-tile">Cross-Discipline</div>
+    <div class="relative z-10 w-full max-w-5xl px-6">
+      <div class="glass-panel overflow-hidden border-white/10 md:grid md:grid-cols-2">
+        <div class="flex flex-col items-center justify-center bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 p-12 text-center">
+          <p class="text-caption text-neon-cyan">Nexus</p>
+          <h1 class="mt-4 font-display text-hero text-white">连接不同学科的人</h1>
+          <p class="mt-4 max-w-sm font-body text-body text-white/70">
+            通过 Supabase Auth 管理账号，AI 标签帮助你突破信息茧房。
+          </p>
+          <div class="mt-8 grid w-full gap-3">
+            <div class="stats-tile">
+              <span class="text-caption text-white/70">AI Powered</span>
+              <p class="text-2xl font-display text-white">LLM + pgvector</p>
+            </div>
+            <div class="stats-tile">
+              <span class="text-caption text-white/70">Cross-Discipline</span>
+              <p class="text-2xl font-display text-white">破壁指数 89%</p>
             </div>
           </div>
         </div>
-        
-        <!-- 右侧登录表单 -->
         <div class="p-12">
-          <p class="font-mono text-mono text-neon-cyan uppercase tracking-wider">Login</p>
-          <h2 class="text-display font-display font-semibold mt-3 text-text-primary">欢迎回到 InfoCross</h2>
+          <p class="text-caption text-neon-cyan">Login</p>
+          <h2 class="mt-3 font-display text-h1 text-white">欢迎回到 InfoCross</h2>
           <form class="mt-8 space-y-6" @submit.prevent="submit">
             <AppInput label="校园邮箱" v-model="email" type="email" placeholder="name@campus.edu" />
             <AppInput label="密码" v-model="password" type="password" />
-            <AppButton variant="neon" class="w-full justify-center" :loading="loading">进入破壁空间</AppButton>
+            <AppButton variant="primary" class="w-full justify-center" :loading="loading">
+              进入破壁空间
+            </AppButton>
           </form>
         </div>
       </div>

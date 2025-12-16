@@ -13,14 +13,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <label class="flex flex-col gap-2 text-body font-body font-medium">
-    <span class="font-mono text-mono text-text-secondary uppercase tracking-wider">{{ props.label }}</span>
+  <label class="flex flex-col gap-2 text-sm font-medium text-ink">
+    <span class="font-data text-xs text-ink-soft">{{ props.label }}</span>
     <input
       :value="modelValue"
       :type="props.type ?? 'text'"
       :placeholder="props.placeholder"
-      class="w-full px-4 py-3 rounded-button glass-card border-glass-border focus:border-neon-cyan/50 focus:shadow-glow-cyan focus:outline-none transition-all duration-300"
-      :class="{ 'font-mono text-mono': props.mono }"
+      class="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-ink outline-none transition placeholder:text-ink-soft focus:border-ink"
+      :class="{ 'font-data': props.mono }"
       @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
   </label>

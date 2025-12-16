@@ -7,12 +7,8 @@ defineProps<{
 
 <template>
   <span
-    class="inline-flex items-center px-3 py-1 font-mono text-mono"
-    :class="
-      accent
-        ? 'ai-tag'
-        : 'normal-tag'
-    "
+    class="tag-pill"
+    :class="{ 'is-accent': accent }"
   >
     #{{ label }}
   </span>
