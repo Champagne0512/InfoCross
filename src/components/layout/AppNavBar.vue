@@ -10,6 +10,7 @@ const { isAuthenticated, profile, logout } = useAuth()
 const navItems = [
   { label: '首页', path: '/' },
   { label: '发布', path: '/publish' },
+  { label: '组队', path: '/team' },
   { label: '个人', path: '/profile' },
 ]
 

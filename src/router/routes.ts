@@ -4,6 +4,7 @@ export const RouteName = {
   HOME: 'home',
   AUTH: 'auth',
   PUBLISH: 'publish',
+  TEAM: 'team',
   PROFILE: 'profile',
 } as const
 
@@ -25,6 +26,12 @@ export const routes: RouteRecordRaw[] = [
     name: RouteName.PUBLISH,
     component: () => import('@/views/publish/PublishView.vue'),
     meta: { title: '发布活动', requiresAuth: true },
+  },
+  {
+    path: '/team',
+    name: RouteName.TEAM,
+    component: () => import('@/views/team/TeamView.vue'),
+    meta: { title: '组队协作', requiresAuth: true },
   },
   {
     path: '/profile',
