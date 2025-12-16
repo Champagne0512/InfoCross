@@ -6,7 +6,7 @@
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: progressWidth + '%' }"></div>
       </div>
-      <p class="loading-text">正在加载中...</p>
+      <p class="loading-text">LOADING...</p>
     </div>
   </div>
   
@@ -25,32 +25,16 @@ const miniSketchContainer = ref<HTMLDivElement>()
 const isLoading = ref(true)
 const progressWidth = ref(0)
 const isFadingOut = ref(false)
-const isFullyLoaded = ref(true)
+const isFullyLoaded = ref(false)
 const showMiniAnimation = ref(false)
 
 onMounted(async () => {
   await nextTick()
   
-  // 开启加载屏幕
-  isFullyLoaded.value = false
-  
-  // 模拟加载进度
-  const progressInterval = setInterval(() => {
-    progressWidth.value = Math.min(progressWidth.value + Math.random() * 30, 100)
-    if (progressWidth.value >= 100) {
-      clearInterval(progressInterval)
-      setTimeout(() => {
-        isLoading.value = false
-        // 延迟一点时间再开始淡出动画
-        setTimeout(() => {
-          startFadeOut()
-        }, 500)
-      }, 300)
-    }
-  }, 200)
-  
-  // 创建加载动画
-  new p5((p: p5) => {
+  // 添加短暂延迟确保DOM完全渲染
+  setTimeout(() => {
+    // 创建加载动画
+    new p5((p: p5) => {
     const finalSize = 120 // 最终尺寸
     
     // 三个球体的属性
@@ -131,6 +115,22 @@ onMounted(async () => {
       p.resizeCanvas(p.windowWidth, p.windowHeight)
     }
   })
+  
+  // 模拟加载进度
+  const progressInterval = setInterval(() => {
+    progressWidth.value = Math.min(progressWidth.value + Math.random() * 30, 100)
+    if (progressWidth.value >= 100) {
+      clearInterval(progressInterval)
+      setTimeout(() => {
+        isLoading.value = false
+        // 延迟一点时间再开始淡出动画
+        setTimeout(() => {
+          startFadeOut()
+        }, 500)
+      }, 300)
+    }
+  }, 200)
+}, 50) // 关闭setTimeout
   
   // 开始淡出动画
   const startFadeOut = () => {
@@ -229,9 +229,6 @@ onMounted(async () => {
   height: 100%;
   background-color: #FDFCF8; /* cream 色 */
   z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   opacity: 1;
   transition: opacity 1s ease;
 }
@@ -242,16 +239,16 @@ onMounted(async () => {
 }
 
 .sketch-container {
-  width: 100%;
-  height: 100%;
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .loading-container {
-  position: absolute;
-  bottom: 20%;
+  position: fixed;
+  bottom: 15%;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -259,7 +256,7 @@ onMounted(async () => {
   align-items: center;
   gap: 16px;
   width: 300px;
-  z-index: 10;
+  z-index: 1001;
 }
 
 .progress-bar {

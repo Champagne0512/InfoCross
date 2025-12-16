@@ -32,7 +32,7 @@ function goAuth() {
       <RouterLink to="/" class="text-2xl font-sans font-bold text-charcoal">
         InfoCross
       </RouterLink>
-      <p class="font-mono text-mono text-slate mt-2">跨学科信息聚合</p>
+      <p class="font-sans text-sm text-slate mt-2">跨学科信息聚合</p>
     </div>
 
     <!-- 导航菜单 -->
@@ -67,7 +67,7 @@ function goAuth() {
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-sans text-sm font-medium text-charcoal truncate">{{ profile?.username }}</p>
-            <p class="font-mono text-mono text-xs text-slate">{{ profile?.college }}</p>
+            <p class="font-sans text-xs text-slate">{{ profile?.college }}</p>
           </div>
         </div>
         <button 
