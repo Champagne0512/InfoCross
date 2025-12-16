@@ -63,105 +63,120 @@ async function handleBookmark(article: Article) {
 </script>
 
 <template>
-  <div class="space-y-10">
-    <section class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-      <div class="panel">
-        <div class="flex items-center justify-between">
-          <p class="font-data text-xs text-ink-soft">{{ new Date().toLocaleDateString() }}</p>
-          <span class="rounded-full bg-neutral px-3 py-1 text-xs text-ink-soft">Wall-Breaker Engine</span>
-        </div>
-        <h1 class="mt-5 text-4xl font-semibold text-ink">
-          Hello, Explorer.
+  <div class="space-y-12">
+    <!-- Hero 区域 - 简洁的问候和简介 -->
+    <section class="morandi-card p-8">
+      <div class="max-w-3xl">
+        <p class="font-mono text-mono text-slate mb-3">{{ new Date().toLocaleDateString() }}</p>
+        <h1 class="text-hero font-sans font-bold text-charcoal mb-4">
+          Hello, Explorer
         </h1>
-        <p class="mt-3 text-[15px] text-ink-soft">
-          这里是 InfoCross 的「生动理性」仪表盘——我们故意推荐专业之外但语义高度相关的活动，并提前给你 TL;DR、推荐理由与真实参与热度。
+        <p class="text-body font-sans text-slate mb-8 leading-relaxed">
+          InfoCross 聚合各学院的讲座、竞赛与通知，并由 AI 自动摘要、打标、向量检索，为你推送最值得跨界投入的机会。
         </p>
-        <div class="mt-6 flex flex-wrap gap-3">
-          <AppButton variant="primary" @click="$router.push('/publish')">发布 / 组队</AppButton>
-          <AppButton variant="ghost" @click="loadArticles">刷新内容</AppButton>
-        </div>
-      </div>
-      <div class="panel space-y-3">
-        <p class="font-data text-xs text-intelligence">TL;DR · Smart Brief</p>
-        <div class="grid gap-3">
-          <div class="tldr-card">
-            <p class="font-data text-xs text-intelligence">TIME</p>
-            <p class="text-sm text-ink">{{ tldrSample.time }}</p>
-          </div>
-          <div class="tldr-card">
-            <p class="font-data text-xs text-intelligence">PLACE</p>
-            <p class="text-sm text-ink">{{ tldrSample.place }}</p>
-          </div>
-          <div class="tldr-card">
-            <p class="font-data text-xs text-intelligence">GATE</p>
-            <p class="text-sm text-ink">{{ tldrSample.gate }}</p>
-          </div>
-          <div class="tldr-card">
-            <p class="font-data text-xs text-intelligence">REWARD</p>
-            <p class="text-sm text-ink">{{ tldrSample.reward }}</p>
-          </div>
+        <div class="flex flex-wrap gap-4">
+          <AppButton variant="primary" @click="$router.push('/publish')">发布活动</AppButton>
+          <AppButton variant="ghost" @click="loadArticles">刷新流</AppButton>
         </div>
       </div>
     </section>
 
-    <section class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <div class="panel">
-        <header class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p class="font-data text-xs text-ink-soft">Info Stream</p>
-            <h2 class="text-2xl font-semibold text-ink mt-1">精选破壁线索</h2>
+    <!-- 主内容区域 - 左侧信息流 + 右侧 AI 洞察 -->
+    <section class="grid gap-8 lg:grid-cols-3">
+      <!-- 左侧：信息流 -->
+      <div class="lg:col-span-2 space-y-8">
+        <!-- 筛选器 -->
+        <div class="morandi-card p-6">
+          <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+              <p class="font-mono text-mono text-slate">Info Stream</p>
+              <h2 class="text-display font-sans font-semibold text-charcoal mt-2">精选破壁线索</h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="category in categories"
+                :key="category.value"
+                class="px-4 py-2 rounded-soft font-mono text-mono text-xs uppercase tracking-wider transition-all"
+                :class="selectedCategory === category.value
+                  ? 'bg-charcoal text-white'
+                  : 'bg-white border border-slate/20 text-slate hover:bg-slate/5'"
+                @click="selectedCategory = category.value"
+              >
+                {{ category.label }}
+              </button>
+            </div>
+          </header>
+          
+          <div v-if="loading" class="grid gap-6 md:grid-cols-2">
+            <div v-for="index in 4" :key="index" class="h-64 rounded-morandi bg-mist animate-pulse" />
           </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="category in categories"
-              :key="category.value"
-              class="pill-button"
-              :class="{ 'is-active': selectedCategory === category.value }"
-              @click="selectedCategory = category.value"
-            >
-              {{ category.label }}
-            </button>
+          
+          <div v-else class="grid gap-6 md:grid-cols-2">
+            <ArticleCard
+              v-for="article in spotlightArticles"
+              :key="article.id"
+              :article="article"
+              @bookmark="handleBookmark"
+            />
           </div>
-        </header>
-        <div v-if="loading" class="mt-6 grid gap-4 md:grid-cols-2">
-          <div v-for="index in 3" :key="index" class="h-44 rounded-2xl bg-neutral animate-pulse" />
         </div>
-        <div v-else class="mt-6 grid gap-4 md:grid-cols-3">
-          <ArticleCard
-            v-for="article in spotlightArticles"
-            :key="article.id"
-            :article="article"
-            @bookmark="handleBookmark"
-          />
+
+        <!-- AI 破壁推荐 -->
+        <div class="morandi-card p-6">
+          <header class="mb-6">
+            <p class="font-mono text-mono text-morandi-lavender mb-2">Breaker Mode</p>
+            <h2 class="text-display font-sans font-semibold text-charcoal">AI 破壁推荐</h2>
+            <p class="text-body font-sans text-slate mt-2">根据你的兴趣标签与向量空间距离，AI 为你挑选跨学院内容。</p>
+          </header>
+          
+          <div class="grid gap-6 md:grid-cols-2">
+            <ArticleCard
+              v-for="article in recommended"
+              :key="`rec-${article.id}`"
+              :article="article"
+              @bookmark="handleBookmark"
+            />
+          </div>
         </div>
       </div>
-      <div class="space-y-6">
-        <InsightPanel v-if="heroInsights.length" :insights="heroInsights" />
-        <div class="panel">
-          <header class="flex items-center justify-between">
-            <div>
-              <p class="font-data text-xs text-intelligence">Wall-Breaker</p>
-              <h3 class="text-lg font-semibold text-ink">你可能错过的跨界活动</h3>
-            </div>
-            <span class="rounded-full bg-intelligence/10 px-3 py-1 text-xs text-intelligence">语义推荐</span>
-          </header>
-          <div class="mt-4 space-y-4">
-            <article
-              v-for="article in breakerHighlights"
-              :key="`rec-${article.id}`"
-              class="rounded-xl border border-border p-4 hover:border-intelligence"
-            >
-              <p class="font-data text-xs text-ink-soft">{{ article.college }}</p>
-              <h4 class="mt-1 text-ink font-semibold">{{ article.title }}</h4>
-              <p class="mt-1 text-sm text-ink-soft">{{ article.summary }}</p>
-              <div class="mt-3 flex items-center justify-between text-xs text-ink-soft">
-                <div class="flex items-center gap-2">
-                  <PhUsersThree size="18" weight="duotone" class="text-intelligence" />
-                  <span>{{ article.tags.slice(0, 1).join(' / ') || '破壁推荐' }}</span>
-                </div>
-                <span class="font-data text-intelligence">{{ (article.aiScore * 100).toFixed(0) }}%</span>
+
+      <!-- 右侧：AI 洞察面板 -->
+      <div class="lg:col-span-1">
+        <div class="sticky top-8 space-y-8">
+          <!-- AI Insight -->
+          <div v-if="heroInsights.length" class="morandi-card p-6">
+            <header class="flex items-center justify-between mb-6">
+              <div>
+                <p class="font-mono text-mono text-morandi-lavender mb-2">AI Insight</p>
+                <h3 class="text-h2 font-sans font-semibold text-charcoal">跨学科提示</h3>
               </div>
-            </article>
+              <div class="w-8 h-8 rounded-full bg-morandi-lavender/10 flex items-center justify-center text-morandi-lavender">
+                ✨
+              </div>
+            </header>
+            <InsightPanel :insights="heroInsights" />
+          </div>
+
+          <!-- 快速统计 -->
+          <div class="morandi-card p-6">
+            <header class="mb-6">
+              <p class="font-mono text-mono text-slate mb-2">Quick Stats</p>
+              <h3 class="text-h2 font-sans font-semibold text-charcoal">今日数据</h3>
+            </header>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-3 rounded-soft bg-morandi-green/10">
+                <span class="font-sans text-sm text-charcoal">新活动</span>
+                <span class="font-mono text-mono text-morandi-green">{{ articles.length }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-soft bg-morandi-lavender/10">
+                <span class="font-sans text-sm text-charcoal">AI 推荐</span>
+                <span class="font-mono text-mono text-morandi-lavender">{{ recommended.length }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-soft bg-morandi-blue/10">
+                <span class="font-sans text-sm text-charcoal">跨学科指数</span>
+                <span class="font-mono text-mono text-morandi-blue">89%</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
