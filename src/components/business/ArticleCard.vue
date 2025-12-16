@@ -13,38 +13,48 @@ const emit = defineEmits<{
   bookmark: [Article]
 }>()
 
-// 莫兰迪配色 - 根据分类设置卡片顶部色条
-const categoryColors = {
-  lecture: 'morandi-blue',
-  competition: 'morandi-green',
-  research: 'morandi-lavender',
-  notice: 'morandi-clay',
+// 莫兰迪配色 - 直接使用颜色值而不是动态类名
+const categoryStyles = {
+  lecture: {
+    topBar: 'bg-[#93A8AC]/30 group-hover:bg-[#93A8AC]/50',
+    icon: 'bg-gradient-to-br from-[#93A8AC] to-[#93A8AC]/80',
+    label: '讲座'
+  },
+  competition: {
+    topBar: 'bg-[#A6B9A8]/30 group-hover:bg-[#A6B9A8]/50',
+    icon: 'bg-gradient-to-br from-[#A6B9A8] to-[#A6B9A8]/80',
+    label: '比赛'
+  },
+  research: {
+    topBar: 'bg-[#B4A8BF]/30 group-hover:bg-[#B4A8BF]/50',
+    icon: 'bg-gradient-to-br from-[#B4A8BF] to-[#B4A8BF]/80',
+    label: '研究'
+  },
+  notice: {
+    topBar: 'bg-[#D9A69F]/30 group-hover:bg-[#D9A69F]/50',
+    icon: 'bg-gradient-to-br from-[#D9A69F] to-[#D9A69F]/80',
+    label: '通知'
+  },
 }
 
-const categoryLabel = {
-  lecture: '讲座',
-  competition: '比赛',
-  research: '研究',
-  notice: '通知',
-}
-
-const topBarColor = computed(() => categoryColors[props.article.category] || 'morandi-lavender')
+const categoryStyle = computed(() => categoryStyles[props.article.category] || categoryStyles.research)
+const isResearch = computed(() => props.article.category === 'research')
 </script>
 
 <template>
   <article class="morandi-card p-0 overflow-hidden group">
-    <!-- 顶部莫兰迪色条 -->
-    <div :class="`h-1 bg-${topBarColor}/30 group-hover:bg-${topBarColor}/50 transition-colors`"></div>
+    <!-- 顶部莫兰迪色条 - 使用静态类名确保颜色显示 -->
+    <div :class="['h-1 transition-colors', categoryStyle.topBar]"></div>
     
     <div class="p-6">
       <div class="flex items-center justify-between mb-4">
-        <TagBadge :label="categoryLabel[article.category]" :accent="article.category === 'research'" />
+        <TagBadge :label="categoryStyle.label" :accent="isResearch" />
         <span class="font-mono text-mono text-slate">{{ formatRelativeTime(article.createdAt) }}</span>
       </div>
 
       <div class="flex gap-4 mb-4">
-        <!-- 首字母图标 - 使用莫兰迪色背景 -->
-        <div :class="`w-16 h-16 rounded-xl flex items-center justify-center text-xl font-sans font-bold text-white bg-gradient-to-br from-${topBarColor} to-${topBarColor}/80`">
+        <!-- 首字母图标 - 使用内联样式确保颜色显示 -->
+        <div :class="['w-16 h-16 rounded-xl flex items-center justify-center text-xl font-sans font-bold text-white', categoryStyle.icon]">
           {{ article.title.charAt(0).toUpperCase() }}
         </div>
         
@@ -70,7 +80,7 @@ const topBarColor = computed(() => categoryColors[props.article.category] || 'mo
 
       <!-- AI 分数和操作 -->
       <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate/10">
-        <div class="flex items-center gap-2 font-mono text-mono text-morandi-lavender">
+        <div class="flex items-center gap-2 font-mono text-mono text-[#B4A8BF]">
           <span>✨</span>
           <span>AI 匹配度 {{ (article.aiScore * 100).toFixed(0) }}%</span>
         </div>
