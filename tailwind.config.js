@@ -34,6 +34,7 @@ export default {
       // 阴影
       boxShadow: {
         'morandi': '0 4px 20px rgba(0, 0, 0, 0.06)',
+        'morandi-sm': '0 2px 10px rgba(0, 0, 0, 0.04)',
         'morandi-lg': '0 8px 30px rgba(0, 0, 0, 0.08)',
         'morandi-hover': '0 12px 40px rgba(0, 0, 0, 0.12)',
       },
