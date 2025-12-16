@@ -1,59 +1,105 @@
-import { hasSupabase, supabase } from './client'
 import type { UserProfile } from '@/types/models'
+import type { Database } from '@/types/supabase'
+import { supabase } from './client'
 
-const mockUser: UserProfile = {
-  id: 'mock-user',
-  email: 'student@infocross.edu',
-  username: 'InfoCross 体验官',
-  college: '计算机学院',
-  major: '人工智能',
-  tags: ['AI', '产品', '跨学科'],
+export interface RegisterPayload {
+  email: string
+  password: string
+  username: string
+  college: string
+  major: string
+  tags: string[]
+}
+
+type ProfileRow = Database['public']['Tables']['profiles']['Row']
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+
+function mapProfile(row: ProfileRow): UserProfile {
+  return {
+    id: row.id,
+    email: row.email,
+    username: row.username ?? 'InfoCross 学员',
+    college: row.college ?? '未知学院',
+    major: row.major ?? '未填写专业',
+    tags: row.tags ?? [],
+    avatarUrl: row.avatar_url ?? undefined,
+  }
+}
+
+async function selectProfileRow(userId: string): Promise<ProfileRow | null> {
+  const { data, error } = (await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()) as { data: ProfileRow | null; error: any }
+  if (error) throw error
+  return data ?? null
+}
+
+async function requireProfile(userId: string): Promise<UserProfile> {
+  const row = await selectProfileRow(userId)
+  if (!row) {
+    throw new Error('Profile 尚未初始化，请稍后重试。')
+  }
+  return mapProfile(row)
+}
+
+async function waitProfileRow(userId: string): Promise<void> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const row = await selectProfileRow(userId)
+    if (row) return
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  }
+  throw new Error('Profile 初始化超时，请稍后重试。')
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<UserProfile> {
-  if (hasSupabase && supabase) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
-    return {
-      id: data.user.id,
-      email: data.user.email ?? email,
-      username: data.user.user_metadata?.username ?? data.user.email ?? '同学',
-      college: data.user.user_metadata?.college ?? '未知学院',
-      major: data.user.user_metadata?.major ?? '未填写专业',
-      tags: data.user.user_metadata?.tags ?? [],
-      avatarUrl: data.user.user_metadata?.avatar_url,
-    }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return requireProfile(data.user.id)
+}
+
+export async function registerUser(payload: RegisterPayload): Promise<UserProfile> {
+  const { data, error } = await supabase.auth.signUp({
+    email: payload.email,
+    password: payload.password,
+    options: {
+      data: {
+        username: payload.username,
+      },
+    },
+  })
+  if (error) throw error
+  const user = data.user
+  if (!user) {
+    throw new Error('注册成功但未返回用户信息，请检查邮箱验证设置')
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 600))
-  return { ...mockUser, email }
+  await waitProfileRow(user.id)
+
+  const { error: updateError } = (await supabase
+    .from('profiles')
+    .update({
+      username: payload.username,
+      college: payload.college,
+      major: payload.major,
+      tags: payload.tags,
+    } as ProfileUpdate)
+    .eq('id', user.id)) as { error: any }
+
+  if (updateError) throw updateError
+
+  return requireProfile(user.id)
 }
 
 export async function signOut(): Promise<void> {
-  if (hasSupabase && supabase) {
-    await supabase.auth.signOut()
-  }
+  await supabase.auth.signOut()
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
-  if (hasSupabase && supabase) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return null
-    return {
-      id: user.id,
-      email: user.email ?? '',
-      username: user.user_metadata?.username ?? '同学',
-      college: user.user_metadata?.college ?? '未知学院',
-      major: user.user_metadata?.major ?? '未填写专业',
-      tags: user.user_metadata?.tags ?? [],
-      avatarUrl: user.user_metadata?.avatar_url,
-    }
-  }
-
-  return null
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  return requireProfile(user.id)
 }

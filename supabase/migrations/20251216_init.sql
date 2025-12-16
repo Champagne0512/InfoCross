@@ -42,16 +42,29 @@ alter table articles enable row level security;
 alter table profiles enable row level security;
 alter table interactions enable row level security;
 
-create policy "Public articles are readable" on articles for select using (true);
-create policy "Authors manage own articles" on articles for
-  insert with check (auth.uid() = author_id),
-  update using (auth.uid() = author_id),
-  delete using (auth.uid() = author_id);
+create policy "Public articles are readable" on articles
+  for select using (true);
 
-create policy "Users read self profile" on profiles for select using (auth.uid() = id);
-create policy "Users edit self profile" on profiles for
-  update using (auth.uid() = id);
+create policy "Authors insert articles" on articles
+  for insert with check (auth.uid() = author_id);
 
-create policy "Interactions by owner" on interactions for
-  select using (auth.uid() = user_id),
-  insert with check (auth.uid() = user_id);
+create policy "Authors update articles" on articles
+  for update using (auth.uid() = author_id);
+
+create policy "Authors delete articles" on articles
+  for delete using (auth.uid() = author_id);
+
+create policy "Users read self profile" on profiles
+  for select using (auth.uid() = id);
+
+create policy "Users insert self profile" on profiles
+  for insert with check (auth.uid() = id);
+
+create policy "Users edit self profile" on profiles
+  for update using (auth.uid() = id);
+
+create policy "Users insert interactions" on interactions
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users read own interactions" on interactions
+  for select using (auth.uid() = user_id);

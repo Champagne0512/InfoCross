@@ -4,9 +4,9 @@ import type { Database } from '@/types/supabase'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-    : null
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase 环境变量缺失，请在 .env.local 中配置 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY')
+}
 
-export const hasSupabase = Boolean(supabase)
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+export const hasSupabase = true

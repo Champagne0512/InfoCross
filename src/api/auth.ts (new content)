@@ -1,0 +1,86 @@
+import { supabase } from './client'
+import type { UserProfile } from '@/types/models'
+
+interface RegisterPayload {
+  email: string
+  password: string
+  username: string
+  college: string
+  major: string
+  tags: string[]
+}
+
+function mapProfile(row: {
+  id: string
+  email: string
+  username: string | null
+  college: string | null
+  major: string | null
+  tags: string[] | null
+  avatar_url: string | null
+}): UserProfile {
+  return {
+    id: row.id,
+    email: row.email,
+    username: row.username ?? 'InfoCross 学员',
+    college: row.college ?? '未知学院',
+    major: row.major ?? '未填写专业',
+    tags: row.tags ?? [],
+    avatarUrl: row.avatar_url ?? undefined,
+  }
+}
+
+async function fetchProfile(userId: string): Promise<UserProfile> {
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  if (error || !data) {
+    throw error ?? new Error('无法获取用户信息')
+  }
+  return mapProfile(data)
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<UserProfile> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return fetchProfile(data.user.id)
+}
+
+export async function registerUser(payload: RegisterPayload): Promise<UserProfile> {
+  const { data, error } = await supabase.auth.signUp({
+    email: payload.email,
+    password: payload.password,
+    options: {
+      data: {
+        username: payload.username,
+        college: payload.college,
+        major: payload.major,
+        tags: payload.tags,
+      },
+    },
+  })
+  if (error) throw error
+  const user = data.user
+  if (!user) {
+    throw new Error('注册成功但未返回用户信息，请检查邮箱验证设置')
+  }
+  await supabase.from('profiles').upsert({
+    id: user.id,
+    email: payload.email,
+    username: payload.username,
+    college: payload.college,
+    major: payload.major,
+    tags: payload.tags,
+  })
+  return fetchProfile(user.id)
+}
+
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut()
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  return fetchProfile(user.id)
+}

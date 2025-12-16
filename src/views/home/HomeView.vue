@@ -35,23 +35,13 @@ const tldrSample = {
   reward: '综测 +1.0 / 赛事补贴 800 元',
 }
 
-const skillGaps = [
-  { role: '财务分析', status: '待加入' },
-  { role: 'UI 设计', status: '待加入' },
-  { role: '视频剪辑', status: '已匹配' },
-]
-
-const footprint = [
-  { label: '学术', value: 80, color: 'bg-academic/50' },
-  { label: '娱乐', value: 45, color: 'bg-life/50' },
-  { label: '运动', value: 30, color: 'bg-activity/50' },
-  { label: '公益', value: 55, color: 'bg-intelligence/30' },
-]
-
 const filteredArticles = computed(() => {
   if (selectedCategory.value === 'all') return articles.value
   return articles.value.filter((article) => article.category === selectedCategory.value)
 })
+
+const previewArticles = computed(() => filteredArticles.value.slice(0, 4))
+const previewRecommended = computed(() => recommended.value.slice(0, 3))
 
 onMounted(async () => {
   await loadArticles()
@@ -74,53 +64,27 @@ async function handleBookmark(article: Article) {
 
 <template>
   <div class="space-y-10">
-    <!-- Hero & Metrics -->
     <section class="grid gap-6 lg:grid-cols-12">
       <div class="panel lg:col-span-7">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="font-data text-xs text-ink-soft">{{ new Date().toLocaleDateString() }}</p>
-            <h1 class="hero-title font-display text-ink mt-2">
-              Hello, Explorer.<br />
-              今日你想去哪一座学术宇宙？
-            </h1>
-          </div>
-          <div class="text-right">
-            <p class="text-sm text-ink-soft">Wall-Breaker Engine</p>
-            <p class="font-display text-3xl text-intelligence">89%</p>
-          </div>
+          <p class="font-data text-xs text-ink-soft">{{ new Date().toLocaleDateString() }}</p>
+          <span class="rounded-full bg-neutral px-3 py-1 text-xs text-ink-soft">Wall-Breaker Engine</span>
         </div>
+        <h1 class="mt-4 text-4xl font-semibold text-ink">
+          Hello, Explorer.<br />
+          今天为你挑选 3 条最值得跨界参与的活动。
+        </h1>
         <p class="mt-4 max-w-2xl text-[15px] text-ink-soft">
-          基于语义向量的破壁推荐引擎，主动向你推送专业之外但逻辑相关的活动，并提供可执行的“省流”摘要、智能组队和探索足迹。
+          InfoCross 将长文公告压缩为 TL;DR 卡片，并用语义向量挑选“专业外但相关”的机会。
         </p>
         <div class="mt-6 flex flex-wrap gap-3">
-          <AppButton variant="primary" @click="$router.push('/publish')">发布/组队</AppButton>
-          <AppButton variant="ghost" @click="loadArticles">刷新数据</AppButton>
+          <AppButton variant="primary" @click="$router.push('/publish')">发布 / 组队</AppButton>
+          <AppButton variant="ghost" @click="loadArticles">刷新推荐</AppButton>
         </div>
       </div>
-      <div class="grid gap-4 lg:col-span-5 sm:grid-cols-2 lg:grid-cols-1">
-        <div
-          v-for="tile in [
-            { label: '今日新增', value: `${articles.length} 条`, desc: 'AI 自建摘要' },
-            { label: '技能缺口', value: '3 个', desc: '等待跨院系补位' },
-            { label: '足迹板块', value: '4', desc: '学术/运动/公益/生活' },
-          ]"
-          :key="tile.label"
-          class="rounded-xl border border-border bg-surface p-4 shadow-subtle"
-        >
-          <p class="text-xs uppercase tracking-[0.3em] text-ink-soft">{{ tile.label }}</p>
-          <p class="mt-2 text-2xl font-semibold text-ink">{{ tile.value }}</p>
-          <p class="text-sm text-ink-soft">{{ tile.desc }}</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Feature Grid -->
-    <section class="bento-grid">
-      <div class="panel col-span-2">
-        <h3 class="text-xl font-semibold text-ink">TL;DR · 省流摘要代理</h3>
-        <p class="mt-2 text-sm text-ink-soft">自动提炼活动关键信息，四个字段必须呈现。</p>
-        <div class="mt-4 grid gap-3 md:grid-cols-2">
+      <div class="panel lg:col-span-5 space-y-3">
+        <p class="font-data text-xs text-intelligence">TL;DR · 省流摘要</p>
+        <div class="grid gap-3">
           <div class="tldr-card">
             <p class="font-data text-xs text-intelligence">TIME</p>
             <p class="text-sm text-ink">{{ tldrSample.time }}</p>
@@ -139,48 +103,14 @@ async function handleBookmark(article: Article) {
           </div>
         </div>
       </div>
-      <div class="panel">
-        <h3 class="text-xl font-semibold text-ink">技能互补型组队</h3>
-        <p class="text-sm text-ink-soft">AI 按角色缺口排序，优先通知具备互补技能的同学。</p>
-        <ul class="mt-4 space-y-3">
-          <li
-            v-for="gap in skillGaps"
-            :key="gap.role"
-            class="flex items-center justify-between rounded-xl border border-dashed border-border px-4 py-3"
-          >
-            <span class="font-medium text-ink">{{ gap.role }}</span>
-            <span class="font-data text-xs" :class="gap.status === '待加入' ? 'text-life' : 'text-ink-soft'">
-              {{ gap.status }}
-            </span>
-          </li>
-        </ul>
-      </div>
-      <div class="panel">
-        <h3 class="text-xl font-semibold text-ink">Explorer Footprint</h3>
-        <p class="text-sm text-ink-soft">实时记录你在不同领域的探索分布。</p>
-        <div class="mt-4 space-y-3">
-          <div
-            v-for="point in footprint"
-            :key="point.label"
-            class="flex items-center gap-3"
-          >
-            <span class="font-data text-xs text-ink-soft w-20">{{ point.label }}</span>
-            <div class="flex-1 rounded-full bg-neutral">
-              <div class="h-2 rounded-full" :class="point.color" :style="{ width: `${point.value}%` }" />
-            </div>
-            <span class="text-sm text-ink">{{ point.value }}%</span>
-          </div>
-        </div>
-      </div>
     </section>
 
-    <!-- Streams -->
-    <section class="grid gap-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+    <section class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <div class="panel">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="font-data text-xs text-ink-soft">Info Stream</p>
-            <h2 class="text-2xl font-semibold text-ink mt-1">今日更新</h2>
+            <h2 class="text-2xl font-semibold text-ink mt-1">今日破壁线索</h2>
           </div>
           <div class="flex flex-wrap gap-2">
             <button
@@ -199,7 +129,7 @@ async function handleBookmark(article: Article) {
         </div>
         <div v-else class="mt-6 grid gap-4 md:grid-cols-2">
           <ArticleCard
-            v-for="article in filteredArticles"
+            v-for="article in previewArticles"
             :key="article.id"
             :article="article"
             @bookmark="handleBookmark"
@@ -212,13 +142,13 @@ async function handleBookmark(article: Article) {
           <header class="flex items-center justify-between">
             <div>
               <p class="font-data text-xs text-intelligence">Wall-Breaker</p>
-              <h3 class="text-lg font-semibold text-ink">破壁推荐引擎</h3>
+              <h3 class="text-lg font-semibold text-ink">你可能错过的跨界活动</h3>
             </div>
-            <span class="rounded-full bg-intelligence/10 px-3 py-1 text-xs text-intelligence">语义距离</span>
+            <span class="rounded-full bg-intelligence/10 px-3 py-1 text-xs text-intelligence">语义推荐</span>
           </header>
           <div class="mt-4 space-y-4">
             <article
-              v-for="article in recommended"
+              v-for="article in previewRecommended"
               :key="`rec-${article.id}`"
               class="rounded-xl border border-border p-4 hover:border-intelligence"
             >
@@ -228,7 +158,7 @@ async function handleBookmark(article: Article) {
               <div class="mt-3 flex items-center justify-between text-xs text-ink-soft">
                 <div class="flex items-center gap-2">
                   <PhUsersThree size="18" weight="duotone" class="text-intelligence" />
-                  <span>破壁推荐</span>
+                  <span>{{ article.tags.slice(0, 1).join(' / ') || '破壁推荐' }}</span>
                 </div>
                 <span class="font-data text-intelligence">{{ (article.aiScore * 100).toFixed(0) }}%</span>
               </div>

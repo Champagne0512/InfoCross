@@ -14,6 +14,7 @@ export function useAuth() {
     interactions,
     isAuthenticated,
     login: userStore.login,
+    register: userStore.register,
     logout: userStore.logout,
     init: userStore.init,
   }
