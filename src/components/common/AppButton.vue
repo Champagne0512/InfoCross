@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'pill'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'ai'
 
 const props = defineProps<{
   variant?: Variant
@@ -14,15 +14,12 @@ const emit = defineEmits<{
 }>()
 
 const classes = computed(() => {
-  const base =
-    'inline-flex items-center justify-center gap-2 rounded-full border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink'
+  const base = 'inline-flex items-center justify-center gap-2 rounded-soft font-sans font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
   const variants: Record<Variant, string> = {
-    primary: 'bg-ink text-white border-ink px-6 py-2 hover:translate-y-0.5 active:scale-[0.97]',
-    secondary:
-      'bg-intelligence text-white border-intelligence px-6 py-2 shadow-subtle hover:bg-intelligence/90',
-    ghost:
-      'bg-transparent border-border text-ink px-5 py-2 hover:border-ink hover:text-ink active:translate-y-0.5',
-    pill: 'bg-neutral border-border text-ink px-4 py-1 text-xs font-mono uppercase tracking-[0.3em]',
+    primary: 'px-6 py-3 bg-charcoal text-white hover:bg-charcoal/90 hover:shadow-morandi-lg hover:scale-105 active:scale-95',
+    secondary: 'px-6 py-3 bg-morandi-green text-white hover:bg-morandi-green/90 hover:shadow-morandi-lg hover:scale-105 active:scale-95',
+    ghost: 'px-5 py-3 bg-transparent border border-slate/20 text-slate hover:bg-slate/5 hover:text-charcoal hover:border-slate/40',
+    ai: 'px-6 py-3 bg-morandi-lavender text-white hover:bg-morandi-lavender/90 hover:shadow-morandi-lg hover:scale-105 active:scale-95',
   }
   return `${base} ${variants[props.variant ?? 'primary']}`
 })

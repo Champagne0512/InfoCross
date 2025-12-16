@@ -40,8 +40,8 @@ const filteredArticles = computed(() => {
   return articles.value.filter((article) => article.category === selectedCategory.value)
 })
 
-const previewArticles = computed(() => filteredArticles.value.slice(0, 4))
-const previewRecommended = computed(() => recommended.value.slice(0, 3))
+const spotlightArticles = computed(() => filteredArticles.value.slice(0, 3))
+const breakerHighlights = computed(() => recommended.value.slice(0, 2))
 
 onMounted(async () => {
   await loadArticles()
@@ -64,26 +64,25 @@ async function handleBookmark(article: Article) {
 
 <template>
   <div class="space-y-10">
-    <section class="grid gap-6 lg:grid-cols-12">
-      <div class="panel lg:col-span-7">
+    <section class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+      <div class="panel">
         <div class="flex items-center justify-between">
           <p class="font-data text-xs text-ink-soft">{{ new Date().toLocaleDateString() }}</p>
           <span class="rounded-full bg-neutral px-3 py-1 text-xs text-ink-soft">Wall-Breaker Engine</span>
         </div>
-        <h1 class="mt-4 text-4xl font-semibold text-ink">
-          Hello, Explorer.<br />
-          今天为你挑选 3 条最值得跨界参与的活动。
+        <h1 class="mt-5 text-4xl font-semibold text-ink">
+          Hello, Explorer.
         </h1>
-        <p class="mt-4 max-w-2xl text-[15px] text-ink-soft">
-          InfoCross 将长文公告压缩为 TL;DR 卡片，并用语义向量挑选“专业外但相关”的机会。
+        <p class="mt-3 text-[15px] text-ink-soft">
+          这里是 InfoCross 的「生动理性」仪表盘——我们故意推荐专业之外但语义高度相关的活动，并提前给你 TL;DR、推荐理由与真实参与热度。
         </p>
         <div class="mt-6 flex flex-wrap gap-3">
           <AppButton variant="primary" @click="$router.push('/publish')">发布 / 组队</AppButton>
-          <AppButton variant="ghost" @click="loadArticles">刷新推荐</AppButton>
+          <AppButton variant="ghost" @click="loadArticles">刷新内容</AppButton>
         </div>
       </div>
-      <div class="panel lg:col-span-5 space-y-3">
-        <p class="font-data text-xs text-intelligence">TL;DR · 省流摘要</p>
+      <div class="panel space-y-3">
+        <p class="font-data text-xs text-intelligence">TL;DR · Smart Brief</p>
         <div class="grid gap-3">
           <div class="tldr-card">
             <p class="font-data text-xs text-intelligence">TIME</p>
@@ -110,7 +109,7 @@ async function handleBookmark(article: Article) {
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="font-data text-xs text-ink-soft">Info Stream</p>
-            <h2 class="text-2xl font-semibold text-ink mt-1">今日破壁线索</h2>
+            <h2 class="text-2xl font-semibold text-ink mt-1">精选破壁线索</h2>
           </div>
           <div class="flex flex-wrap gap-2">
             <button
@@ -125,11 +124,11 @@ async function handleBookmark(article: Article) {
           </div>
         </header>
         <div v-if="loading" class="mt-6 grid gap-4 md:grid-cols-2">
-          <div v-for="index in 4" :key="index" class="h-44 rounded-2xl bg-neutral animate-pulse" />
+          <div v-for="index in 3" :key="index" class="h-44 rounded-2xl bg-neutral animate-pulse" />
         </div>
-        <div v-else class="mt-6 grid gap-4 md:grid-cols-2">
+        <div v-else class="mt-6 grid gap-4 md:grid-cols-3">
           <ArticleCard
-            v-for="article in previewArticles"
+            v-for="article in spotlightArticles"
             :key="article.id"
             :article="article"
             @bookmark="handleBookmark"
@@ -148,7 +147,7 @@ async function handleBookmark(article: Article) {
           </header>
           <div class="mt-4 space-y-4">
             <article
-              v-for="article in previewRecommended"
+              v-for="article in breakerHighlights"
               :key="`rec-${article.id}`"
               class="rounded-xl border border-border p-4 hover:border-intelligence"
             >

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatEventTime, formatRelativeTime } from '@/utils/date'
-import { PhSparkle } from '@phosphor-icons/vue'
+import TagBadge from './TagBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import type { Article } from '@/types/models'
 
@@ -13,77 +13,75 @@ const emit = defineEmits<{
   bookmark: [Article]
 }>()
 
-const palette: Record<string, string> = {
-  lecture: 'bg-academic/10 text-academic',
-  competition: 'bg-academic/10 text-academic',
-  research: 'bg-academic/10 text-academic',
-  notice: 'bg-life/10 text-life',
+// 莫兰迪配色 - 根据分类设置卡片顶部色条
+const categoryColors = {
+  lecture: 'morandi-blue',
+  competition: 'morandi-green',
+  research: 'morandi-lavender',
+  notice: 'morandi-clay',
 }
 
-const coverColor = computed(() => {
-  switch (props.article.category) {
-    case 'competition':
-      return 'bg-academic text-white'
-    case 'notice':
-      return 'bg-life text-white'
-    case 'research':
-      return 'bg-activity text-white'
-    default:
-      return 'bg-intelligence text-white'
-  }
-})
+const categoryLabel = {
+  lecture: '讲座',
+  competition: '比赛',
+  research: '研究',
+  notice: '通知',
+}
 
-const categoryClass = computed(() => palette[props.article.category] ?? 'bg-intelligence/10 text-intelligence')
+const topBarColor = computed(() => categoryColors[props.article.category] || 'morandi-lavender')
 </script>
 
 <template>
-  <article class="flex flex-col gap-4 rounded-2xl bg-surface p-6 shadow-card transition hover:-translate-y-1 hover:shadow-sheet">
-    <div class="flex items-center justify-between">
-      <span class="category-chip" :class="categoryClass">{{ article.category }}</span>
-      <span class="font-data text-[0.6rem] text-ink-soft">{{ formatRelativeTime(article.createdAt) }}</span>
-    </div>
-
-    <div class="flex gap-4">
-      <div :class="['flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-semibold', coverColor]">
-        {{ article.title.slice(0, 2).toUpperCase() }}
+  <article class="morandi-card p-0 overflow-hidden group">
+    <!-- 顶部莫兰迪色条 -->
+    <div :class="`h-1 bg-${topBarColor}/30 group-hover:bg-${topBarColor}/50 transition-colors`"></div>
+    
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <TagBadge :label="categoryLabel[article.category]" :accent="article.category === 'research'" />
+        <span class="font-mono text-mono text-slate">{{ formatRelativeTime(article.createdAt) }}</span>
       </div>
-      <div class="flex-1 space-y-2">
-        <h3 class="text-xl font-semibold text-ink">{{ article.title }}</h3>
-        <p class="line-clamp-3 text-[15px] text-ink-soft">{{ article.summary }}</p>
-      </div>
-    </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <span
-        v-for="tag in article.tags"
-        :key="tag"
-        class="rounded-full bg-neutral px-3 py-1 text-xs text-ink font-medium"
-      >
-        #{{ tag }}
-      </span>
-    </div>
-
-    <div class="grid gap-2 border-y border-dashed border-border py-3 font-data text-[0.65rem] text-ink-soft">
-      <span>时间 · {{ formatEventTime(article.eventTime) }}</span>
-      <span>地点 · {{ article.location ?? '待定' }}</span>
-      <span>发布机构 · {{ article.college }}</span>
-    </div>
-
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3 text-sm text-ink">
-        <div class="avatar-stack">
-          <span>DK</span>
-          <span>AI</span>
-          <span>UX</span>
+      <div class="flex gap-4 mb-4">
+        <!-- 首字母图标 - 使用莫兰迪色背景 -->
+        <div :class="`w-16 h-16 rounded-xl flex items-center justify-center text-xl font-sans font-bold text-white bg-gradient-to-br from-${topBarColor} to-${topBarColor}/80`">
+          {{ article.title.charAt(0).toUpperCase() }}
         </div>
-        <div class="text-xs text-ink-soft">+32 位同学关注</div>
+        
+        <div class="flex-1 space-y-3">
+          <h3 class="text-h3 font-sans font-semibold text-charcoal leading-tight">{{ article.title }}</h3>
+          <p class="text-body font-sans text-slate line-clamp-3">{{ article.summary }}</p>
+        </div>
       </div>
-      <AppButton variant="ghost" @click="emit('bookmark', article)">收藏</AppButton>
-    </div>
 
-    <div class="ai-ribbon">
-      <PhSparkle size="16" weight="duotone" />
-      推荐理由：{{ props.article.tags[0] ?? '破壁推荐' }} · 更配你的兴趣
+      <!-- 标签 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <TagBadge v-for="tag in article.tags.slice(0, 3)" :key="tag" :label="tag" />
+      </div>
+
+      <!-- 元信息 -->
+      <div class="pt-4 border-t border-slate/10">
+        <div class="flex flex-wrap items-center justify-between gap-3 font-mono text-mono text-slate">
+          <span>{{ formatEventTime(article.eventTime) }}</span>
+          <span>{{ article.location || '地点待定' }}</span>
+          <span class="px-2 py-1 rounded bg-slate/5 text-slate">{{ article.college }}</span>
+        </div>
+      </div>
+
+      <!-- AI 分数和操作 -->
+      <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate/10">
+        <div class="flex items-center gap-2 font-mono text-mono text-morandi-lavender">
+          <span>✨</span>
+          <span>AI 匹配度 {{ (article.aiScore * 100).toFixed(0) }}%</span>
+        </div>
+        <AppButton 
+          variant="ghost" 
+          @click="emit('bookmark', article)"
+          class="text-slate hover:text-charcoal"
+        >
+          收藏
+        </AppButton>
+      </div>
     </div>
   </article>
 </template>

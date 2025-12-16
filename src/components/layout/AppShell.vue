@@ -5,7 +5,7 @@ import AppNavBar from './AppNavBar.vue'
 <template>
   <div class="min-h-screen bg-cream text-charcoal">
     <AppNavBar />
-    <main class="main-content">
+    <main class="main-content bg-cream">
       <slot />
     </main>
   </div>

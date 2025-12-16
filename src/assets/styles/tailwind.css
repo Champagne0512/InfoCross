@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #374151;
     background-color: #FDFCF8;
     font-synthesis: none;
@@ -17,24 +17,25 @@
 
   body {
     @apply bg-cream text-charcoal min-h-screen;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   #app {
     @apply min-h-screen bg-cream;
   }
 
-  /* 字体类 */
+  /* 字体类 - 使用 Tailwind 工具类 */
   .font-sans {
-    font-family: 'Manrope', 'Outfit', sans-serif;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   }
 
   .font-mono {
-    font-family: 'DM Mono', monospace;
+    font-family: 'DM Mono', 'Monaco', 'Courier New', monospace !important;
   }
 
   /* 标题样式 */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-sans font-semibold;
+    @apply font-sans font-semibold text-charcoal;
   }
 
   h1 {
@@ -58,12 +59,17 @@
   }
 
   p {
-    @apply text-body font-sans;
+    @apply text-body font-sans text-slate;
+  }
+
+  /* 确保所有文本都使用正确字体 */
+  * {
+    font-family: inherit;
   }
 }
 
 @layer components {
-  /* 莫兰迪卡片 */
+  /* 莫兰迪卡片 - 带有柔和阴影和悬停效果 */
   .morandi-card {
     @apply bg-white rounded-morandi shadow-morandi transition-all duration-300;
   }
@@ -72,7 +78,7 @@
     @apply shadow-morandi-hover -translate-y-1;
   }
 
-  /* 莫兰迪按钮 */
+  /* 莫兰迪按钮 - 主按钮使用炭灰，次要按钮使用莫兰迪色 */
   .morandi-button {
     @apply px-6 py-3 rounded-soft font-sans font-medium transition-all duration-300;
   }
@@ -82,48 +88,53 @@
   }
 
   .morandi-button-primary {
-    @apply morandi-button bg-charcoal text-white;
+    @apply morandi-button bg-charcoal text-white hover:bg-charcoal/90;
   }
 
   .morandi-button-secondary {
-    @apply morandi-button bg-morandi-green text-white;
+    @apply morandi-button bg-morandi-green text-white hover:bg-morandi-green/90;
   }
 
-  /* AI 标签 */
+  .morandi-button-ghost {
+    @apply px-5 py-3 bg-transparent border border-slate/20 text-slate hover:bg-slate/5 hover:text-charcoal hover:border-slate/40 rounded-soft font-sans font-medium transition-all duration-300;
+  }
+
+  /* AI 标签 - 灰紫色，带有 ✨ 图标 */
   .ai-tag {
-    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full font-mono text-mono;
-    @apply border border-morandi-lavender text-morandi-lavender;
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full font-mono text-mono text-xs uppercase tracking-wider;
+    @apply border border-morandi-lavender text-morandi-lavender bg-morandi-lavender/10;
   }
 
   .ai-tag::before {
     content: '✨';
-    @apply text-sm;
+    @apply text-xs;
   }
 
-  /* 普通标签 */
+  /* 普通标签 - 莫兰迪绿色 */
   .normal-tag {
-    @apply inline-flex items-center px-3 py-1 rounded-full font-mono text-mono;
-    @apply bg-morandi-green/10 text-morandi-green border border-morandi-green/30;
+    @apply inline-flex items-center px-3 py-1 rounded-full font-mono text-mono text-xs uppercase tracking-wider;
+    @apply bg-morandi-green/10 text-morandi-green border border-morandi-green/20;
   }
 
-  /* 左侧导航 */
+  /* 左侧导航 - 固定侧边栏 */
   .sidebar-nav {
     @apply fixed left-0 top-0 h-screen w-60 bg-cream border-r border-slate/20;
-    @apply flex flex-col p-6 z-50;
+    @apply flex flex-col p-6 z-50 shadow-morandi;
   }
 
-  /* 主内容区 */
+  /* 主内容区 - 自适应宽度 */
   .main-content {
-    @apply ml-60 min-h-screen p-8;
+    @apply ml-60 min-h-screen p-8 bg-cream;
   }
 
-  /* 数据磁贴 */
+  /* 数据磁贴 - 磨砂玻璃效果 */
   .data-tile {
     @apply px-4 py-2 rounded-soft bg-white/80 backdrop-blur-sm;
-    @apply border border-slate/20 font-mono text-mono;
+    @apply border border-slate/20 font-mono text-mono text-xs uppercase tracking-wider;
+    @apply shadow-morandi-sm;
   }
 
-  /* 渐变文字 */
+  /* 渐变文字效果 */
   .gradient-text {
     @apply bg-gradient-to-r from-morandi-lavender to-morandi-blue bg-clip-text text-transparent;
   }
@@ -131,48 +142,52 @@
   /* 莫兰迪输入框 */
   .morandi-input {
     @apply w-full px-4 py-3 rounded-soft bg-white;
-    @apply border border-slate/20 focus:border-morandi-blue focus:outline-none;
-    @apply transition-all duration-300;
+    @apply border border-slate/20 focus:border-morandi-blue focus:outline-none focus:ring-2 focus:ring-morandi-blue/20;
+    @apply transition-all duration-300 font-sans text-body;
   }
 
-  /* 便利贴卡片 */
+  /* 便利贴卡片 - 三种莫兰迪色 */
   .sticky-note {
-    @apply rounded-morandi p-6 transition-all duration-300;
-    @apply hover:rotate-1 hover:scale-105;
+    @apply rounded-morandi p-6 transition-all duration-300 shadow-morandi;
+    @apply hover:rotate-1 hover:scale-105 hover:shadow-morandi-lg;
   }
 
   .sticky-note-green {
-    @apply sticky-note bg-morandi-green/10;
+    @apply sticky-note bg-morandi-green/10 border border-morandi-green/20;
   }
 
   .sticky-note-blue {
-    @apply sticky-note bg-morandi-blue/10;
+    @apply sticky-note bg-morandi-blue/10 border border-morandi-blue/20;
   }
 
   .sticky-note-clay {
-    @apply sticky-note bg-morandi-clay/10;
+    @apply sticky-note bg-morandi-clay/10 border border-morandi-clay/20;
   }
 
-  /* 能力雷达图 */
-  .radar-container {
-    @apply morandi-card p-8;
+  /* 分割线 */
+  .divider {
+    @apply h-px bg-slate/10 my-6;
   }
 
-  /* 勋章墙 */
-  .medal-wall {
-    @apply grid grid-cols-8 gap-4 p-6 morandi-card;
+  /* 标题区域 - 带底部边框 */
+  .section-header {
+    @apply pb-4 mb-6 border-b border-slate/10;
   }
 
-  .medal {
-    @apply w-16 h-16 rounded-full flex items-center justify-center;
-    @apply transition-all duration-300;
+  /* 网格布局 */
+  .morandi-grid {
+    @apply grid gap-6;
   }
 
-  .medal-lit {
-    @apply medal bg-morandi-lavender text-white;
+  .morandi-grid-2 {
+    @apply morandi-grid grid-cols-1 md:grid-cols-2;
   }
 
-  .medal-dim {
-    @apply medal bg-slate/10 border-2 border-dashed border-slate/30;
+  .morandi-grid-3 {
+    @apply morandi-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .morandi-grid-4 {
+    @apply morandi-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4;
   }
 }

@@ -8,9 +8,9 @@ const route = useRoute()
 const { isAuthenticated, profile, logout } = useAuth()
 
 const navItems = [
-  { label: '首页', path: '/', icon: '🏠' },
-  { label: '发布', path: '/publish', icon: '✏️' },
-  { label: '个人', path: '/profile', icon: '👤' },
+  { label: '首页', path: '/' },
+  { label: '发布', path: '/publish' },
+  { label: '个人', path: '/profile' },
 ]
 
 const activePath = computed(() => route.path)
@@ -41,12 +41,11 @@ function goAuth() {
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
-        class="flex items-center gap-3 px-4 py-3 rounded-soft font-sans text-body transition-all duration-300"
+        class="flex items-center px-4 py-3 rounded-soft font-sans text-body transition-all duration-300"
         :class="activePath === item.path 
           ? 'bg-morandi-lavender/10 text-charcoal font-semibold' 
           : 'text-slate hover:bg-morandi-lavender/5 hover:text-charcoal'"
       >
-        <span class="text-lg">{{ item.icon }}</span>
         <span>{{ item.label }}</span>
       </RouterLink>
     </div>
@@ -63,8 +62,8 @@ function goAuth() {
       </div>
       <div v-else class="space-y-3">
         <div class="flex items-center gap-3 px-3">
-          <div class="w-10 h-10 rounded-full bg-morandi-lavender/20 flex items-center justify-center">
-            <span class="text-lg">👤</span>
+          <div class="w-10 h-10 rounded-full bg-morandi-lavender/20 flex items-center justify-center text-morandi-lavender font-sans font-semibold">
+            {{ profile?.username?.charAt(0)?.toUpperCase() }}
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-sans text-sm font-medium text-charcoal truncate">{{ profile?.username }}</p>
