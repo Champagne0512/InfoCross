@@ -74,6 +74,13 @@ export async function registerUser(payload: RegisterPayload): Promise<UserProfil
   if (!user) {
     throw new Error('注册成功但未返回用户信息，请检查邮箱验证设置')
   }
+  if (!data.session) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: payload.email,
+      password: payload.password,
+    })
+    if (signInError) throw signInError
+  }
 
   await waitProfileRow(user.id)
 
