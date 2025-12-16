@@ -38,3 +38,29 @@ export interface AiInsight {
   confidence: number
   tags: string[]
 }
+
+export type TeamType = 'project' | 'competition' | 'research' | 'study'
+
+export interface TeamMember {
+  id: string
+  name: string
+  avatar?: string
+  skills?: string[]
+  role?: string
+}
+
+export interface Team {
+  id: number
+  name: string
+  description: string
+  type: TeamType
+  college: string
+  currentMembers: number
+  maxMembers: number
+  requiredSkills?: string[]
+  members: TeamMember[]
+  tags?: string[]
+  createdAt: string
+  deadline?: string
+  status: 'recruiting' | 'full' | 'completed'
+}
