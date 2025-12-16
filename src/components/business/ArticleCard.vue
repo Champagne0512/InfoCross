@@ -39,10 +39,25 @@ const categoryStyles = {
 
 const categoryStyle = computed(() => categoryStyles[props.article.category] || categoryStyles.research)
 const isResearch = computed(() => props.article.category === 'research')
+
+const cardBgClass = computed(() => {
+  switch (props.article.category) {
+    case 'lecture':
+      return 'morandi-card-blue'
+    case 'competition':
+      return 'morandi-card-green'
+    case 'research':
+      return 'morandi-card-lavender'
+    case 'notice':
+      return 'morandi-card-clay'
+    default:
+      return 'morandi-card-base'
+  }
+})
 </script>
 
 <template>
-  <article class="morandi-card p-0 overflow-hidden group transition-all duration-300">
+  <article :class="['morandi-card p-0 overflow-hidden group transition-all duration-300', cardBgClass]">
     <!-- 顶部莫兰迪色条 -->
     <div :class="['h-1.5 transition-all duration-300', categoryStyle.topBar]"></div>
     

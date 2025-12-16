@@ -65,7 +65,7 @@ const tabs = [
 </script>
 
 <template>
-  <div class="bg-white rounded-morandi p-8 shadow-morandi">
+  <div class="morandi-card-base">
     <!-- 标签页 -->
     <div class="flex border-b border-slate/10 mb-8">
       <button

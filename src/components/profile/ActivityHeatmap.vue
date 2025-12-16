@@ -70,7 +70,7 @@ const weekDays = ['', '一', '', '三', '', '五', '']
 </script>
 
 <template>
-  <div class="bg-white rounded-morandi p-8 shadow-morandi">
+  <div class="morandi-card-green">
     <header class="mb-8">
       <p class="font-mono text-mono text-slate mb-2">EXPLORER FOOTPRINT</p>
       <h3 class="text-h2 font-sans font-semibold text-charcoal">破壁足迹</h3>

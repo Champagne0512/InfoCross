@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import DigitalIDCard from '@/components/profile/DigitalIDCard.vue'
-import SkillRadar from '@/components/profile/SkillRadar.vue'
-import ActivityHeatmap from '@/components/profile/ActivityHeatmap.vue'
-import ReputationTags from '@/components/profile/ReputationTags.vue'
-import UserProfileTabs from '@/components/profile/UserProfileTabs.vue'
+import ProfileHeader from '@/components/profile/ProfileHeader.vue'
+import UserStats from '@/components/profile/UserStats.vue'
+import ActionGrid from '@/components/profile/ActionGrid.vue'
+import TabSwitcher from '@/components/profile/TabSwitcher.vue'
 import ProfileEditForm from '@/components/profile/ProfileEditForm.vue'
 import { useAuth } from '@/composables/useAuth'
-import { useUserStore } from '@/stores/userStore'
+import { useRouter } from 'vue-router'
 
 const { profile } = useAuth()
-const userStore = useUserStore()
-const { loading } = storeToRefs(userStore)
+const router = useRouter()
 
 const isEditModalOpen = ref(false)
 
@@ -23,47 +20,82 @@ function openEditModal() {
 function closeEditModal() {
   isEditModalOpen.value = false
 }
+
+function handleStatNavigate(id: string) {
+  // 根据统计项导航到对应页面
+  switch (id) {
+    case 'bookmarks':
+      router.push('/bookmarks')
+      break
+    case 'activities':
+      router.push('/activities')
+      break
+    case 'teams':
+      router.push('/team')
+      break
+    case 'credit':
+      router.push('/credit')
+      break
+  }
+}
+
+function handleAction(action: string) {
+  // 处理功能磁贴点击
+  switch (action) {
+    case 'team':
+      router.push('/team')
+      break
+    case 'progress':
+      router.push('/progress')
+      break
+    case 'forum':
+      router.push('/forum')
+      break
+    case 'security':
+      router.push('/settings')
+      break
+  }
+}
+
+function handleTabNavigate(tab: string, itemId: number) {
+  // 处理列表项点击
+  console.log('Navigate to:', tab, itemId)
+}
 </script>
 
 <template>
-  <div class="space-y-10">
-    <!-- Bento Grid 上半部分 -->
-    <section class="grid gap-8 lg:grid-cols-3">
-      <!-- 左侧：数字工牌（占1份） -->
-      <div class="lg:col-span-1">
-        <DigitalIDCard 
-          v-if="profile" 
-          :profile="profile" 
-          @edit="openEditModal"
-        />
-        <div v-else class="bg-white rounded-morandi p-8 shadow-morandi h-full flex items-center justify-center">
-          <p class="text-slate">请先登录</p>
-        </div>
-      </div>
-      
-      <!-- 右侧：能力雷达图（占2份） -->
-      <div class="lg:col-span-2">
-        <SkillRadar />
-      </div>
-    </section>
+  <div v-if="profile" class="min-h-screen bg-cream">
+    <!-- 顶部：个人资料卡 -->
+    <ProfileHeader 
+      :profile="profile" 
+      @edit="openEditModal"
+    />
+    
+    <!-- 中部：状态数据栏 -->
+    <UserStats @navigate="handleStatNavigate" />
+    
+    <!-- 主体：功能磁贴区 -->
+    <ActionGrid @action="handleAction" />
+    
+    <!-- 底部：内容列表切换 -->
+    <TabSwitcher @navigate="handleTabNavigate" />
+  </div>
 
-    <!-- Bento Grid 中间部分 -->
-    <section class="grid gap-8 lg:grid-cols-2">
-      <!-- 左侧：破壁足迹 -->
-      <div class="lg:col-span-1">
-        <ActivityHeatmap />
+  <!-- 未登录状态 -->
+  <div v-else class="min-h-screen bg-cream flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-16 h-16 rounded-full bg-slate/10 flex items-center justify-center mx-auto mb-6">
+        <span class="text-2xl text-slate">👤</span>
       </div>
-      
-      <!-- 右侧：队友评价 -->
-      <div class="lg:col-span-1">
-        <ReputationTags />
-      </div>
-    </section>
-
-    <!-- 底部：全宽内容选项卡 -->
-    <section>
-      <UserProfileTabs />
-    </section>
+      <h2 class="text-h2 font-sans font-bold text-charcoal mb-3">请先登录</h2>
+      <p class="text-body font-sans text-slate mb-8">登录后即可查看个人资料</p>
+      <button 
+        @click="$router.push('/auth')"
+        class="px-6 py-3 rounded-soft bg-morandi-lavender text-white font-sans font-medium hover:bg-morandi-lavender/90 transition-colors"
+      >
+        前往登录
+      </button>
+    </div>
   </div>
 
   <!-- 编辑模态框 -->
@@ -78,7 +110,6 @@ function closeEditModal() {
         @click.stop
       >
         <ProfileEditForm 
-          v-if="profile"
           :profile="profile"
           @close="closeEditModal"
           @updated="closeEditModal"

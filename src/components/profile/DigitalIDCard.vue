@@ -21,7 +21,7 @@ const isHovering = ref(false)
 
 <template>
   <div 
-    class="relative bg-morandi-lavender/5 rounded-morandi p-8 shadow-morandi h-full border border-morandi-lavender/10 transition-all duration-300 cursor-pointer"
+    class="relative morandi-card-lavender h-full cursor-pointer"
     @mouseenter="isHovering = true"
     @mouseleave="isHovering = false"
     :class="{ 'scale-[1.01] shadow-xl': isHovering }"

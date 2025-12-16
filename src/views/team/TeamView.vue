@@ -129,7 +129,7 @@ function resetFilters() {
 <template>
   <div class="space-y-10">
     <!-- 页面标题 -->
-    <section class="morandi-card p-8">
+    <section class="morandi-card-blue p-8">
       <div class="max-w-4xl mx-auto text-center">
         <p class="font-mono text-mono text-slate mb-4 tracking-wider">TEAM COLLABORATION</p>
         <h1 class="text-hero font-sans font-bold text-charcoal mb-6 leading-tight">
@@ -146,7 +146,7 @@ function resetFilters() {
     </section>
 
     <!-- 筛选面板 -->
-    <section class="morandi-card p-8">
+    <section class="morandi-card-mist p-8">
       <!-- 搜索框 -->
       <div class="mb-8">
         <AppInput 
@@ -256,7 +256,7 @@ function resetFilters() {
         <div v-for="index in 6" :key="index" class="h-96 rounded-morandi bg-mist animate-pulse" />
       </div>
       
-      <div v-else-if="filteredTeams.length === 0" class="morandi-card p-12 text-center">
+      <div v-else-if="filteredTeams.length === 0" class="morandi-card-base p-12 text-center">
         <div class="w-16 h-16 rounded-full bg-slate/10 flex items-center justify-center mx-auto mb-6">
           <span class="text-2xl text-slate">🔍</span>
         </div>

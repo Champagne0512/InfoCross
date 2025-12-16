@@ -12,7 +12,7 @@ const reputationTags = [
 </script>
 
 <template>
-  <div class="bg-white rounded-morandi p-8 shadow-morandi">
+  <div class="morandi-card-clay">
     <header class="mb-8">
       <p class="font-mono text-mono text-slate mb-2">TEAMMATE REVIEWS</p>
       <h3 class="text-h2 font-sans font-semibold text-charcoal">队友印象</h3>

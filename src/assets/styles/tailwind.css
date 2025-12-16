@@ -8,7 +8,7 @@
   :root {
     font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #374151;
-    background-color: #FDFCF8;
+    background-color: #F9F7F4;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -108,6 +108,36 @@
   .ai-tag::before {
     content: '🧠';
     @apply text-xs;
+  }
+
+  /* 莫兰迪卡片 - 极淡背景色 */
+  .morandi-card {
+    @apply rounded-morandi p-6 transition-all duration-300 shadow-morandi;
+    @apply hover:shadow-morandi-hover hover:-translate-y-1;
+  }
+
+  .morandi-card-base {
+    @apply morandi-card bg-card-base border border-slate/10 backdrop-blur-sm;
+  }
+
+  .morandi-card-blue {
+    @apply morandi-card bg-card-blue border border-morandi-blue/10 backdrop-blur-sm;
+  }
+
+  .morandi-card-green {
+    @apply morandi-card bg-card-green border border-morandi-green/10 backdrop-blur-sm;
+  }
+
+  .morandi-card-clay {
+    @apply morandi-card bg-card-clay border border-morandi-clay/10 backdrop-blur-sm;
+  }
+
+  .morandi-card-lavender {
+    @apply morandi-card bg-card-lavender border border-morandi-lavender/15 backdrop-blur-sm;
+  }
+
+  .morandi-card-mist {
+    @apply morandi-card bg-card-mist border border-slate/10 backdrop-blur-sm;
   }
 
   /* 普通标签 - 莫兰迪绿色 */

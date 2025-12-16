@@ -57,9 +57,9 @@ async function handleBookmark(article: Article) {
 
 <template>
   <div class="space-y-10">
-    <!-- Hero 区域 - 更精致的问候 -->
-    <section class="morandi-card p-10">
-      <div class="max-w-4xl mx-auto text-center">
+    <!-- Hero 区域 - 直接融入背景 -->
+    <section class="py-16 lg:py-20">
+      <div class="max-w-4xl mx-auto text-center px-6">
         <p class="font-mono text-mono text-slate mb-4 tracking-wider">{{ new Date().toLocaleDateString() }}</p>
         <h1 class="text-hero font-sans font-bold text-charcoal mb-6 leading-tight">
           Hello, Explorer
@@ -79,7 +79,7 @@ async function handleBookmark(article: Article) {
       <!-- 左侧：主要内容 -->
       <div class="lg:col-span-2 space-y-10">
         <!-- 精选内容 -->
-        <div class="morandi-card p-8">
+        <div class="morandi-card-base p-8">
           <header class="flex items-center justify-between mb-8">
             <div>
               <p class="font-mono text-mono text-slate mb-2">FEATURED</p>
@@ -139,7 +139,7 @@ async function handleBookmark(article: Article) {
       <div class="lg:col-span-1">
         <div class="sticky top-8 space-y-8">
           <!-- AI 洞察 -->
-          <div v-if="heroInsights.length" class="morandi-card p-6">
+          <div v-if="heroInsights.length" class="morandi-card-lavender p-6">
             <div class="text-center mb-6">
               <div class="w-10 h-10 rounded-full bg-morandi-lavender/10 flex items-center justify-center text-morandi-lavender mx-auto mb-3">
                 <AiIcon size="lg" color="#B4A8BF" />
@@ -151,7 +151,7 @@ async function handleBookmark(article: Article) {
           </div>
 
           <!-- 今日摘要 -->
-          <div class="morandi-card p-6">
+          <div class="morandi-card-mist p-6">
             <header class="text-center mb-6">
               <p class="font-mono text-mono text-slate mb-2">TL;DR</p>
               <h3 class="text-h2 font-sans font-semibold text-charcoal">今日重点</h3>
