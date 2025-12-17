@@ -4,6 +4,7 @@ import ArticleCard from '@/components/business/ArticleCard.vue'
 import InsightPanel from '@/components/business/InsightPanel.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AiIcon from '@/components/common/AiIcon.vue'
+import { Activity, Zap, Layers } from 'lucide-vue-next'
 import { fetchArticles, fetchRecommendedArticles } from '@/api/article'
 import type { Article } from '@/types/models'
 import { buildMockInsights } from '@/utils/ai-parser'
@@ -16,6 +17,7 @@ const frequencyStore = useFrequencyStore()
 const articles = ref<Article[]>([])
 const recommended = ref<Article[]>([])
 const selectedCategory = ref<string>('all')
+const searchQuery = ref('')
 const loading = ref(true)
 const { profile } = useAuth()
 
@@ -104,29 +106,170 @@ async function loadArticles() {
 async function handleBookmark(article: Article) {
   await recordInteraction({ articleId: article.id, type: 'bookmark' })
 }
+
+function handleSearch() {
+  if (!searchQuery.value.trim()) return
+  // 搜索逻辑 - 可以跳转到搜索结果页或过滤当前列表
+  console.log('搜索:', searchQuery.value)
+}
 </script>
 
 <template>
   <div class="space-y-10">
-    <!-- Hero 区域 -->
-    <section class="py-16 lg:py-20">
-      <div class="max-w-4xl mx-auto text-center px-6">
-        <p class="font-mono text-mono text-slate mb-4 tracking-wider">{{ new Date().toLocaleDateString() }}</p>
-        <h1 class="text-hero font-sans font-bold text-charcoal mb-6 leading-tight">
-          {{ pageConfig.greeting }}
-        </h1>
-        <p class="text-body font-sans text-slate mb-10 max-w-2xl mx-auto leading-relaxed">
-          {{ pageConfig.desc }}
-        </p>
-        <div class="flex justify-center gap-4">
-          <AppButton 
-            variant="primary" 
-            :class="frequencyStore.isVibe ? 'vibe-button' : ''"
-            @click="$router.push('/publish')"
+    <!-- Hero Dashboard 区域 -->
+    <section class="py-12 lg:py-16">
+      <div class="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] items-start">
+        <!-- 左侧：问候语 + 价值主张 + 操作按钮 -->
+        <div class="space-y-6">
+          <div>
+            <p class="font-mono text-mono text-slate mb-3 tracking-wider">
+              {{ new Date().toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' }) }}
+            </p>
+            <h1 class="text-hero font-sans font-bold text-charcoal mb-4 leading-tight">
+              {{ pageConfig.greeting }}
+            </h1>
+            <p class="text-body font-sans text-slate leading-relaxed max-w-xl">
+              {{ pageConfig.desc }}
+            </p>
+          </div>
+          <!-- 全局搜索栏 -->
+          <div class="relative max-w-xl">
+            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="frequencyStore.isFocus ? '搜索讲座、比赛、研究项目...' : '搜索约伴、活动、话题...'"
+              class="w-full pl-12 pr-4 py-3 rounded-full border bg-white/80 backdrop-blur-sm font-sans text-body text-charcoal placeholder:text-slate/60 transition-all duration-300 focus:outline-none focus:ring-2"
+              :class="frequencyStore.isFocus 
+                ? 'border-slate/20 focus:border-focus-primary focus:ring-focus-primary/20' 
+                : 'border-vibe-primary/20 focus:border-vibe-primary focus:ring-vibe-primary/20'"
+              @keyup.enter="handleSearch"
+            />
+            <button
+              v-if="searchQuery"
+              @click="searchQuery = ''"
+              class="absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 右侧：数据磁贴区 -->
+        <div class="grid gap-4">
+          <!-- 磁贴 1: 活动/动态数 -->
+          <div 
+            class="p-5 rounded-morandi backdrop-blur-sm border transition-all duration-300 hover:shadow-morandi-hover hover:-translate-y-0.5"
+            :class="frequencyStore.isFocus 
+              ? 'bg-card-blue border-morandi-blue/15' 
+              : 'bg-card-vibe border-vibe-primary/20'"
           >
-            {{ pageConfig.publishText }}
-          </AppButton>
-          <AppButton variant="ghost" @click="loadArticles">{{ pageConfig.refreshText }}</AppButton>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div 
+                  class="w-10 h-10 rounded-soft flex items-center justify-center"
+                  :class="frequencyStore.isFocus ? 'bg-morandi-blue/15' : 'bg-vibe-primary/15'"
+                >
+                  <Activity 
+                    :size="20" 
+                    :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'" 
+                  />
+                </div>
+                <div>
+                  <p class="font-mono text-mono text-xs text-slate tracking-wider uppercase">
+                    {{ frequencyStore.isFocus ? 'New Events' : 'Live Now' }}
+                  </p>
+                  <p class="font-sans text-sm text-charcoal">
+                    {{ frequencyStore.isFocus ? '今日新增活动' : '正在进行的约伴' }}
+                  </p>
+                </div>
+              </div>
+              <span 
+                class="font-mono text-2xl font-bold"
+                :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'"
+              >
+                {{ articles.length }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 磁贴 2: AI推荐/热度 -->
+          <div 
+            class="p-5 rounded-morandi backdrop-blur-sm border transition-all duration-300 hover:shadow-morandi-hover hover:-translate-y-0.5"
+            :class="frequencyStore.isFocus 
+              ? 'bg-card-lavender border-morandi-lavender/15' 
+              : 'bg-card-vibe border-vibe-secondary/20'"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div 
+                  class="w-10 h-10 rounded-soft flex items-center justify-center"
+                  :class="frequencyStore.isFocus ? 'bg-morandi-lavender/15' : 'bg-vibe-secondary/15'"
+                >
+                  <Zap 
+                    :size="20" 
+                    :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'" 
+                  />
+                </div>
+                <div>
+                  <p class="font-mono text-mono text-xs text-slate tracking-wider uppercase">
+                    {{ frequencyStore.isFocus ? 'AI Picks' : 'Trending' }}
+                  </p>
+                  <p class="font-sans text-sm text-charcoal">
+                    {{ frequencyStore.isFocus ? '破壁推荐' : '热门话题' }}
+                  </p>
+                </div>
+              </div>
+              <span 
+                class="font-mono text-2xl font-bold"
+                :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
+              >
+                {{ recommended.length }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 磁贴 3: 跨学科指数/活跃度 -->
+          <div 
+            class="p-5 rounded-morandi backdrop-blur-sm border transition-all duration-300 hover:shadow-morandi-hover hover:-translate-y-0.5"
+            :class="frequencyStore.isFocus 
+              ? 'bg-card-green border-morandi-green/15' 
+              : 'bg-card-vibe border-vibe-primary/20'"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div 
+                  class="w-10 h-10 rounded-soft flex items-center justify-center"
+                  :class="frequencyStore.isFocus ? 'bg-morandi-green/15' : 'bg-vibe-primary/15'"
+                >
+                  <Layers 
+                    :size="20" 
+                    :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'" 
+                  />
+                </div>
+                <div>
+                  <p class="font-mono text-mono text-xs text-slate tracking-wider uppercase">
+                    {{ frequencyStore.isFocus ? 'Cross Index' : 'Activity' }}
+                  </p>
+                  <p class="font-sans text-sm text-charcoal">
+                    {{ frequencyStore.isFocus ? '跨学科指数' : '校园活跃度' }}
+                  </p>
+                </div>
+              </div>
+              <span 
+                class="font-mono text-2xl font-bold"
+                :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'"
+              >
+                {{ frequencyStore.isFocus ? '89%' : 'HIGH' }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
