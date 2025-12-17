@@ -52,9 +52,9 @@ currentS2.value = initValues.s2
 // 目标值（响应模式变化）
 const targetValues = computed(() => getTargetValues(frequencyStore.isFocus))
 
-// 颜色配置
-const bodyColor = computed(() => frequencyStore.isFocus ? '#374151' : '#ede9e3')
-const textColor = computed(() => frequencyStore.isFocus ? '#ede9e3' : '#374151')
+// 固定颜色配置（不随模式变化）
+const bodyColor = '#374151'
+const textColor = '#ede9e3'
 
 // 线性插值函数
 const lerp = (current: number, target: number, factor: number) => {
@@ -161,8 +161,6 @@ const body2Y = computed(() => CENTER_Y + currentR2.value * Math.sin(angle.value 
   border: 1px solid;
   border-radius: 50%;
   opacity: 0.3;
-  /* 颜色过渡 */
-  transition: border-color 0.5s ease;
 }
 
 .barycenter {
@@ -174,7 +172,6 @@ const body2Y = computed(() => CENTER_Y + currentR2.value * Math.sin(angle.value 
   height: 3px;
   border-radius: 50%;
   opacity: 0.6;
-  transition: background-color 0.5s ease;
 }
 
 .body {
@@ -187,7 +184,5 @@ const body2Y = computed(() => CENTER_Y + currentR2.value * Math.sin(angle.value 
   justify-content: center;
   font-family: 'Manrope', sans-serif;
   font-weight: 600;
-  /* 颜色过渡（大小和位置由JS插值处理） */
-  transition: background-color 0.5s ease, color 0.5s ease;
 }
 </style>
