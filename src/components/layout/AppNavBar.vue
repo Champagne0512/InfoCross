@@ -17,6 +17,7 @@ const navItems = computed(() => {
       { label: '首页', path: '/' },
       { label: '发布', path: '/publish' },
       { label: '组队', path: '/team' },
+      { label: '论坛', path: '/forum' },
       { label: '个人', path: '/profile' },
     ]
   }
@@ -24,6 +25,7 @@ const navItems = computed(() => {
     { label: '动态', path: '/' },
     { label: '发起', path: '/publish' },
     { label: '约伴', path: '/team' },
+    { label: '论坛', path: '/forum' },
     { label: '我的', path: '/profile' },
   ]
 })

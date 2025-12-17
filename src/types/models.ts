@@ -64,3 +64,55 @@ export interface Team {
   deadline?: string
   status: 'recruiting' | 'full' | 'completed'
 }
+
+export type ForumThreadType = 'signal' | 'depth'
+export type DepthCategory = 'review' | 'guide' | 'discussion' | 'debate' | 'question'
+
+export interface ForumThread {
+  id: number
+  createdAt: string
+  updatedAt: string
+  authorId: string
+  authorName?: string
+  authorAvatar?: string
+  authorCollege?: string
+  isAnonymous: boolean
+  type: ForumThreadType
+  category?: DepthCategory
+  title?: string
+  contentText: string
+  contentDelta?: Record<string, unknown>
+  summary?: string
+  coverUrl?: string
+  linkedEntities?: Array<{ type: 'event' | 'team'; id: number }>
+  aiTags: string[]
+  sentimentScore: number
+  readTimeMinutes: number
+  viewCount: number
+  likeCount: number
+  commentCount: number
+  shareCount: number
+  sourceCollege?: string
+}
+
+export interface ForumComment {
+  id: number
+  createdAt: string
+  threadId: number
+  authorId: string
+  authorName?: string
+  authorAvatar?: string
+  isAnonymous: boolean
+  content: string
+  parentId?: number
+  likeCount: number
+  replies?: ForumComment[]
+}
+
+export interface ForumHotTopic {
+  id: number
+  title: string
+  threadIds: number[]
+  heatScore: number
+  threadCount: number
+}
