@@ -18,21 +18,28 @@ const frequencyStore = useFrequencyStore()
         :class="frequencyStore.isFocus ? 'thumb-focus' : 'thumb-vibe'"
       />
       
-      <!-- 左侧标签 - Focus -->
-      <span 
-        class="switch-label label-left"
-        :class="{ active: frequencyStore.isFocus }"
+      <!-- 标签容器 - 随状态切换位置 -->
+      <div 
+        class="labels-container"
+        :class="frequencyStore.isFocus ? 'labels-right' : 'labels-left'"
       >
-        Focus
-      </span>
-      
-      <!-- 右侧标签 - Vibe -->
-      <span 
-        class="switch-label label-right"
-        :class="{ active: frequencyStore.isVibe }"
-      >
-        Vibe
-      </span>
+        <span 
+          class="switch-label"
+          :class="[
+            frequencyStore.isFocus ? 'text-focus-accent active' : 'text-focus-accent'
+          ]"
+        >
+          Focus
+        </span>
+        <span 
+          class="switch-label"
+          :class="[
+            frequencyStore.isVibe ? 'text-vibe-accent active' : 'text-vibe-accent'
+          ]"
+        >
+          Vibe
+        </span>
+      </div>
     </button>
   </div>
 </template>
@@ -44,8 +51,9 @@ const frequencyStore = useFrequencyStore()
 
 .switch-track {
   @apply relative w-32 h-9 rounded-full cursor-pointer transition-all duration-500;
-  @apply flex items-center justify-between px-1;
+  @apply flex items-center px-1;
   @apply shadow-morandi-sm hover:shadow-morandi;
+  overflow: hidden;
 }
 
 .track-focus {
@@ -63,6 +71,7 @@ const frequencyStore = useFrequencyStore()
 .switch-thumb {
   @apply absolute w-7 h-7 rounded-full;
   @apply shadow-morandi transition-all duration-500 ease-out;
+  z-index: 10;
 }
 
 .thumb-focus {
@@ -75,17 +84,24 @@ const frequencyStore = useFrequencyStore()
   background: linear-gradient(135deg, #D9A69F, #E8D5B7);
 }
 
+/* 标签容器 */
+.labels-container {
+  @apply absolute flex gap-2 transition-all duration-500 ease-out;
+}
+
+/* Focus状态：标签在右侧（圆形在左） */
+.labels-right {
+  @apply left-9 right-2;
+}
+
+/* Vibe状态：标签在左侧（圆形在右） */
+.labels-left {
+  @apply left-2 right-9;
+}
+
 .switch-label {
   @apply font-mono text-xs uppercase tracking-wider;
-  @apply transition-all duration-300 z-10;
-}
-
-.label-left {
-  @apply ml-8 text-focus-accent;
-}
-
-.label-right {
-  @apply mr-2 text-vibe-accent;
+  @apply transition-all duration-300;
 }
 
 .switch-label:not(.active) {
