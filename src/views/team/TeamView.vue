@@ -8,6 +8,7 @@ import type { Team } from '@/types/models'
 
 const teams = ref<Team[]>([])
 const loading = ref(true)
+const filterExpanded = ref(false)
 
 // 筛选状态
 const searchQuery = ref('')
@@ -129,35 +130,45 @@ function resetFilters() {
 <template>
   <div class="space-y-10">
     <!-- 页面标题 -->
-    <section class="morandi-card-blue p-8">
-      <div class="max-w-4xl mx-auto text-center">
-        <p class="font-mono text-mono text-slate mb-4 tracking-wider">TEAM COLLABORATION</p>
-        <h1 class="text-hero font-sans font-bold text-charcoal mb-6 leading-tight">
-          组队协作
-        </h1>
-        <p class="text-body font-sans text-slate mb-8 max-w-2xl mx-auto leading-relaxed">
-          找到志同道合的队友，一起完成项目、参加比赛、进行科研。AI 智能匹配，让组队更高效。
-        </p>
-        <div class="flex justify-center gap-4">
-          <AppButton variant="primary" @click="$router.push('/publish?type=team')">创建团队</AppButton>
-          <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
-        </div>
+    <section class="max-w-4xl mx-auto text-center">
+      <p class="font-mono text-mono text-slate mb-4 tracking-wider">TEAM COLLABORATION</p>
+      <h1 class="text-hero font-sans font-bold text-charcoal mb-6 leading-tight">
+        组队协作
+      </h1>
+      <p class="text-body font-sans text-slate mb-8 max-w-2xl mx-auto leading-relaxed">
+        找到志同道合的队友，一起完成项目、参加比赛、进行科研。AI 智能匹配，让组队更高效。
+      </p>
+      <div class="flex justify-center gap-4">
+        <AppButton variant="primary" @click="$router.push('/publish?type=team')">创建团队</AppButton>
+        <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
       </div>
     </section>
 
     <!-- 筛选面板 -->
-    <section class="morandi-card-mist p-8">
-      <!-- 搜索框 -->
-      <div class="mb-8">
-        <AppInput 
-          label="搜索团队"
-          v-model="searchQuery"
-          placeholder="搜索团队名称、技能、描述..."
-        />
+    <section class="morandi-card-mist p-6">
+      <!-- 筛选头部：搜索框 + 展开按钮 -->
+      <div class="flex items-end gap-4">
+        <div class="flex-1">
+          <AppInput 
+            label="搜索团队"
+            v-model="searchQuery"
+            placeholder="搜索团队名称、技能、描述..."
+          />
+        </div>
+        <button
+          class="flex items-center gap-2 px-4 py-3 rounded-soft font-sans text-sm text-slate hover:bg-slate/5 transition-all"
+          @click="filterExpanded = !filterExpanded"
+        >
+          <span>{{ filterExpanded ? '收起筛选' : '展开筛选' }}</span>
+          <span class="transition-transform" :class="filterExpanded ? 'rotate-180' : ''">▼</span>
+        </button>
       </div>
 
-      <!-- 筛选选项 -->
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+      <!-- 筛选选项（可折叠） -->
+      <div 
+        class="grid gap-6 md:grid-cols-2 lg:grid-cols-5 overflow-hidden transition-all duration-300"
+        :class="filterExpanded ? 'mt-8 max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 mt-0'"
+      >
         <!-- 团队类型 -->
         <div>
           <label class="block font-mono text-mono text-slate text-xs mb-3 tracking-wider">团队类型</label>

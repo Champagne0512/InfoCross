@@ -89,7 +89,7 @@ async function handleBookmark(article: Article) {
               <button
                 v-for="category in categories"
                 :key="category.value"
-                class="px-4 py-2 rounded-soft font-mono text-mono text-xs uppercase tracking-wider transition-all"
+                class="px-4 py-2 rounded-soft font-sans text-caption uppercase tracking-wider transition-all"
                 :class="selectedCategory === category.value
                   ? 'bg-charcoal text-white'
                   : 'bg-white border border-slate/20 text-slate hover:bg-slate/5'"
