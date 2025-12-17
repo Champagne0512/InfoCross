@@ -63,7 +63,10 @@ function goAuth() {
       </div>
       <div v-else class="space-y-3">
         <div class="flex items-center gap-3 px-3">
-          <div class="w-10 h-10 rounded-full bg-morandi-lavender/20 flex items-center justify-center text-morandi-lavender font-sans font-semibold">
+          <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden">
+            <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
+          </div>
+          <div v-else class="w-10 h-10 rounded-full bg-morandi-lavender/20 flex items-center justify-center text-morandi-lavender font-sans font-semibold">
             {{ profile?.username?.charAt(0)?.toUpperCase() }}
           </div>
           <div class="flex-1 min-w-0">
@@ -73,7 +76,7 @@ function goAuth() {
         </div>
         <button 
           @click="handleLogout"
-          class="w-full px-4 py-2 rounded-soft border border-slate/20 font-sans text-sm text-slate transition-all duration-300 hover:bg-slate/5"
+          class="w-full px-4 py-2 rounded-soft bg-morandi-clay/10 border border-morandi-clay/30 font-sans text-sm text-morandi-clay transition-all duration-300 hover:bg-morandi-clay/20"
         >
           退出登录
         </button>
