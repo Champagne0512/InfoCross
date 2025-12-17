@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import FrequencySwitch from '@/components/common/FrequencySwitch.vue'
+import BinaryOrbitAnimation from '@/components/common/BinaryOrbitAnimation.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -52,8 +53,9 @@ function goAuth() {
     </div>
 
     <!-- 频率切换器 -->
-    <div class="mb-8 pb-6 border-b border-slate/10">
-      <p class="font-mono text-xs text-slate mb-3 tracking-wider uppercase">Mode</p>
+    <div class="mb-6 pb-6 border-b border-slate/10">
+      <!-- 双天体轨道动画 -->
+      <BinaryOrbitAnimation class="mb-4" />
       <FrequencySwitch />
       <p class="font-sans text-xs text-slate mt-3 text-center">
         {{ frequencyStore.config.desc }}

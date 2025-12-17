@@ -50,12 +50,14 @@ const frequencyStore = useFrequencyStore()
 
 .track-focus {
   background: linear-gradient(135deg, #E8F0F0, #F0F4F4);
-  @apply border border-focus-primary/20;
+  @apply border;
+  border-color: rgba(147, 168, 172, 0.2);
 }
 
 .track-vibe {
   background: linear-gradient(135deg, #FDF6F0, #FBF2EA);
-  @apply border border-vibe-primary/20;
+  @apply border;
+  border-color: rgba(217, 166, 159, 0.2);
 }
 
 .switch-thumb {
