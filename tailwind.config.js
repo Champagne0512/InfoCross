@@ -21,6 +21,20 @@ export default {
           lavender: '#B4A8BF', // 灰紫 - AI/科技
         },
         
+        // 双频模式配色
+        focus: {
+          primary: '#93A8AC',   // 雾霾蓝 - Focus 主色
+          secondary: '#A6B9A8', // 鼠尾草绿 - Focus 辅色
+          bg: '#F4F7F7',        // 冷调背景
+          accent: '#7A9A9E',    // 深雾霾蓝
+        },
+        vibe: {
+          primary: '#D9A69F',   // 陶土色 - Vibe 主色
+          secondary: '#E8D5B7', // 暖沙色 - Vibe 辅色
+          bg: '#FBF8F4',        // 暖调背景
+          accent: '#C4887E',    // 深陶土色
+        },
+        
         // 卡片背景色 - 莫兰迪色系，20-30%透明度，与背景形成柔和对比
         card: {
           base: 'rgba(255, 255, 255, 0.85)',  // 半透明白，通用卡片
@@ -29,6 +43,10 @@ export default {
           clay: 'rgba(217, 166, 159, 0.25)',   // 柔和脏粉 - 社交类
           lavender: 'rgba(180, 168, 191, 0.3)', // 柔和灰紫 - AI/个人相关
           mist: 'rgba(228, 225, 221, 0.7)',    // 柔和迷雾灰 - 中性卡片
+          // Focus Mode 卡片
+          focus: 'rgba(147, 168, 172, 0.15)',
+          // Vibe Mode 卡片
+          vibe: 'rgba(217, 166, 159, 0.2)',
         }
       },
       // 字体系统

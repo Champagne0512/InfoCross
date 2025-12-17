@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import TagBadge from '@/components/business/TagBadge.vue'
 import { createArticle } from '@/api/article'
+import { useFrequencyStore } from '@/stores/frequencyStore'
 import type { ArticleCategory } from '@/types/models'
+
+const frequencyStore = useFrequencyStore()
 
 const form = reactive({
   title: '',
@@ -13,11 +16,79 @@ const form = reactive({
   eventTime: '',
   location: '',
   tags: '',
+  lifespan: '4h', // Vibe 模式专用
 })
 
 const creating = ref(false)
 const successMessage = ref('')
-const skillGaps = ['财务分析', 'UI 设计', '文案策划']
+
+// Focus 模式分类
+const focusCategories = [
+  { label: '讲座 Lecture', value: 'lecture' },
+  { label: '比赛 Competition', value: 'competition' },
+  { label: '研究 Research', value: 'research' },
+  { label: '通知 Notice', value: 'notice' },
+]
+
+// Vibe 模式分类
+const vibeCategories = [
+  { label: '约饭', value: 'meal' },
+  { label: '运动', value: 'sports' },
+  { label: '拼车', value: 'carpool' },
+  { label: '游戏', value: 'gaming' },
+  { label: '自习', value: 'study' },
+]
+
+// Vibe 模式时效选项
+const lifespanOptions = [
+  { label: '2小时', value: '2h' },
+  { label: '4小时', value: '4h' },
+  { label: '今天内', value: 'today' },
+  { label: '本周内', value: 'week' },
+]
+
+const categories = computed(() => 
+  frequencyStore.isFocus ? focusCategories : vibeCategories
+)
+
+// 页面配置
+const pageConfig = computed(() => {
+  if (frequencyStore.isFocus) {
+    return {
+      subtitle: 'CANVAS',
+      title: '发布活动',
+      desc: '便利贴式表单 + 实时预览。填写信息后右侧即可看到卡片成品，AI 将自动生成摘要与标签。',
+      titleLabel: '活动标题',
+      titlePlaceholder: 'AI 伦理破壁研讨会',
+      contentLabel: '正文内容',
+      contentPlaceholder: '粘贴活动详情或描述海报信息...',
+      submitText: '提交信息',
+      aiText: 'AI 辅助填充',
+      previewTitle: '实时预览',
+      skillGapTitle: '技能缺口',
+    }
+  }
+  return {
+    subtitle: 'QUICK POST',
+    title: '发起约伴',
+    desc: '快速发布限时动态，找到志同道合的伙伴。动态将在设定时间后自动消失。',
+    titleLabel: '约伴主题',
+    titlePlaceholder: '二食堂约饭',
+    contentLabel: '详细说明',
+    contentPlaceholder: '说明时间、地点、人数要求...',
+    submitText: '立即发布',
+    aiText: '智能填充',
+    previewTitle: '动态预览',
+    skillGapTitle: '热门约伴',
+  }
+})
+
+const skillGaps = computed(() => {
+  if (frequencyStore.isFocus) {
+    return ['财务分析', 'UI 设计', '文案策划']
+  }
+  return ['羽毛球 3缺1', '图书馆自习', '晚餐约伴']
+})
 
 async function submit() {
   creating.value = true
@@ -46,7 +117,9 @@ async function submit() {
 
 function useAiAssist() {
   if (!form.content) {
-    form.content = '上传海报后，AI 将自动识别时间、地点并生成 TL;DR 与标签。'
+    form.content = frequencyStore.isFocus 
+      ? '上传海报后，AI 将自动识别时间、地点并生成摘要与标签。'
+      : '今晚 6 点，二食堂门口集合，一起吃饭聊天！'
   }
   if (!form.eventTime) {
     form.eventTime = new Date().toISOString().slice(0, 16)
@@ -56,84 +129,192 @@ function useAiAssist() {
 </script>
 
 <template>
-  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)]">
-    <section class="panel">
-      <header class="space-y-3">
-        <p class="font-data text-xs text-intelligence">CANVAS · 组队发布</p>
-        <h1 class="text-2xl font-semibold text-ink">技能互补型招募画布</h1>
-        <p class="text-sm text-ink-soft">
-          便利贴式表单 + 实时预览。填写信息后右侧即可看到卡片成品，AI 将自动生成 TL;DR 与技能缺口。
-        </p>
-      </header>
-      <form class="mt-6 space-y-6" @submit.prevent="submit">
-        <div class="grid gap-4 md:grid-cols-2">
-          <AppInput label="活动标题" v-model="form.title" placeholder="AI 伦理破壁研讨会" />
-          <label class="flex flex-col gap-2 text-sm font-medium text-ink">
-            <span class="font-data text-xs text-ink-soft">类别</span>
-            <select
-              v-model="form.category"
-              class="rounded-xl border border-border bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none"
-            >
-              <option value="lecture">讲座 Lecture</option>
-              <option value="competition">比赛 Competition</option>
-              <option value="research">研究 Research</option>
-              <option value="notice">通知 Notice</option>
-            </select>
-          </label>
-          <AppInput label="时间" v-model="form.eventTime" type="datetime-local" :mono="true" />
-          <AppInput label="地点" v-model="form.location" placeholder="图书馆 B1" />
-          <AppInput label="标签 (逗号分隔)" v-model="form.tags" placeholder="AI, 伦理, 设计, 摄影" />
-        </div>
-        <label class="flex flex-col gap-2 text-sm font-medium text-ink">
-          <span class="font-data text-xs text-ink-soft">正文内容</span>
-          <textarea
-            v-model="form.content"
-            rows="6"
-            class="rounded-xl border border-border bg-surface p-4 text-base text-ink outline-none transition focus:border-ink"
-            placeholder="粘贴活动详情或描述海报信息..."
-          />
-        </label>
-        <div class="flex flex-wrap gap-4">
-          <AppButton type="submit" :loading="creating">提交信息</AppButton>
-          <AppButton variant="ghost" type="button" @click="useAiAssist">AI 辅助填充</AppButton>
-        </div>
-        <p v-if="successMessage" class="font-data text-xs text-intelligence">{{ successMessage }}</p>
-      </form>
+  <div class="space-y-8">
+    <!-- 页面标题 -->
+    <section class="max-w-4xl">
+      <p 
+        class="font-mono text-mono mb-2 tracking-wider"
+        :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
+      >
+        {{ pageConfig.subtitle }}
+      </p>
+      <h1 class="text-display font-sans font-semibold text-charcoal mb-3">{{ pageConfig.title }}</h1>
+      <p class="text-body font-sans text-slate">{{ pageConfig.desc }}</p>
     </section>
-    <aside class="space-y-4">
-      <div class="rounded-2xl border border-border bg-surface p-5 shadow-subtle">
-        <p class="font-data text-xs text-ink-soft">实时预览</p>
-        <div class="mt-4 rounded-2xl border border-border bg-white p-5 shadow-sheet">
-          <div class="flex items-center justify-between">
-            <span class="category-chip bg-intelligence/10 text-intelligence">{{ form.category }}</span>
-            <span class="font-data text-[0.6rem] text-ink-soft">{{ form.eventTime || '待定' }}</span>
+
+    <!-- 主内容 -->
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)]">
+      <!-- 左侧表单 -->
+      <section 
+        class="rounded-morandi p-8 transition-all duration-500 shadow-morandi"
+        :class="frequencyStore.isFocus 
+          ? 'bg-card-focus border border-focus-primary/20' 
+          : 'bg-card-vibe border border-vibe-primary/20'"
+      >
+        <form class="space-y-6" @submit.prevent="submit">
+          <div class="grid gap-4 md:grid-cols-2">
+            <AppInput 
+              :label="pageConfig.titleLabel" 
+              v-model="form.title" 
+              :placeholder="pageConfig.titlePlaceholder" 
+            />
+            <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+              <span class="font-mono text-mono text-xs text-slate">类别</span>
+              <select
+                v-model="form.category"
+                class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-slate focus:outline-none transition-all"
+                :class="frequencyStore.isFocus ? 'focus:border-focus-primary' : 'focus:border-vibe-primary'"
+              >
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+                  {{ cat.label }}
+                </option>
+              </select>
+            </label>
+            
+            <!-- Vibe 模式显示时效选项 -->
+            <template v-if="frequencyStore.isVibe">
+              <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+                <span class="font-mono text-mono text-xs text-slate">有效期</span>
+                <select
+                  v-model="form.lifespan"
+                  class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-vibe-primary focus:outline-none transition-all"
+                >
+                  <option v-for="opt in lifespanOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </label>
+            </template>
+            <template v-else>
+              <AppInput label="时间" v-model="form.eventTime" type="datetime-local" :mono="true" />
+            </template>
+            
+            <AppInput label="地点" v-model="form.location" placeholder="图书馆 B1" />
+            <AppInput 
+              label="标签 (逗号分隔)" 
+              v-model="form.tags" 
+              :placeholder="frequencyStore.isFocus ? 'AI, 伦理, 设计' : '约饭, 聊天, 交友'" 
+            />
           </div>
-          <h3 class="mt-3 text-xl font-semibold text-ink">{{ form.title || '活动标题预览' }}</h3>
-          <p class="mt-2 line-clamp-3 text-sm text-ink-soft">
-            {{ form.content || 'AI 将在此生成摘要...' }}
+          
+          <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+            <span class="font-mono text-mono text-xs text-slate">{{ pageConfig.contentLabel }}</span>
+            <textarea
+              v-model="form.content"
+              rows="6"
+              class="rounded-soft border border-slate/20 bg-white p-4 text-base text-charcoal outline-none transition focus:border-slate"
+              :class="frequencyStore.isFocus ? 'focus:border-focus-primary' : 'focus:border-vibe-primary'"
+              :placeholder="pageConfig.contentPlaceholder"
+            />
+          </label>
+          
+          <div class="flex flex-wrap gap-4">
+            <AppButton 
+              type="submit" 
+              :loading="creating"
+              :class="frequencyStore.isVibe ? 'vibe-button' : ''"
+            >
+              {{ pageConfig.submitText }}
+            </AppButton>
+            <AppButton variant="ghost" type="button" @click="useAiAssist">
+              {{ pageConfig.aiText }}
+            </AppButton>
+          </div>
+          
+          <p 
+            v-if="successMessage" 
+            class="font-mono text-mono text-xs"
+            :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
+          >
+            {{ successMessage }}
           </p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <TagBadge v-for="tag in form.tags.split(',').filter(Boolean)" :key="tag" :label="tag" />
-          </div>
-          <div class="ai-ribbon mt-5">
-            <span class="font-data text-[0.6rem] text-intelligence">破壁推荐理由</span>
-            <span class="text-xs text-intelligence">为你的 {{ form.tags.split(',')[0] || '兴趣' }} 提供补全视角</span>
+        </form>
+      </section>
+
+      <!-- 右侧预览 -->
+      <aside class="space-y-4">
+        <!-- 实时预览 -->
+        <div 
+          class="rounded-morandi p-5 transition-all duration-500 shadow-morandi"
+          :class="frequencyStore.isFocus 
+            ? 'bg-card-base border border-slate/10' 
+            : 'bg-card-vibe border border-vibe-primary/20'"
+        >
+          <p class="font-mono text-mono text-xs text-slate">{{ pageConfig.previewTitle }}</p>
+          <div class="mt-4 rounded-morandi border border-slate/10 bg-white p-5 shadow-morandi-sm">
+            <div class="flex items-center justify-between">
+              <span 
+                class="px-3 py-1 rounded-full font-mono text-mono text-xs"
+                :class="frequencyStore.isFocus 
+                  ? 'bg-focus-primary/10 text-focus-accent' 
+                  : 'bg-vibe-primary/20 text-vibe-accent'"
+              >
+                {{ form.category }}
+              </span>
+              <span class="font-mono text-mono text-xs text-slate">
+                {{ frequencyStore.isVibe ? form.lifespan + ' 后过期' : (form.eventTime || '待定') }}
+              </span>
+            </div>
+            <h3 class="mt-3 text-h2 font-sans font-semibold text-charcoal">
+              {{ form.title || (frequencyStore.isFocus ? '活动标题预览' : '约伴主题预览') }}
+            </h3>
+            <p class="mt-2 line-clamp-3 text-body font-sans text-slate">
+              {{ form.content || 'AI 将在此生成摘要...' }}
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <TagBadge v-for="tag in form.tags.split(',').filter(Boolean)" :key="tag" :label="tag" />
+            </div>
+            <div 
+              class="mt-5 p-3 rounded-soft"
+              :class="frequencyStore.isFocus ? 'bg-morandi-lavender/10' : 'bg-vibe-secondary/20'"
+            >
+              <span 
+                class="font-mono text-mono text-xs block mb-1"
+                :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
+              >
+                {{ frequencyStore.isFocus ? '破壁推荐理由' : '约伴提示' }}
+              </span>
+              <span class="text-caption font-sans text-slate">
+                {{ frequencyStore.isFocus 
+                    ? `为你的 ${form.tags.split(',')[0] || '兴趣'} 提供补全视角`
+                    : '动态将在有效期后自动消失' 
+                }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="rounded-2xl border border-dashed border-border bg-neutral p-5">
-        <p class="font-data text-xs text-ink-soft">技能缺口</p>
-        <ul class="mt-4 space-y-3">
-          <li
-            v-for="gap in skillGaps"
-            :key="gap"
-            class="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-subtle"
-          >
-            <span class="font-semibold text-ink">{{ gap }}</span>
-            <button class="text-sm text-intelligence underline">申请填补</button>
-          </li>
-        </ul>
-      </div>
-    </aside>
+
+        <!-- 技能缺口 / 热门约伴 -->
+        <div 
+          class="rounded-morandi border border-dashed p-5"
+          :class="frequencyStore.isFocus 
+            ? 'border-focus-primary/30 bg-focus-primary/5' 
+            : 'border-vibe-primary/30 bg-vibe-primary/10'"
+        >
+          <p class="font-mono text-mono text-xs text-slate">{{ pageConfig.skillGapTitle }}</p>
+          <ul class="mt-4 space-y-3">
+            <li
+              v-for="gap in skillGaps"
+              :key="gap"
+              class="flex items-center justify-between rounded-soft bg-white px-4 py-3 shadow-morandi-sm"
+            >
+              <span class="font-sans font-medium text-charcoal">{{ gap }}</span>
+              <button 
+                class="text-caption font-sans underline"
+                :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
+              >
+                {{ frequencyStore.isFocus ? '申请填补' : '立即参与' }}
+              </button>
+            </li>
+          </ul>
+        </div>
+      </aside>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.vibe-button {
+  @apply bg-vibe-accent hover:bg-vibe-accent/90;
+}
+</style>

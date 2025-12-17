@@ -5,16 +5,21 @@ import TagBadge from './TagBadge.vue'
 import AiIcon from '@/components/common/AiIcon.vue'
 import type { Article } from '@/types/models'
 
-const props = defineProps<{
+type FrequencyMode = 'focus' | 'vibe'
+
+const props = withDefaults(defineProps<{
   article: Article
-}>()
+  mode?: FrequencyMode
+}>(), {
+  mode: 'focus'
+})
 
 const emit = defineEmits<{
   bookmark: [Article]
 }>()
 
-// 莫兰迪配色 - 直接使用颜色值而不是动态类名
-const categoryStyles = {
+// Focus 模式配色
+const focusCategoryStyles = {
   lecture: {
     topBar: 'bg-[#93A8AC]/30 group-hover:bg-[#93A8AC]/50',
     icon: 'bg-gradient-to-br from-[#93A8AC] to-[#93A8AC]/80',
@@ -37,10 +42,61 @@ const categoryStyles = {
   },
 }
 
-const categoryStyle = computed(() => categoryStyles[props.article.category] || categoryStyles.research)
+// Vibe 模式配色
+const vibeCategoryStyles = {
+  lecture: {
+    topBar: 'bg-[#D9A69F]/40 group-hover:bg-[#D9A69F]/60',
+    icon: 'bg-gradient-to-br from-[#D9A69F] to-[#C4887E]',
+    label: '活动'
+  },
+  competition: {
+    topBar: 'bg-[#E8D5B7]/50 group-hover:bg-[#E8D5B7]/70',
+    icon: 'bg-gradient-to-br from-[#E8D5B7] to-[#D4C4A8]',
+    label: '比赛'
+  },
+  research: {
+    topBar: 'bg-[#D9A69F]/40 group-hover:bg-[#D9A69F]/60',
+    icon: 'bg-gradient-to-br from-[#D9A69F] to-[#C4887E]',
+    label: '分享'
+  },
+  notice: {
+    topBar: 'bg-[#E8D5B7]/50 group-hover:bg-[#E8D5B7]/70',
+    icon: 'bg-gradient-to-br from-[#E8D5B7] to-[#D4C4A8]',
+    label: '动态'
+  },
+  meal: {
+    topBar: 'bg-[#D9A69F]/40 group-hover:bg-[#D9A69F]/60',
+    icon: 'bg-gradient-to-br from-[#D9A69F] to-[#C4887E]',
+    label: '约饭'
+  },
+  sports: {
+    topBar: 'bg-[#E8D5B7]/50 group-hover:bg-[#E8D5B7]/70',
+    icon: 'bg-gradient-to-br from-[#E8D5B7] to-[#D4C4A8]',
+    label: '运动'
+  },
+  carpool: {
+    topBar: 'bg-[#D9A69F]/40 group-hover:bg-[#D9A69F]/60',
+    icon: 'bg-gradient-to-br from-[#D9A69F] to-[#C4887E]',
+    label: '拼车'
+  },
+  chat: {
+    topBar: 'bg-[#E8D5B7]/50 group-hover:bg-[#E8D5B7]/70',
+    icon: 'bg-gradient-to-br from-[#E8D5B7] to-[#D4C4A8]',
+    label: '闲聊'
+  },
+}
+
+const categoryStyle = computed(() => {
+  const styles = props.mode === 'focus' ? focusCategoryStyles : vibeCategoryStyles
+  return styles[props.article.category as keyof typeof styles] || (props.mode === 'focus' ? focusCategoryStyles.research : vibeCategoryStyles.notice)
+})
 const isResearch = computed(() => props.article.category === 'research')
+const isVibe = computed(() => props.mode === 'vibe')
 
 const cardBgClass = computed(() => {
+  if (props.mode === 'vibe') {
+    return 'bg-card-vibe border border-vibe-primary/20'
+  }
   switch (props.article.category) {
     case 'lecture':
       return 'morandi-card-blue'
@@ -108,14 +164,22 @@ const cardBgClass = computed(() => {
       <!-- AI 分数和操作 -->
       <div class="flex items-center justify-between pt-6 border-t border-slate/10">
         <div class="flex items-center gap-3">
-          <AiIcon size="sm" color="#B4A8BF" />
-          <span class="font-mono text-mono text-morandi-lavender text-sm font-medium">AI 匹配度 {{ (article.aiScore * 100).toFixed(0) }}%</span>
+          <AiIcon size="sm" :color="isVibe ? '#C4887E' : '#B4A8BF'" />
+          <span 
+            class="font-mono text-mono text-sm font-medium"
+            :class="isVibe ? 'text-vibe-accent' : 'text-morandi-lavender'"
+          >
+            {{ isVibe ? '热度 ' + Math.floor(Math.random() * 50 + 50) : 'AI 匹配度 ' + (article.aiScore * 100).toFixed(0) + '%' }}
+          </span>
         </div>
         <button 
           @click="emit('bookmark', article)"
-          class="px-4 py-2 rounded-soft bg-slate/5 text-slate hover:bg-slate/10 hover:text-charcoal transition-all font-sans text-sm font-medium"
+          class="px-4 py-2 rounded-soft transition-all font-sans text-sm font-medium"
+          :class="isVibe 
+            ? 'bg-vibe-primary/10 text-vibe-accent hover:bg-vibe-primary/20' 
+            : 'bg-slate/5 text-slate hover:bg-slate/10 hover:text-charcoal'"
         >
-          收藏
+          {{ isVibe ? '参与' : '收藏' }}
         </button>
       </div>
     </div>
