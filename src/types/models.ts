@@ -39,7 +39,15 @@ export interface AiInsight {
   tags: string[]
 }
 
-export type TeamType = 'project' | 'competition' | 'research' | 'study'
+export type TeamType =
+  | 'project'
+  | 'competition'
+  | 'research'
+  | 'study'
+  | 'meal'
+  | 'sports'
+  | 'carpool'
+  | 'gaming'
 
 export interface TeamMember {
   id: string

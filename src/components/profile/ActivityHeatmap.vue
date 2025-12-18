@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+
+interface ActivityPoint {
+  date: string
+  activity: number
+  type: string
+}
 
 // 生成一年的活动数据
-const generateActivityData = () => {
-  const data = []
+const generateActivityData = (): ActivityPoint[] => {
+  const data: ActivityPoint[] = []
   const today = new Date()
   const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
   
@@ -14,12 +19,14 @@ const generateActivityData = () => {
     
     if (random > 0.7) {
       activity = Math.floor(Math.random() * 3) + 1
-      const types = ['research', 'life', 'academic']
-      type = types[Math.floor(Math.random() * types.length)]
+      const types = ['research', 'life', 'academic'] as const
+      const index = Math.floor(Math.random() * types.length)
+      type = types[index] ?? 'research'
     }
     
+    const date = new Date(d).toISOString().split('T')[0] ?? ''
     data.push({
-      date: new Date(d).toISOString().split('T')[0],
+      date,
       activity,
       type
     })
@@ -32,8 +39,7 @@ const activityData = generateActivityData()
 
 const getActivityColor = (activity: number, type: string) => {
   if (activity === 0) return 'bg-slate/10'
-  
-  const opacity = activity * 0.3
+
   switch (type) {
     case 'research':
       return `bg-[#93A8AC]`
@@ -60,9 +66,10 @@ const getTooltipText = (date: string, activity: number, type: string) => {
   }
   
   const activityList = activities[type as keyof typeof activities] || []
-  const activityText = activityList[Math.floor(Math.random() * activityList.length)]
+  const activityText = activityList[Math.floor(Math.random() * activityList.length)] ?? '跨界活动'
+  const label = typeLabel[type as keyof typeof typeLabel] ?? '活动'
   
-  return `${date}: ${activityText}`
+  return `${date} · ${label}: ${activityText}`
 }
 
 const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
@@ -99,7 +106,7 @@ const weekDays = ['', '一', '', '三', '', '五', '']
         <div class="flex mb-2">
           <div class="w-8"></div>
           <div class="grid grid-cols-12 gap-1 flex-1">
-            <div v-for="(month, i) in months" :key="month" class="text-center">
+            <div v-for="month in months" :key="month" class="text-center">
               <span class="font-mono text-mono text-xs text-slate">{{ month }}</span>
             </div>
           </div>
@@ -117,7 +124,7 @@ const weekDays = ['', '一', '', '三', '', '五', '']
           <!-- 格子 -->
           <div class="grid grid-cols-53 gap-1 flex-1">
             <div
-              v-for="(day, index) in activityData"
+              v-for="day in activityData"
               :key="day.date"
               class="w-3 h-3 rounded-sm cursor-pointer transition-all hover:scale-110"
               :class="getActivityColor(day.activity, day.type)"

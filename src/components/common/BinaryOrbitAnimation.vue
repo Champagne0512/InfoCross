@@ -4,7 +4,7 @@
  * 两个天体围绕共同质心做匀速圆周运动
  * 遵循质心关系：m₁·r₁ = m₂·r₂
  */
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
 const frequencyStore = useFrequencyStore()

@@ -5,6 +5,8 @@ import type {
   ForumComment,
   ForumHotTopic,
 } from '@/types/models'
+import type { Database } from '@/types/supabase'
+import { supabase } from './client'
 
 // Mock 数据 - Signal 模式 (短情报)
 const mockSignalThreads: ForumThread[] = [
@@ -203,6 +205,112 @@ const mockHotTopics: ForumHotTopic[] = [
   },
 ]
 
+type ThreadRow = Database['public']['Tables']['forum_threads']['Row'] & {
+  profiles?: Database['public']['Tables']['profiles']['Row'] | null
+}
+
+type CommentRow = Database['public']['Tables']['forum_comments']['Row'] & {
+  profiles?: Database['public']['Tables']['profiles']['Row'] | null
+}
+
+type HotTopicRow = Database['public']['Tables']['forum_hot_topics']['Row']
+
+async function getUserId(): Promise<string | null> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+  if (error) throw error
+  return user?.id ?? null
+}
+
+function mapThread(row: ThreadRow): ForumThread {
+  const profile = row.profiles ?? null
+  const anonymous = Boolean(row.is_anonymous)
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    authorId: row.author_id,
+    authorName: anonymous ? '匿名用户' : profile?.username ?? 'InfoCross 用户',
+    authorAvatar: anonymous ? undefined : profile?.avatar_url ?? undefined,
+    authorCollege: anonymous ? undefined : profile?.college ?? undefined,
+    isAnonymous: anonymous,
+    type: row.type,
+    category: row.category ?? undefined,
+    title: row.title ?? undefined,
+    contentText: row.content_text,
+    contentDelta: (row.content_delta as ForumThread['contentDelta']) ?? undefined,
+    summary: row.summary ?? undefined,
+    coverUrl: row.cover_url ?? undefined,
+    linkedEntities: (row.linked_entities as ForumThread['linkedEntities']) ?? undefined,
+    aiTags: row.ai_tags ?? [],
+    sentimentScore: row.sentiment_score ?? 0.5,
+    readTimeMinutes: row.read_time_minutes ?? 1,
+    viewCount: row.view_count,
+    likeCount: row.like_count,
+    commentCount: row.comment_count,
+    shareCount: row.share_count,
+    sourceCollege: row.source_college ?? undefined,
+  }
+}
+
+function mapComment(row: CommentRow): ForumComment {
+  const profile = row.profiles ?? null
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    threadId: row.thread_id,
+    authorId: row.author_id,
+    authorName: row.is_anonymous ? '匿名用户' : profile?.username ?? 'InfoCross 用户',
+    authorAvatar: row.is_anonymous ? undefined : profile?.avatar_url ?? undefined,
+    isAnonymous: Boolean(row.is_anonymous),
+    content: row.content,
+    parentId: row.parent_id ?? undefined,
+    likeCount: row.like_count,
+  }
+}
+
+function mapHotTopic(row: HotTopicRow): ForumHotTopic {
+  return {
+    id: row.id,
+    title: row.title,
+    threadIds: row.thread_ids ?? [],
+    heatScore: row.heat_score ?? 0,
+    threadCount: (row.thread_ids ?? []).length,
+  }
+}
+
+async function fetchThreadRows(params?: {
+  type?: ForumThreadType
+  category?: DepthCategory
+  limit?: number
+}): Promise<ThreadRow[]> {
+  let query = supabase
+    .from('forum_threads')
+    .select(
+      '*,' +
+        'profiles:profiles!forum_threads_author_id_fkey(id, username, avatar_url, college)',
+    )
+    .order('created_at', { ascending: false })
+
+  if (params?.type) {
+    query = query.eq('type', params.type)
+  }
+
+  if (params?.category && params.type === 'depth') {
+    query = query.eq('category', params.category)
+  }
+
+  if (params?.limit) {
+    query = query.limit(params.limit)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return (data as unknown as ThreadRow[] | null) ?? []
+}
+
 // API 函数
 
 export async function fetchForumThreads(params?: {
@@ -210,96 +318,131 @@ export async function fetchForumThreads(params?: {
   category?: DepthCategory
   limit?: number
 }): Promise<ForumThread[]> {
-  const type = params?.type || 'signal'
-  const threads = type === 'signal' ? mockSignalThreads : mockDepthThreads
+  try {
+    const rows = await fetchThreadRows(params)
+    return rows.map(mapThread)
+  } catch (error) {
+    console.error('[fetchForumThreads] supabase query failed, fallback to mock', error)
+    const type = params?.type || 'signal'
+    const threads = type === 'signal' ? mockSignalThreads : mockDepthThreads
+    let result = [...threads]
 
-  let result = [...threads]
+    if (params?.category && type === 'depth') {
+      result = result.filter((t) => t.category === params.category)
+    }
 
-  if (params?.category && type === 'depth') {
-    result = result.filter((t) => t.category === params.category)
+    if (params?.limit) {
+      result = result.slice(0, params.limit)
+    }
+
+    return result
   }
-
-  if (params?.limit) {
-    result = result.slice(0, params.limit)
-  }
-
-  return result
 }
 
 export async function fetchThreadById(id: number): Promise<ForumThread | null> {
-  const allThreads = [...mockSignalThreads, ...mockDepthThreads]
-  return allThreads.find((t) => t.id === id) ?? null
+  try {
+    const { data, error } = await supabase
+      .from('forum_threads')
+      .select(
+        '*,' +
+          'profiles:profiles!forum_threads_author_id_fkey(id, username, avatar_url, college)',
+      )
+      .eq('id', id)
+      .maybeSingle()
+    if (error) throw error
+    if (data) return mapThread(data as unknown as ThreadRow)
+    return null
+  } catch (error) {
+    console.error('[fetchThreadById] supabase query failed, fallback to mock', error)
+    const allThreads = [...mockSignalThreads, ...mockDepthThreads]
+    return allThreads.find((t) => t.id === id) ?? null
+  }
 }
 
 export async function fetchHotTopics(): Promise<ForumHotTopic[]> {
-  return mockHotTopics
+  try {
+    const { data, error } = await supabase
+      .from('forum_hot_topics')
+      .select('*')
+      .order('heat_score', { ascending: false })
+      .limit(10)
+    if (error) throw error
+    const rows = (data as unknown as HotTopicRow[] | null) ?? []
+    return rows.map(mapHotTopic)
+  } catch (error) {
+    console.error('[fetchHotTopics] supabase query failed, fallback to mock', error)
+    return mockHotTopics
+  }
 }
 
 export async function createThread(
   input: Partial<ForumThread>,
 ): Promise<ForumThread> {
-  const newThread: ForumThread = {
-    id: Date.now(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    authorId: input.authorId || 'current-user',
-    authorName: input.isAnonymous ? '匿名用户' : '当前用户',
-    isAnonymous: input.isAnonymous || false,
-    type: input.type || 'signal',
-    category: input.category,
-    title: input.title,
-    contentText: input.contentText || '',
-    aiTags: [],
-    sentimentScore: 0.5,
-    readTimeMinutes: Math.ceil((input.contentText?.length || 0) / 500),
-    viewCount: 0,
-    likeCount: 0,
-    commentCount: 0,
-    shareCount: 0,
-    sourceCollege: input.sourceCollege,
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录再发帖')
+
+  const payload: Database['public']['Tables']['forum_threads']['Insert'] = {
+    author_id: userId,
+    is_anonymous: input.isAnonymous ?? false,
+    type: input.type ?? 'signal',
+    category: input.category ?? null,
+    title: input.title ?? null,
+    content_text: input.contentText ?? '',
+    summary: input.summary ?? null,
+    cover_url: input.coverUrl ?? null,
+    linked_entities: input.linkedEntities ?? null,
+    ai_tags: input.aiTags ?? [],
+    sentiment_score: input.sentimentScore ?? 0.5,
+    read_time_minutes: input.readTimeMinutes ?? Math.ceil((input.contentText?.length || 0) / 500),
+    source_college: input.sourceCollege ?? null,
   }
 
-  if (input.type === 'signal') {
-    mockSignalThreads.unshift(newThread)
-  } else {
-    mockDepthThreads.unshift(newThread)
-  }
-
-  return newThread
+  const { data, error } = await supabase
+    .from('forum_threads')
+    .insert(payload)
+    .select(
+      '*,' +
+        'profiles:profiles!forum_threads_author_id_fkey(id, username, avatar_url, college)',
+    )
+    .single()
+  if (error) throw error
+  return mapThread(data as unknown as ThreadRow)
 }
 
 export async function fetchComments(threadId: number): Promise<ForumComment[]> {
-  // Mock 评论数据
-  return [
-    {
-      id: 1,
-      createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-      threadId,
-      authorId: 'commenter1',
-      authorName: '热心网友',
-      isAnonymous: false,
-      content: '感谢分享，非常有帮助！',
-      likeCount: 12,
-    },
-    {
-      id: 2,
-      createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      threadId,
-      authorId: 'commenter2',
-      authorName: '某学院同学',
-      isAnonymous: true,
-      content: '请问具体是哪个窗口？',
-      likeCount: 3,
-    },
-  ]
+  try {
+    const { data, error } = await supabase
+      .from('forum_comments')
+      .select(
+        '*,' +
+          'profiles:profiles!forum_comments_author_id_fkey(id, username, avatar_url)',
+      )
+      .eq('thread_id', threadId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    const rows = (data as unknown as CommentRow[] | null) ?? []
+    return rows.map(mapComment)
+  } catch (error) {
+    console.error('[fetchComments] supabase query failed, return empty list', error)
+  }
+  return []
 }
 
 export async function likeThread(threadId: number): Promise<void> {
-  const thread =
-    mockSignalThreads.find((t) => t.id === threadId) ||
-    mockDepthThreads.find((t) => t.id === threadId)
-  if (thread) {
-    thread.likeCount++
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+  const { error } = await supabase
+    .from('forum_interactions')
+    .upsert(
+      {
+        user_id: userId,
+        thread_id: threadId,
+        type: 'like',
+      },
+      { onConflict: 'user_id,thread_id,type' },
+    )
+  if (error && error.code !== '23505') {
+    throw error
   }
 }
 

@@ -35,8 +35,6 @@ onMounted(async () => {
   setTimeout(() => {
     // 创建加载动画
     new p5((p: p5) => {
-    const finalSize = 120 // 最终尺寸
-    
     // 三个球体的属性
     class Body {
       angle: number

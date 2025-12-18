@@ -117,7 +117,7 @@ function handleCancel() {
               v-if="avatarUrl || avatarPreview"
               class="w-20 h-20 rounded-xl overflow-hidden shadow-md"
             >
-              <img :src="avatarPreview || avatarUrl" :alt="form.username" class="w-full h-full object-cover" />
+              <img :src="avatarPreview || avatarUrl || ''" :alt="form.username" class="w-full h-full object-cover" />
             </div>
             <div 
               v-else

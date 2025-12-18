@@ -1,5 +1,6 @@
-import type { Article, ArticleCategory } from '@/types/models'
-import { hasSupabase } from './client'
+import type { Article } from '@/types/models'
+import type { Database } from '@/types/supabase'
+import { supabase } from './client'
 
 const mockArticles: Article[] = [
   {
@@ -64,12 +65,81 @@ const mockArticles: Article[] = [
 
 let mockSequence = mockArticles.length + 1
 
+type ArticleRow = Database['public']['Tables']['articles']['Row']
+
+function mapArticle(row: ArticleRow): Article {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary ?? '',
+    content: row.content ?? '',
+    category: row.category as Article['category'],
+    posterUrl: row.poster_url ?? undefined,
+    eventTime: row.event_time ?? undefined,
+    location: row.location ?? undefined,
+    tags: row.tags ?? [],
+    college: row.college ?? '未标注学院',
+    createdAt: row.created_at,
+    aiScore: Number(row.ai_score ?? 0),
+  }
+}
+
+async function getCurrentUserId(): Promise<string | null> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+  if (error) throw error
+  return user?.id ?? null
+}
+
+interface AnalyzeArticleResponse {
+  summary?: string
+  tags?: string[]
+  embedding?: number[]
+}
+
+async function analyzeArticle(input: {
+  title: string
+  content?: string
+  tags?: string[]
+}): Promise<AnalyzeArticleResponse | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-article', {
+      body: input,
+    })
+    if (error) throw error
+    return data as AnalyzeArticleResponse
+  } catch (err) {
+    console.warn('[analyze-article] failed, fallback to raw form', err)
+    return null
+  }
+}
+
 export async function fetchArticles(params?: {
-  category?: ArticleCategory
+  category?: string
   limit?: number
 }): Promise<Article[]> {
-  if (hasSupabase) {
-    console.info('[Supabase] 可在此处接入真实数据查询。当前返回本地 mock。')
+  try {
+    let query = supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (params?.category && params.category !== 'all') {
+      query = query.eq('category', params.category)
+    }
+
+    if (params?.limit) {
+      query = query.limit(params.limit)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    const rows = (data as ArticleRow[] | null) ?? []
+    return rows.map(mapArticle)
+  } catch (error) {
+    console.error('[fetchArticles] fallback to mock', error)
   }
 
   let articles = [...mockArticles]
@@ -86,46 +156,102 @@ export async function fetchArticles(params?: {
 }
 
 export async function fetchArticleById(id: number): Promise<Article | null> {
-  return mockArticles.find((article) => article.id === id) ?? null
+  try {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+    if (error) throw error
+    return data ? mapArticle(data as ArticleRow) : null
+  } catch (error) {
+    console.error('[fetchArticleById] fallback to mock', error)
+    return mockArticles.find((article) => article.id === id) ?? null
+  }
 }
 
 export async function createArticle(input: Partial<Article>): Promise<Article> {
-  const newArticle: Article = {
-    id: mockSequence++,
-    title: input.title ?? '未命名活动',
-    summary: input.summary ?? 'AI 正在生成摘要...',
-    content: input.content ?? '',
-    category: (input.category ?? 'lecture') as ArticleCategory,
-    posterUrl: input.posterUrl,
-    eventTime: input.eventTime,
-    location: input.location,
-    tags: input.tags ?? [],
-    college: input.college ?? 'InfoCross 团队',
-    createdAt: new Date().toISOString(),
-    aiScore: 0.75,
-  }
+  try {
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      throw new Error('请先登录再发布内容')
+    }
 
-  mockArticles.unshift(newArticle)
-  return newArticle
+    const tags = input.tags?.length ? input.tags : []
+    const analysis = await analyzeArticle({
+      title: input.title ?? '未命名活动',
+      content: input.content,
+      tags,
+    })
+
+    const payload: Database['public']['Tables']['articles']['Insert'] = {
+      author_id: userId,
+      title: input.title ?? '未命名活动',
+      content: input.content ?? '',
+      summary: input.summary ?? analysis?.summary ?? null,
+      category: input.category ?? 'lecture',
+      event_time: input.eventTime ? new Date(input.eventTime).toISOString() : null,
+      location: input.location ?? null,
+      tags: (tags.length ? tags : analysis?.tags) ?? [],
+      college: input.college ?? 'InfoCross 团队',
+      poster_url: input.posterUrl ?? null,
+      ai_score: input.aiScore ?? 0.75,
+      embedding: analysis?.embedding ?? null,
+    }
+
+    const { data, error } = await supabase
+      .from('articles')
+      .insert(payload)
+      .select('*')
+      .single()
+    if (error) throw error
+    return mapArticle(data as ArticleRow)
+  } catch (error) {
+    console.error('[createArticle] supabase insert failed, fallback to mock', error)
+    const newArticle: Article = {
+      id: mockSequence++,
+      title: input.title ?? '未命名活动',
+      summary: input.summary ?? 'AI 正在生成摘要...',
+      content: input.content ?? '',
+      category: (input.category ?? 'lecture') as Article['category'],
+      posterUrl: input.posterUrl,
+      eventTime: input.eventTime,
+      location: input.location,
+      tags: input.tags ?? [],
+      college: input.college ?? 'InfoCross 团队',
+      createdAt: new Date().toISOString(),
+      aiScore: 0.75,
+    }
+    mockArticles.unshift(newArticle)
+    return newArticle
+  }
 }
 
 export async function fetchRecommendedArticles(
   userTags: string[] = [],
   limit = 4,
 ): Promise<Article[]> {
-  if (hasSupabase) {
-    console.info('[Supabase] 可调用 recommend edge function。当前使用本地推荐。')
+  try {
+    const userId = await getCurrentUserId()
+    const { data, error } = await supabase.rpc('recommend_articles', {
+      user_id: userId,
+      limit_count: limit,
+    })
+    if (error) throw error
+    const rows = (data as ArticleRow[] | null) ?? []
+    if (rows.length) {
+      return rows.map(mapArticle)
+    }
+  } catch (error) {
+    console.error('[fetchRecommendedArticles] rpc failed, fallback to local ranking', error)
   }
 
-  const scored = [...mockArticles].sort((a, b) => b.aiScore - a.aiScore)
+  const articles = await fetchArticles({ limit: limit * 2 })
+  const ranked = [...articles].sort((a, b) => b.aiScore - a.aiScore)
+  if (!userTags.length) return ranked.slice(0, limit)
 
-  if (!userTags.length) {
-    return scored.slice(0, limit)
-  }
-
-  const tagMatched = scored.filter((article) =>
+  const tagMatched = ranked.filter((article) =>
     article.tags.some((tag) => userTags.includes(tag)),
   )
-
-  return (tagMatched.length ? tagMatched : scored).slice(0, limit)
+  return (tagMatched.length ? tagMatched : ranked).slice(0, limit)
 }

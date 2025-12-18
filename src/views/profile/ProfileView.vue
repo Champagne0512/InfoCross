@@ -101,7 +101,7 @@ function handleTabNavigate(tab: string, itemId: number) {
   <!-- 编辑模态框 -->
   <Transition name="fade">
     <div 
-      v-if="isEditModalOpen" 
+      v-if="isEditModalOpen && profile" 
       class="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       @click="closeEditModal"
     >
