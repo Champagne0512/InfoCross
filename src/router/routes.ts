@@ -5,6 +5,7 @@ export const RouteName = {
   AUTH: 'auth',
   PUBLISH: 'publish',
   TEAM: 'team',
+  TEAM_HUB: 'team-hub',
   FORUM: 'forum',
   PROFILE: 'profile',
 } as const
@@ -32,7 +33,13 @@ export const routes: RouteRecordRaw[] = [
     path: '/team',
     name: RouteName.TEAM,
     component: () => import('@/views/team/TeamView.vue'),
-    meta: { title: '组队协作', requiresAuth: true },
+    meta: { title: '发现协作', requiresAuth: true },
+  },
+  {
+    path: '/team/hub',
+    name: RouteName.TEAM_HUB,
+    component: () => import('@/views/team/TeamHubView.vue'),
+    meta: { title: '协作空间', requiresAuth: true },
   },
   {
     path: '/forum',

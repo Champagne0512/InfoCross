@@ -46,7 +46,7 @@ const frequencyStore = useFrequencyStore()
 
 <style scoped>
 .frequency-switch {
-  @apply flex flex-col items-center;
+  @apply flex flex-col items-center mt-2;
 }
 
 .switch-track {

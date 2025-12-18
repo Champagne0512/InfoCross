@@ -150,7 +150,7 @@ const body2Y = computed(() => CENTER_Y + currentR2.value * Math.sin(angle.value 
   width: 128px;
   height: 160px;
   position: relative;
-  margin: 0 auto;
+  margin: -18px auto 0;
 }
 
 .orbit {

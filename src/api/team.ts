@@ -34,6 +34,7 @@ function mapTeam(row: TeamRow, members: TeamMemberRow[]): Team {
     deadline: row.deadline ?? undefined,
     status: (row.status as Team['status']) ?? 'recruiting',
     isVibe: Boolean(row.is_vibe),
+    ownerId: row.owner_id,
   }
 }
 

@@ -65,7 +65,7 @@ const pageConfig = computed(() => {
       submitText: '提交信息',
       aiText: 'AI 辅助填充',
       previewTitle: '实时预览',
-      skillGapTitle: '技能缺口',
+      helperTitle: 'AI 发布建议',
     }
   }
   return {
@@ -79,16 +79,43 @@ const pageConfig = computed(() => {
     submitText: '立即发布',
     aiText: '智能填充',
     previewTitle: '动态预览',
-    skillGapTitle: '热门约伴',
+    helperTitle: '灵感提示',
   }
 })
 
-const skillGaps = computed(() => {
-  if (frequencyStore.isFocus) {
-    return ['财务分析', 'UI 设计', '文案策划']
-  }
-  return ['羽毛球 3缺1', '图书馆自习', '晚餐约伴']
-})
+const focusHelperTips = [
+  {
+    title: '补全行动要点',
+    desc: '明确时间 / 地点 / 人数与报名方式，AI 才能生成更精准摘要。',
+  },
+  {
+    title: '突出跨界亮点',
+    desc: '在正文里写清“需要什么学科/技能”，有助于匹配破壁伙伴。',
+  },
+  {
+    title: '善用标签',
+    desc: '标签控制在 3~5 个，优先选择项目主题 + 技能需求。',
+  },
+]
+
+const vibeHelperTips = [
+  {
+    title: '时间 + 地点明确',
+    desc: '约伴信息越具体，越容易被附近的人看到并响应。',
+  },
+  {
+    title: '限定人数/氛围',
+    desc: '写出人数或氛围关键词，匹配更合拍的搭子。',
+  },
+  {
+    title: '提醒有效期',
+    desc: '说明动态什么时候结束，避免错过。',
+  },
+]
+
+const helperTips = computed(() =>
+  frequencyStore.isFocus ? focusHelperTips : vibeHelperTips,
+)
 
 async function submit() {
   creating.value = true
@@ -133,7 +160,7 @@ function useAiAssist() {
     <!-- 页面标题 -->
     <section class="max-w-4xl">
       <p 
-        class="font-mono text-mono mb-2 tracking-wider"
+        class="font-sans text-caption text-slate mb-2 tracking-wider uppercase"
         :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
       >
         {{ pageConfig.subtitle }}
@@ -159,7 +186,7 @@ function useAiAssist() {
               :placeholder="pageConfig.titlePlaceholder" 
             />
             <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
-              <span class="font-mono text-mono text-xs text-slate">类别</span>
+            <span class="font-sans text-xs font-semibold text-slate">类别</span>
               <select
                 v-model="form.category"
                 class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-slate focus:outline-none transition-all"
@@ -174,7 +201,7 @@ function useAiAssist() {
             <!-- Vibe 模式显示时效选项 -->
             <template v-if="frequencyStore.isVibe">
               <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
-                <span class="font-mono text-mono text-xs text-slate">有效期</span>
+                <span class="font-sans text-xs font-semibold text-slate">有效期</span>
                 <select
                   v-model="form.lifespan"
                   class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-vibe-primary focus:outline-none transition-all"
@@ -198,7 +225,7 @@ function useAiAssist() {
           </div>
           
           <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
-            <span class="font-mono text-mono text-xs text-slate">{{ pageConfig.contentLabel }}</span>
+            <span class="font-sans text-xs font-semibold text-slate">{{ pageConfig.contentLabel }}</span>
             <textarea
               v-model="form.content"
               rows="6"
@@ -223,7 +250,7 @@ function useAiAssist() {
           
           <p 
             v-if="successMessage" 
-            class="font-mono text-mono text-xs"
+            class="font-sans text-xs"
             :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
           >
             {{ successMessage }}
@@ -240,18 +267,18 @@ function useAiAssist() {
             ? 'bg-card-base border border-slate/10' 
             : 'bg-card-vibe border border-vibe-primary/20'"
         >
-          <p class="font-mono text-mono text-xs text-slate">{{ pageConfig.previewTitle }}</p>
+          <p class="font-sans text-xs font-semibold text-slate tracking-wide uppercase">{{ pageConfig.previewTitle }}</p>
           <div class="mt-4 rounded-morandi border border-slate/10 bg-white p-5 shadow-morandi-sm">
             <div class="flex items-center justify-between">
               <span 
-                class="px-3 py-1 rounded-full font-mono text-mono text-xs"
+                class="px-3 py-1 rounded-full font-sans text-xs font-semibold"
                 :class="frequencyStore.isFocus 
                   ? 'bg-focus-primary/10 text-focus-accent' 
                   : 'bg-vibe-primary/20 text-vibe-accent'"
               >
                 {{ form.category }}
               </span>
-              <span class="font-mono text-mono text-xs text-slate">
+              <span class="font-sans text-xs text-slate">
                 {{ frequencyStore.isVibe ? form.lifespan + ' 后过期' : (form.eventTime || '待定') }}
               </span>
             </div>
@@ -269,7 +296,7 @@ function useAiAssist() {
               :class="frequencyStore.isFocus ? 'bg-morandi-lavender/10' : 'bg-vibe-secondary/20'"
             >
               <span 
-                class="font-mono text-mono text-xs block mb-1"
+                class="font-sans text-xs font-semibold block mb-1 uppercase"
                 :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
               >
                 {{ frequencyStore.isFocus ? '破壁推荐理由' : '约伴提示' }}
@@ -291,20 +318,15 @@ function useAiAssist() {
             ? 'border-focus-primary/30 bg-focus-primary/5' 
             : 'border-vibe-primary/30 bg-vibe-primary/10'"
         >
-          <p class="font-mono text-mono text-xs text-slate">{{ pageConfig.skillGapTitle }}</p>
+          <p class="font-sans text-xs font-semibold text-slate tracking-wide uppercase">{{ pageConfig.helperTitle }}</p>
           <ul class="mt-4 space-y-3">
             <li
-              v-for="gap in skillGaps"
-              :key="gap"
-              class="flex items-center justify-between rounded-soft bg-white px-4 py-3 shadow-morandi-sm"
+              v-for="tip in helperTips"
+              :key="tip.title"
+              class="rounded-soft bg-white px-4 py-3 shadow-morandi-sm"
             >
-              <span class="font-sans font-medium text-charcoal">{{ gap }}</span>
-              <button 
-                class="text-caption font-sans underline"
-                :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
-              >
-                {{ frequencyStore.isFocus ? '申请填补' : '立即参与' }}
-              </button>
+              <p class="font-sans font-semibold text-charcoal mb-1">{{ tip.title }}</p>
+              <p class="text-caption font-sans text-slate">{{ tip.desc }}</p>
             </li>
           </ul>
         </div>
