@@ -9,11 +9,37 @@ import type { ArticleCategory } from '@/types/models'
 
 const frequencyStore = useFrequencyStore()
 
+// 获取默认日期时间，格式化为 datetime-local 输入框所需格式
+// 12点前默认填充当天12:00，12-18点默认填充当天18:00，18点后默认填充次日12:00
+const getDefaultDateTime = () => {
+  const now = new Date()
+  const hour = now.getHours()
+
+  if (hour < 12) {
+    now.setHours(12, 0, 0, 0)
+  } else if (hour < 18) {
+    now.setHours(18, 0, 0, 0)
+  } else {
+    // 18点后填充次日12点
+    now.setDate(now.getDate() + 1)
+    now.setHours(12, 0, 0, 0)
+  }
+
+  // 格式化为 YYYY-MM-DDTHH:mm
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
 const form = reactive({
   title: '',
   content: '',
   category: 'lecture',
-  eventTime: '',
+  eventTime: getDefaultDateTime(),
   location: '',
   tags: '',
   lifespan: '4h', // Vibe 模式专用
@@ -107,7 +133,7 @@ async function submit() {
     successMessage.value = `提交成功：${article.title}`
     form.title = ''
     form.content = ''
-    form.eventTime = ''
+    form.eventTime = getDefaultDateTime()
     form.location = ''
     form.tags = ''
   } finally {
@@ -162,7 +188,7 @@ function useAiAssist() {
               <span class="font-mono text-mono text-xs text-slate">类别</span>
               <select
                 v-model="form.category"
-                class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-slate focus:outline-none transition-all"
+                class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal font-sans focus:border-slate focus:outline-none transition-all"
                 :class="frequencyStore.isFocus ? 'focus:border-focus-primary' : 'focus:border-vibe-primary'"
               >
                 <option v-for="cat in categories" :key="cat.value" :value="cat.value">
@@ -177,7 +203,7 @@ function useAiAssist() {
                 <span class="font-mono text-mono text-xs text-slate">有效期</span>
                 <select
                   v-model="form.lifespan"
-                  class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal focus:border-vibe-primary focus:outline-none transition-all"
+                  class="rounded-soft border border-slate/20 bg-white px-4 py-3 text-base text-charcoal font-sans focus:border-vibe-primary focus:outline-none transition-all"
                 >
                   <option v-for="opt in lifespanOptions" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
@@ -202,7 +228,7 @@ function useAiAssist() {
             <textarea
               v-model="form.content"
               rows="6"
-              class="rounded-soft border border-slate/20 bg-white p-4 text-base text-charcoal outline-none transition focus:border-slate"
+              class="rounded-soft border border-slate/20 bg-white p-4 text-base text-charcoal font-sans outline-none transition focus:border-slate"
               :class="frequencyStore.isFocus ? 'focus:border-focus-primary' : 'focus:border-vibe-primary'"
               :placeholder="pageConfig.contentPlaceholder"
             />

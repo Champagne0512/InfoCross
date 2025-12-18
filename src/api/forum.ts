@@ -457,3 +457,82 @@ export async function fetchRelatedResources(
     { type: 'team', title: '大创项目招人', id: 3 },
   ]
 }
+
+export async function createComment(
+  threadId: number,
+  content: string,
+  isAnonymous: boolean = false,
+  parentId?: number,
+): Promise<ForumComment> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录再评论')
+
+  const payload: Database['public']['Tables']['forum_comments']['Insert'] = {
+    thread_id: threadId,
+    author_id: userId,
+    content,
+    is_anonymous: isAnonymous,
+    parent_id: parentId ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('forum_comments')
+    .insert(payload)
+    .select(
+      '*,' +
+        'profiles:profiles!forum_comments_author_id_fkey(id, username, avatar_url)',
+    )
+    .single()
+  if (error) throw error
+  return mapComment(data as unknown as CommentRow)
+}
+
+export async function bookmarkThread(threadId: number): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+  const { error } = await supabase
+    .from('forum_interactions')
+    .upsert(
+      {
+        user_id: userId,
+        thread_id: threadId,
+        type: 'bookmark',
+      },
+      { onConflict: 'user_id,thread_id,type' },
+    )
+  if (error && error.code !== '23505') {
+    throw error
+  }
+}
+
+export async function checkUserInteractions(
+  threadId: number,
+): Promise<{ liked: boolean; bookmarked: boolean }> {
+  const userId = await getUserId()
+  if (!userId) return { liked: false, bookmarked: false }
+
+  try {
+    const { data, error } = await supabase
+      .from('forum_interactions')
+      .select('type')
+      .eq('user_id', userId)
+      .eq('thread_id', threadId)
+    if (error) throw error
+
+    const types = (data ?? []).map((d) => d.type)
+    return {
+      liked: types.includes('like'),
+      bookmarked: types.includes('bookmark'),
+    }
+  } catch {
+    return { liked: false, bookmarked: false }
+  }
+}
+
+export async function incrementViewCount(threadId: number): Promise<void> {
+  try {
+    await supabase.rpc('increment_view_count', { thread_id: threadId })
+  } catch (error) {
+    console.error('[incrementViewCount] failed', error)
+  }
+}

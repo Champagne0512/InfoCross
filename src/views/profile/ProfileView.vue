@@ -7,6 +7,7 @@ import TabSwitcher from '@/components/profile/TabSwitcher.vue'
 import ProfileEditForm from '@/components/profile/ProfileEditForm.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
+import { User } from 'lucide-vue-next'
 
 const { profile } = useAuth()
 const router = useRouter()
@@ -85,7 +86,7 @@ function handleTabNavigate(tab: string, itemId: number) {
   <div v-else class="min-h-screen bg-cream flex items-center justify-center">
     <div class="text-center">
       <div class="w-16 h-16 rounded-full bg-slate/10 flex items-center justify-center mx-auto mb-6">
-        <span class="text-2xl text-slate">👤</span>
+        <User :size="32" class="text-slate" />
       </div>
       <h2 class="text-h2 font-sans font-bold text-charcoal mb-3">请先登录</h2>
       <p class="text-body font-sans text-slate mb-8">登录后即可查看个人资料</p>
