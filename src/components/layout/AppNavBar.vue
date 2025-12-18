@@ -26,16 +26,16 @@ const navItems = computed(() => {
   if (frequencyStore.isFocus) {
     return [
       { label: '首页', path: '/' },
-      { label: '发布', path: '/publish' },
-      { label: '组队', path: '/team' },
+      { label: '发现', path: '/team' },
+      { label: '协作', path: '/team/hub' },
       { label: '论坛', path: '/forum' },
       { label: '个人', path: '/profile' },
     ]
   }
   return [
     { label: '动态', path: '/' },
-    { label: '发起', path: '/publish' },
-    { label: '约伴', path: '/team' },
+    { label: '发现', path: '/team' },
+    { label: '协作', path: '/team/hub' },
     { label: '论坛', path: '/forum' },
     { label: '我的', path: '/profile' },
   ]

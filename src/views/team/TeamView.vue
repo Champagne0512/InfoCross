@@ -3,8 +3,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import TeamCard from '@/components/team/TeamCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppInput from '@/components/common/AppInput.vue'
-import { fetchTeams } from '@/api/team'
+import { fetchTeams, joinTeam } from '@/api/team'
 import { useFrequencyStore } from '@/stores/frequencyStore'
+import JoinTeamModal from '@/components/team/JoinTeamModal.vue'
 import type { Team } from '@/types/models'
 
 const frequencyStore = useFrequencyStore()
@@ -12,6 +13,9 @@ const frequencyStore = useFrequencyStore()
 const teams = ref<Team[]>([])
 const loading = ref(true)
 const filterExpanded = ref(false)
+const showDrawer = ref(false)
+const selectedTeam = ref<Team | null>(null)
+const toastMessage = ref('')
 
 // 筛选状态
 const searchQuery = ref('')
@@ -126,7 +130,7 @@ const pageConfig = computed(() => {
   if (frequencyStore.isFocus) {
     return {
       subtitle: 'DEEP FOCUS',
-      title: '组队协作',
+      title: '发现协作',
       desc: '跨学科科研组队、高难度课程问答、考研资料共享。内容越沉淀越有价值。',
       createText: '发起长期项目',
       searchLabel: '搜索项目/团队',
@@ -138,7 +142,7 @@ const pageConfig = computed(() => {
   }
   return {
     subtitle: 'VIBE MODE',
-    title: '即时约伴',
+    title: '发现约伴',
     desc: '约饭搭子、运动约伴、拼车出行。所有动态限时可见，永远新鲜。',
     createText: '发起即时约伴',
     searchLabel: '搜索约伴',
@@ -171,7 +175,8 @@ async function loadTeams() {
 }
 
 async function handleJoinTeam(team: Team) {
-  console.log('申请加入团队:', team.name)
+  selectedTeam.value = team
+  showDrawer.value = true
 }
 
 function handleViewTeam(team: Team) {
@@ -184,6 +189,20 @@ function resetFilters() {
   selectedCollege.value = 'all'
   selectedSkill.value = 'all'
   selectedStatus.value = 'all'
+}
+
+async function handleDrawerSubmit(payload: { teamId: number; role: string; message: string }) {
+  try {
+    await joinTeam(payload.teamId)
+    toastMessage.value = '申请已发送，队长将看到你的破壁摘要。'
+    showDrawer.value = false
+    setTimeout(() => {
+      toastMessage.value = ''
+    }, 4000)
+  } catch (error) {
+    toastMessage.value = '申请提交失败，请稍后再试。'
+    console.error(error)
+  }
 }
 </script>
 
@@ -203,17 +222,23 @@ function resetFilters() {
       <p class="text-body font-sans text-slate mb-8 max-w-2xl mx-auto leading-relaxed">
         {{ pageConfig.desc }}
       </p>
-      <div class="flex justify-center gap-4">
-        <AppButton 
-          variant="primary" 
-          :class="frequencyStore.isVibe ? 'vibe-button' : ''"
-          @click="$router.push('/publish?type=team&mode=' + frequencyStore.mode)"
-        >
-          {{ pageConfig.createText }}
-        </AppButton>
-        <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
-      </div>
-    </section>
+    <div class="flex justify-center gap-4">
+      <AppButton 
+        variant="primary" 
+        :class="frequencyStore.isVibe ? 'vibe-button' : ''"
+        @click="$router.push('/publish?type=team&mode=' + frequencyStore.mode)"
+      >
+        {{ pageConfig.createText }}
+      </AppButton>
+      <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
+    </div>
+    <p
+      v-if="toastMessage"
+      class="mt-4 text-center text-sm text-focus-accent"
+    >
+      {{ toastMessage }}
+    </p>
+  </section>
 
     <!-- 筛选面板 -->
     <section 
@@ -410,6 +435,14 @@ function resetFilters() {
       </div>
     </section>
   </div>
+
+  <JoinTeamModal
+    :open="showDrawer"
+    :team="selectedTeam"
+    :mode="frequencyStore.mode"
+    @close="showDrawer = false"
+    @submit="handleDrawerSubmit"
+  />
 </template>
 
 <style scoped>
