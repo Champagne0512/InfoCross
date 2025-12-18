@@ -7,9 +7,9 @@ import TabSwitcher from '@/components/profile/TabSwitcher.vue'
 import ProfileEditForm from '@/components/profile/ProfileEditForm.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
-import { User } from 'lucide-vue-next'
+import { User, LogOut } from 'lucide-vue-next'
 
-const { profile } = useAuth()
+const { profile, logout } = useAuth()
 const router = useRouter()
 
 const isEditModalOpen = ref(false)
@@ -62,6 +62,11 @@ function handleTabNavigate(tab: string, itemId: number) {
   // 处理列表项点击
   console.log('Navigate to:', tab, itemId)
 }
+
+async function handleLogout() {
+  await logout()
+  router.push('/')
+}
 </script>
 
 <template>
@@ -80,6 +85,17 @@ function handleTabNavigate(tab: string, itemId: number) {
     
     <!-- 底部：内容列表切换 -->
     <TabSwitcher @navigate="handleTabNavigate" />
+
+    <!-- 退出登录按钮 -->
+    <div class="px-6 py-8">
+      <button 
+        @click="handleLogout"
+        class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-soft border border-red-200 text-red-500 font-sans text-sm font-medium transition-all duration-200 hover:bg-red-50 hover:border-red-300"
+      >
+        <LogOut :size="18" />
+        <span>退出登录</span>
+      </button>
+    </div>
   </div>
 
   <!-- 未登录状态 -->

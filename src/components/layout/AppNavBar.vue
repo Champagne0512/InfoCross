@@ -1,15 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import FrequencySwitch from '@/components/common/FrequencySwitch.vue'
 import BinaryOrbitAnimation from '@/components/common/BinaryOrbitAnimation.vue'
+import { LogOut, User, Settings } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
 const { isAuthenticated, profile, logout } = useAuth()
 const frequencyStore = useFrequencyStore()
+
+const showUserMenu = ref(false)
+
+function toggleUserMenu() {
+  showUserMenu.value = !showUserMenu.value
+}
+
+function closeUserMenu() {
+  showUserMenu.value = false
+}
 
 const navItems = computed(() => {
   if (frequencyStore.isFocus) {
@@ -33,8 +44,19 @@ const navItems = computed(() => {
 const activePath = computed(() => route.path)
 
 async function handleLogout() {
+  closeUserMenu()
   await logout()
   router.push('/')
+}
+
+function goToProfile() {
+  closeUserMenu()
+  router.push('/profile')
+}
+
+function goToSettings() {
+  closeUserMenu()
+  router.push('/settings')
 }
 
 function goAuth() {
@@ -96,8 +118,12 @@ function goAuth() {
           登录
         </button>
       </div>
-      <div v-else class="space-y-3">
-        <div class="flex items-center gap-3 px-3">
+      <div v-else class="relative">
+        <!-- 用户信息区域（可点击） -->
+        <div 
+          @click="toggleUserMenu"
+          class="flex items-center gap-3 px-3 py-2 rounded-soft cursor-pointer transition-all duration-200 hover:bg-slate/5"
+        >
           <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden">
             <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
           </div>
@@ -112,18 +138,66 @@ function goAuth() {
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-sans text-sm font-medium text-charcoal truncate">{{ profile?.username }}</p>
+            <p class="font-sans text-xs text-slate truncate">点击查看更多</p>
           </div>
         </div>
-        <button 
-          @click="handleLogout"
-          class="w-full px-4 py-3 rounded-soft text-white font-sans text-sm font-medium transition-all duration-300 hover:shadow-morandi-lg hover:scale-105 active:scale-95"
-          :class="frequencyStore.isFocus 
-            ? 'bg-focus-accent hover:bg-focus-accent/90' 
-            : 'bg-vibe-accent hover:bg-vibe-accent/90'"
-        >
-          退出登录
-        </button>
+
+        <!-- 用户菜单弹出卡片 -->
+        <Transition name="popup">
+          <div 
+            v-if="showUserMenu"
+            class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-morandi shadow-morandi-lg border border-slate/10 overflow-hidden z-50"
+          >
+            <div class="p-3 border-b border-slate/10">
+              <p class="font-sans text-sm font-medium text-charcoal">{{ profile?.username }}</p>
+              <p class="font-sans text-xs text-slate">{{ profile?.email || '未设置邮箱' }}</p>
+            </div>
+            <div class="py-1">
+              <button 
+                @click="goToProfile"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-charcoal hover:bg-slate/5 transition-colors"
+              >
+                <User :size="16" class="text-slate" />
+                <span>个人资料</span>
+              </button>
+              <button 
+                @click="goToSettings"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-charcoal hover:bg-slate/5 transition-colors"
+              >
+                <Settings :size="16" class="text-slate" />
+                <span>设置</span>
+              </button>
+              <button 
+                @click="handleLogout"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <LogOut :size="16" />
+                <span>退出登录</span>
+              </button>
+            </div>
+          </div>
+        </Transition>
+
+        <!-- 点击外部关闭菜单的遮罩 -->
+        <div 
+          v-if="showUserMenu"
+          class="fixed inset-0 z-40"
+          @click="closeUserMenu"
+        />
       </div>
     </div>
   </nav>
 </template>
+
+<style scoped>
+.popup-enter-active,
+.popup-leave-active {
+  transition: all 0.2s ease;
+}
+
+.popup-enter-from,
+.popup-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+</style>
