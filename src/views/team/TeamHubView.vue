@@ -58,7 +58,7 @@ const stats = computed(() => ({
 
 <template>
   <div class="space-y-8">
-    <section class="rounded-3xl bg-gradient-to-br from-white via-cream to-focus-primary/5 p-8 shadow-morandi">
+    <section class="rounded-3xl bg-transparent p-8">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p class="text-caption uppercase tracking-[0.3em] text-slate">InfoCross Crew</p>
