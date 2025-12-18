@@ -33,6 +33,7 @@ function mapTeam(row: TeamRow, members: TeamMemberRow[]): Team {
     createdAt: row.created_at,
     deadline: row.deadline ?? undefined,
     status: (row.status as Team['status']) ?? 'recruiting',
+    isVibe: Boolean(row.is_vibe),
   }
 }
 
@@ -61,12 +62,17 @@ export async function fetchTeams(params?: {
   skill?: string
   status?: string
   limit?: number
+  mode?: 'focus' | 'vibe'
 }): Promise<Team[]> {
   try {
     let query = supabase
       .from('teams')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (params?.mode) {
+      query = query.eq('is_vibe', params.mode === 'vibe')
+    }
 
     if (params?.type && params.type !== 'all') {
       query = query.eq('type', params.type)

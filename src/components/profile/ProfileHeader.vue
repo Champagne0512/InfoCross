@@ -18,16 +18,16 @@ const joinDate = computed(() => {
 </script>
 
 <template>
-  <section class="py-4">
+  <section class="py-6">
     <div class="max-w-6xl mx-auto px-6">
-      <div class="morandi-card-base p-6">
-        <div class="flex flex-col lg:flex-row items-center lg:items-center gap-4">
+      <div class="morandi-card-base p-8">
+        <div class="flex flex-col lg:flex-row items-center lg:items-start gap-6">
           <!-- 左侧：头像 -->
           <div class="flex-shrink-0">
             <div class="relative">
               <div 
                 v-if="profile.avatarUrl"
-                class="w-14 h-14 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white shadow-sm"
+                class="w-20 h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden border-3 border-white shadow-morandi"
               >
                 <img 
                   :src="profile.avatarUrl" 
@@ -37,7 +37,7 @@ const joinDate = computed(() => {
               </div>
               <div 
                 v-else
-                class="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-morandi-blue to-morandi-lavender flex items-center justify-center text-white text-lg lg:text-xl font-sans font-bold border-2 border-white shadow-sm"
+                class="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-morandi-blue to-morandi-lavender flex items-center justify-center text-white text-2xl lg:text-3xl font-sans font-bold border-3 border-white shadow-morandi"
               >
                 {{ profile.username.charAt(0).toUpperCase() }}
               </div>
@@ -46,40 +46,45 @@ const joinDate = computed(() => {
           
           <!-- 右侧：个人信息 -->
           <div class="flex-1 text-center lg:text-left">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 mb-2">
-              <!-- 姓名和基本信息 -->
-              <div>
-                <h1 class="text-h2 font-sans font-bold text-charcoal mb-0.5">
-                  {{ profile.username }}
-                </h1>
-                <div class="flex flex-wrap items-center gap-2 text-slate">
-                  <div class="flex items-center gap-1">
-                    <MapPin class="w-3 h-3" />
-                    <span class="font-sans text-xs">{{ profile.college }} · {{ profile.major }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <Calendar class="w-3 h-3" />
-                    <span class="font-mono text-mono text-xs">{{ joinDate }}</span>
-                  </div>
-                </div>
-              </div>
+            <!-- 姓名行 -->
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+              <h1 class="text-h1 font-sans font-bold text-charcoal">
+                {{ profile.username }}
+              </h1>
               
               <!-- 编辑按钮 -->
               <button 
                 @click="emit('edit')"
-                class="flex items-center gap-1.5 px-2.5 py-1 rounded-soft bg-white/70 backdrop-blur-sm border border-slate/20 hover:bg-white transition-all duration-200"
+                class="flex items-center gap-2 px-4 py-2 rounded-soft bg-white/80 backdrop-blur-sm border border-slate/20 hover:bg-white hover:shadow-morandi-sm transition-all duration-200"
               >
-                <User class="w-3 h-3 text-slate" />
-                <span class="font-sans text-xs font-medium text-slate">编辑</span>
+                <User class="w-4 h-4 text-slate" />
+                <span class="font-sans text-sm font-medium text-slate">编辑资料</span>
               </button>
             </div>
             
+            <!-- 基本信息 -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-4 text-slate">
+              <div class="flex items-center gap-2">
+                <MapPin class="w-4 h-4" />
+                <span class="font-sans text-sm">{{ profile.college }}</span>
+              </div>
+              <span class="hidden lg:inline text-slate/30">|</span>
+              <div class="flex items-center gap-2">
+                <span class="font-sans text-sm">{{ profile.major }}</span>
+              </div>
+              <span class="hidden lg:inline text-slate/30">|</span>
+              <div class="flex items-center gap-2">
+                <Calendar class="w-4 h-4" />
+                <span class="font-mono text-sm">{{ joinDate }} 加入</span>
+              </div>
+            </div>
+            
             <!-- 兴趣标签 -->
-            <div v-if="profile.tags && profile.tags.length > 0" class="flex flex-wrap gap-1">
+            <div v-if="profile.tags && profile.tags.length > 0" class="flex flex-wrap justify-center lg:justify-start gap-2">
               <span 
                 v-for="tag in profile.tags" 
                 :key="tag"
-                class="px-2 py-0.5 rounded-full bg-white/60 border border-slate/10 text-xs font-sans text-slate"
+                class="px-3 py-1 rounded-full bg-morandi-lavender/10 border border-morandi-lavender/20 text-sm font-sans text-morandi-lavender"
               >
                 #{{ tag }}
               </span>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import TeamCard from '@/components/team/TeamCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppInput from '@/components/common/AppInput.vue'
@@ -76,8 +76,14 @@ const statuses = [
 ]
 
 // 计算筛选结果
+const visibleTeams = computed(() =>
+  teams.value.filter((team) =>
+    frequencyStore.isFocus ? !team.isVibe : Boolean(team.isVibe),
+  )
+)
+
 const filteredTeams = computed(() => {
-  let result = teams.value
+  let result = visibleTeams.value
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -147,10 +153,18 @@ onMounted(async () => {
   await loadTeams()
 })
 
+watch(
+  () => frequencyStore.mode,
+  async () => {
+    resetFilters()
+    await loadTeams()
+  },
+)
+
 async function loadTeams() {
   loading.value = true
   try {
-    teams.value = await fetchTeams()
+    teams.value = await fetchTeams({ mode: frequencyStore.mode })
   } finally {
     loading.value = false
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import ArticleCard from '@/components/business/ArticleCard.vue'
 import InsightPanel from '@/components/business/InsightPanel.vue'
 import AiIcon from '@/components/common/AiIcon.vue'
@@ -37,8 +37,14 @@ const vibeCategories = [
   { label: '闲聊', value: 'chat' },
 ]
 
-const categories = computed(() => 
-  frequencyStore.isFocus ? focusCategories : vibeCategories
+const categories = computed(() =>
+  frequencyStore.isFocus ? focusCategories : vibeCategories,
+)
+
+const allowedCategoryValues = computed(() =>
+  categories.value
+    .map((category) => category.value)
+    .filter((value) => value !== 'all'),
 )
 
 // 页面配置
@@ -77,21 +83,46 @@ const pageConfig = computed(() => {
   }
 })
 
+const modeArticles = computed(() =>
+  articles.value.filter((article) =>
+    allowedCategoryValues.value.includes(article.category),
+  ),
+)
+
+const modeRecommended = computed(() =>
+  recommended.value.filter((article) =>
+    allowedCategoryValues.value.includes(article.category),
+  ),
+)
+
 const heroInsights = computed(() =>
-  articles.value[0] ? buildMockInsights(articles.value[0]) : [],
+  modeArticles.value[0] ? buildMockInsights(modeArticles.value[0]) : [],
 )
 
 const filteredArticles = computed(() => {
-  if (selectedCategory.value === 'all') return articles.value
-  return articles.value.filter((article) => article.category === selectedCategory.value)
+  const source = modeArticles.value
+  if (
+    selectedCategory.value !== 'all' &&
+    allowedCategoryValues.value.includes(selectedCategory.value)
+  ) {
+    return source.filter((article) => article.category === selectedCategory.value)
+  }
+  return source
 })
 
 const spotlightArticles = computed(() => filteredArticles.value.slice(0, 3))
-const breakerHighlights = computed(() => recommended.value.slice(0, 2))
+const breakerHighlights = computed(() => modeRecommended.value.slice(0, 2))
 
 onMounted(async () => {
   await loadArticles()
 })
+
+watch(
+  () => frequencyStore.mode,
+  () => {
+    selectedCategory.value = 'all'
+  },
+)
 
 async function loadArticles() {
   loading.value = true
@@ -362,7 +393,7 @@ function handleSearch() {
                   class="font-mono text-mono font-semibold"
                   :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'"
                 >
-                  {{ articles.length }}
+                  {{ modeArticles.length }}
                 </span>
               </div>
               <div 
@@ -376,7 +407,7 @@ function handleSearch() {
                   class="font-mono text-mono font-semibold"
                   :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
                 >
-                  {{ recommended.length }}
+                  {{ modeRecommended.length }}
                 </span>
               </div>
               <div 

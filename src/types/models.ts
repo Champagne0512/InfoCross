@@ -71,6 +71,7 @@ export interface Team {
   createdAt: string
   deadline?: string
   status: 'recruiting' | 'full' | 'completed'
+  isVibe?: boolean
 }
 
 export type ForumThreadType = 'signal' | 'depth'
