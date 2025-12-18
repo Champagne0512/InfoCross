@@ -1,13 +1,30 @@
 <script setup lang="ts">
-const reputationTags = [
-  { tag: '靠谱', count: 12, icon: '👍', color: 'morandi-green' },
-  { tag: '代码大神', count: 8, icon: '💻', color: 'morandi-blue' },
-  { tag: 'PPT美工', count: 5, icon: '🎨', color: 'morandi-lavender' },
-  { tag: '准时', count: 15, icon: '⏰', color: 'morandi-clay' },
-  { tag: '沟通清晰', count: 9, icon: '💬', color: 'morandi-green' },
-  { tag: '解决问题', count: 7, icon: '🔧', color: 'morandi-blue' },
-  { tag: '团队协作', count: 11, icon: '🤝', color: 'morandi-lavender' },
-  { tag: '创新思维', count: 6, icon: '💡', color: 'morandi-clay' },
+import {
+  ThumbsUp,
+  Code,
+  Palette,
+  Clock,
+  MessageCircle,
+  Wrench,
+  Users,
+  Lightbulb,
+} from 'lucide-vue-next'
+import { markRaw, type Component } from 'vue'
+
+const reputationTags: Array<{
+  tag: string
+  count: number
+  icon: Component
+  color: string
+}> = [
+  { tag: '靠谱', count: 12, icon: markRaw(ThumbsUp), color: 'morandi-green' },
+  { tag: '代码大神', count: 8, icon: markRaw(Code), color: 'morandi-blue' },
+  { tag: 'PPT美工', count: 5, icon: markRaw(Palette), color: 'morandi-lavender' },
+  { tag: '准时', count: 15, icon: markRaw(Clock), color: 'morandi-clay' },
+  { tag: '沟通清晰', count: 9, icon: markRaw(MessageCircle), color: 'morandi-green' },
+  { tag: '解决问题', count: 7, icon: markRaw(Wrench), color: 'morandi-blue' },
+  { tag: '团队协作', count: 11, icon: markRaw(Users), color: 'morandi-lavender' },
+  { tag: '创新思维', count: 6, icon: markRaw(Lightbulb), color: 'morandi-clay' },
 ]
 </script>
 
@@ -17,7 +34,7 @@ const reputationTags = [
       <p class="font-mono text-mono text-slate mb-2">TEAMMATE REVIEWS</p>
       <h3 class="text-h2 font-sans font-semibold text-charcoal">队友印象</h3>
     </header>
-    
+
     <!-- 标签云 -->
     <div class="flex flex-wrap gap-3">
       <button
@@ -26,12 +43,12 @@ const reputationTags = [
         class="inline-flex items-center gap-2 px-4 py-3 rounded-full border transition-all hover:scale-105"
         :class="`border-${item.color} bg-${item.color}/10 text-${item.color}`"
       >
-        <span>{{ item.icon }}</span>
+        <component :is="item.icon" :size="16" />
         <span class="font-sans text-sm font-medium">{{ item.tag }}</span>
         <span class="font-mono text-mono text-xs">{{ item.count }}</span>
       </button>
     </div>
-    
+
     <!-- 统计 -->
     <div class="mt-8 pt-6 border-t border-slate/10">
       <div class="grid grid-cols-3 gap-6">
@@ -47,7 +64,7 @@ const reputationTags = [
         </div>
         <div class="text-center">
           <div class="text-2xl font-sans font-bold text-charcoal">
-            {{ Math.max(...reputationTags.map(item => item.count)) }}
+            {{ Math.max(...reputationTags.map((item) => item.count)) }}
           </div>
           <div class="font-mono text-mono text-xs text-slate">最高评价</div>
         </div>

@@ -11,7 +11,7 @@ defineProps<{
   <section class="rounded-2xl border border-intelligence/30 bg-surface p-5 shadow-subtle">
     <header class="mb-4 flex items-center justify-between">
       <div>
-        <p class="font-data text-xs text-intelligence">AI BRIEF</p>
+        <p class="font-mono text-xs text-intelligence">AI BRIEF</p>
         <h3 class="text-lg font-semibold text-ink mt-1">跨学科建议</h3>
       </div>
       <div class="rounded-full bg-intelligence/10 px-3 py-1 text-xs text-intelligence font-semibold">破壁推荐</div>
@@ -27,7 +27,7 @@ defineProps<{
             <PhMagicWand size="18" weight="duotone" class="text-intelligence" />
             <span class="font-semibold">{{ insight.headline }}</span>
           </div>
-          <span class="font-data text-[0.6rem] text-intelligence">
+          <span class="font-mono text-[0.6rem] text-intelligence">
             {{ (insight.confidence * 100).toFixed(0) }}%
           </span>
         </div>

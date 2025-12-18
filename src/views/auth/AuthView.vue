@@ -63,19 +63,19 @@ async function submit() {
     <div class="relative z-10 w-full max-w-5xl px-6">
       <div class="rounded-3xl border border-border bg-white shadow-sheet md:grid md:grid-cols-2">
         <div class="flex flex-col justify-center gap-6 border-b border-border bg-neutral p-10 md:border-b-0 md:border-r">
-          <p class="font-data text-xs text-ink-soft">Nexus Identity</p>
+          <p class="font-mono text-xs text-ink-soft">Nexus Identity</p>
           <h1 class="text-3xl font-semibold text-ink">连接不同学科的人</h1>
           <p class="text-sm text-ink-soft">
             使用校园邮箱登录，体验 AI 省流摘要、破壁推荐、技能互补组队与 Explorer Footprint。
           </p>
           <div class="grid gap-3">
             <div class="rounded-2xl border border-border bg-white p-4">
-              <p class="font-data text-xs text-ink-soft">Wall-Breaker</p>
+              <p class="font-mono text-xs text-ink-soft">Wall-Breaker</p>
               <p class="text-2xl font-semibold text-intelligence">89%</p>
               <p class="text-xs text-ink-soft">跨学科匹配率</p>
             </div>
             <div class="rounded-2xl border border-border bg-white p-4">
-              <p class="font-data text-xs text-ink-soft">AI Smart Brief</p>
+              <p class="font-mono text-xs text-ink-soft">AI Smart Brief</p>
               <p class="text-2xl font-semibold text-academic">TL;DR</p>
               <p class="text-xs text-ink-soft">LLM 摘要代理</p>
             </div>

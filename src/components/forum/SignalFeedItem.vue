@@ -52,6 +52,14 @@ const displayName = computed(() => {
   }
   return props.thread.authorName || '匿名用户'
 })
+
+// 情感颜色
+const sentimentColor = computed(() => {
+  const score = props.thread.sentimentScore
+  if (score >= 0.7) return 'positive'
+  if (score <= 0.3) return 'negative'
+  return 'neutral'
+})
 </script>
 
 <template>
@@ -69,7 +77,7 @@ const displayName = computed(() => {
     <!-- 内容区 -->
     <div class="content-area">
       <!-- 气泡卡片 -->
-      <div class="bubble-card">
+      <div class="bubble-card" :class="`sentiment-${sentimentColor}`">
         <!-- 跨界情报标识 -->
         <div v-if="isCrossCollege" class="cross-badge">
           <Globe :size="14" />
@@ -77,24 +85,24 @@ const displayName = computed(() => {
         </div>
 
         <!-- 正文 -->
-        <p class="content-text">{{ thread.contentText }}</p>
+        <p class="content-text font-sans">{{ thread.contentText }}</p>
 
         <!-- 标签 -->
         <div v-if="thread.aiTags.length" class="tags">
-          <span v-for="tag in thread.aiTags.slice(0, 3)" :key="tag" class="tag">
-            {{ tag }}
+          <span v-for="tag in thread.aiTags.slice(0, 3)" :key="tag" class="tag font-mono">
+            #{{ tag }}
           </span>
         </div>
 
         <!-- 底部信息栏 -->
         <div class="meta-bar">
           <div class="meta-left">
-            <span class="author">{{ displayName }}</span>
-            <span class="time">{{ relativeTime }}</span>
+            <span class="author font-sans">{{ displayName }}</span>
+            <span class="time font-mono">{{ relativeTime }}</span>
           </div>
 
           <!-- 热度指示器 -->
-          <div class="heat-indicator">
+          <div class="heat-indicator" :title="`热度: ${Math.round(thread.sentimentScore * 100)}%`">
             <div
               v-for="i in 5"
               :key="i"
@@ -107,16 +115,17 @@ const displayName = computed(() => {
 
       <!-- 操作栏 -->
       <div class="action-bar">
-        <button class="action-btn" @click="emit('like', thread)">
+        <button class="action-btn like-btn" @click="emit('like', thread)">
           <Heart :size="16" />
           <span v-if="thread.likeCount">{{ thread.likeCount }}</span>
         </button>
-        <button class="action-btn" @click="emit('comment', thread)">
+        <button class="action-btn comment-btn" @click="emit('comment', thread)">
           <MessageCircle :size="16" />
           <span v-if="thread.commentCount">{{ thread.commentCount }}</span>
         </button>
-        <button class="action-btn" @click="emit('share', thread)">
+        <button class="action-btn share-btn" @click="emit('share', thread)">
           <Share2 :size="16" />
+          <span v-if="thread.shareCount">{{ thread.shareCount }}</span>
         </button>
       </div>
     </div>
@@ -134,12 +143,19 @@ const displayName = computed(() => {
 
 .avatar {
   @apply w-10 h-10 rounded-full flex items-center justify-center;
-  @apply bg-vibe-primary/20 text-vibe-accent;
+  @apply bg-vibe-primary/30 text-vibe-accent;
   @apply font-sans font-semibold text-sm;
+  @apply transition-all duration-300;
+  @apply shadow-sm;
+}
+
+.signal-item:hover .avatar {
+  @apply scale-110 shadow-md;
 }
 
 .timeline-line {
-  @apply flex-1 w-px bg-slate/15 mt-2;
+  @apply flex-1 w-px bg-vibe-primary/20 mt-2;
+  @apply transition-colors duration-300;
 }
 
 .content-area {
@@ -147,20 +163,35 @@ const displayName = computed(() => {
 }
 
 .bubble-card {
-  @apply p-5 rounded-morandi bg-cream;
-  @apply border border-slate/10 shadow-morandi-sm;
+  @apply p-5 rounded-morandi;
+  @apply border shadow-morandi-sm;
   @apply relative;
+  @apply transition-all duration-300;
+  @apply hover:shadow-morandi hover:-translate-y-0.5;
+}
+
+.bubble-card.sentiment-positive {
+  @apply bg-vibe-bg border-vibe-primary/20;
+}
+
+.bubble-card.sentiment-neutral {
+  @apply bg-cream border-slate/15;
+}
+
+.bubble-card.sentiment-negative {
+  @apply bg-morandi-clay/5 border-morandi-clay/20;
 }
 
 .cross-badge {
   @apply absolute -top-2 right-4;
-  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full;
-  @apply bg-vibe-primary/20 text-vibe-accent;
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full;
+  @apply bg-vibe-accent text-white;
   @apply font-mono text-xs;
+  @apply shadow-sm;
 }
 
 .content-text {
-  @apply font-sans text-body text-charcoal leading-relaxed;
+  @apply text-body text-charcoal leading-relaxed;
 }
 
 .tags {
@@ -168,9 +199,11 @@ const displayName = computed(() => {
 }
 
 .tag {
-  @apply px-2 py-1 rounded-full;
-  @apply bg-slate/10 text-slate;
-  @apply font-mono text-xs;
+  @apply px-2.5 py-1 rounded-full;
+  @apply bg-vibe-primary/15 text-vibe-accent;
+  @apply text-xs;
+  @apply transition-colors duration-200;
+  @apply cursor-pointer hover:bg-vibe-primary/25;
 }
 
 .meta-bar {
@@ -182,36 +215,61 @@ const displayName = computed(() => {
 }
 
 .author {
-  @apply font-sans text-sm text-charcoal;
+  @apply text-sm text-charcoal font-medium;
 }
 
 .time {
-  @apply font-mono text-xs text-slate;
+  @apply text-xs text-slate;
 }
 
 .heat-indicator {
-  @apply flex gap-1;
+  @apply flex gap-1 cursor-help;
 }
 
 .heat-dot {
-  @apply w-1.5 h-1.5 rounded-full transition-all;
+  @apply w-2 h-2 rounded-full transition-all duration-300;
 }
 
 .heat-active {
   @apply bg-vibe-accent;
+  animation: pulse 2s infinite;
 }
 
 .heat-inactive {
   @apply bg-slate/20;
 }
 
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .action-bar {
-  @apply flex gap-4 mt-3;
+  @apply flex gap-2 mt-3;
 }
 
 .action-btn {
-  @apply flex items-center gap-1.5 px-3 py-1.5 rounded-soft;
-  @apply text-slate hover:text-vibe-accent hover:bg-vibe-primary/10;
-  @apply font-mono text-xs transition-all;
+  @apply flex items-center gap-1.5 px-3 py-2 rounded-soft;
+  @apply text-slate;
+  @apply font-mono text-xs;
+  @apply transition-all duration-200;
+  @apply hover:scale-105;
+}
+
+.like-btn:hover {
+  @apply text-vibe-accent bg-vibe-primary/10;
+}
+
+.comment-btn:hover {
+  @apply text-morandi-blue bg-morandi-blue/10;
+}
+
+.share-btn:hover {
+  @apply text-morandi-green bg-morandi-green/10;
 }
 </style>
