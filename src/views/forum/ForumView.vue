@@ -15,8 +15,8 @@ import {
   MessageCircle,
   Eye,
   Heart,
-  ChevronUp,
-  ChevronDown,
+  Maximize2,
+  Minimize2,
 } from 'lucide-vue-next'
 import {
   fetchForumThreads,
@@ -86,33 +86,19 @@ const newComment = ref('')
 const commentAnonymous = ref(false)
 const submittingComment = ref(false)
 
-// 阅览模式状态
-const isReadingMode = ref(false)
+// 专注模式
+const compactMode = ref(false)
 
-// 切换阅览模式
-function toggleReadingMode() {
-  isReadingMode.value = !isReadingMode.value
+function enterCompactMode() {
+  compactMode.value = true
 }
 
-// 监听滚动事件，向下滚动时进入阅览模式
-function handleScroll(event: WheelEvent) {
-  if (!isReadingMode.value && event.deltaY > 30) {
-    isReadingMode.value = true
-  }
+function exitCompactMode() {
+  compactMode.value = false
 }
 
-// 监听阅览模式变化，控制body滚动
-watch(isReadingMode, (reading) => {
-  if (reading) {
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = ''
-  }
-})
-
-onUnmounted(() => {
-  window.removeEventListener('wheel', handleScroll)
-  document.body.style.overflow = ''
+watch(compactMode, (value) => {
+  document.body.style.overflow = value ? 'hidden' : ''
 })
 
 // 筛选后的深度文章
@@ -141,10 +127,11 @@ const heroContent = computed(() => {
 })
 
 onMounted(async () => {
-  // 添加滚动监听
-  window.addEventListener('wheel', handleScroll, { passive: true })
-  // 加载数据
   await Promise.all([loadSignalThreads(), loadDepthThreads(), loadHotTopics()])
+})
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
 })
 
 // 监听模式变化，重新加载数据
@@ -325,11 +312,11 @@ async function handleBookmark() {
     class="forum-wrapper transition-colors duration-500"
     :class="[
       frequencyStore.isFocus ? 'bg-focus-bg' : 'bg-vibe-bg',
-      isReadingMode ? 'reading-mode' : ''
+      compactMode ? 'compact-mode' : ''
     ]"
   >
-    <!-- Hero 区域 - 初始状态（竖直排列） -->
-    <section v-if="!isReadingMode" class="hero hero-initial">
+    <!-- Hero 区域 -->
+    <section v-if="!compactMode" class="hero hero-initial">
       <p
         class="hero-subtitle transition-colors duration-300"
         :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
@@ -351,66 +338,41 @@ async function handleBookmark() {
         >
           {{ heroContent.action }}
         </AppButton>
+        <button class="focus-toggle focus-toggle--ghost" @click="enterCompactMode">
+          <Maximize2 :size="16" />
+          <span>进入专注</span>
+        </button>
       </div>
-
-      <!-- 切换到阅览模式的按钮 -->
-      <button
-        class="mode-toggle-btn"
-        :class="frequencyStore.isFocus ? 'toggle-focus' : 'toggle-vibe'"
-        @click="toggleReadingMode"
-      >
-        <ChevronUp :size="20" />
-      </button>
     </section>
 
-    <!-- Hero 区域 - 阅览状态（水平排列，固定在顶部） -->
-    <header v-else class="hero-compact">
-      <div class="compact-content">
-        <div class="compact-left">
-          <h1 class="compact-title font-sans">{{ heroContent.title }}</h1>
-          <SpectrumTabs v-model="mode" :compact="true" />
+    <header v-else class="compact-bar">
+      <div class="compact-left">
+        <div>
+          <p class="compact-label">The Spectrum</p>
+          <h2 class="compact-title">{{ heroContent.title }}</h2>
         </div>
-        <div class="compact-right">
-          <!-- 模式说明 - 紧凑模式下显示在发布按钮左侧 -->
-          <Transition name="hint-fade" mode="out-in">
-            <span
-              v-if="frequencyStore.isFocus"
-              key="focus"
-              class="compact-mode-hint font-mono text-focus-accent"
-            >
-              Focus Mode · 深度聚焦
-            </span>
-            <span
-              v-else
-              key="vibe"
-              class="compact-mode-hint font-mono text-vibe-accent"
-            >
-              Vibe Mode · 生活脉动
-            </span>
-          </Transition>
-          <AppButton
-            variant="primary"
-            size="sm"
-            :class="frequencyStore.isVibe ? 'vibe-button' : ''"
-            @click="openPostModal"
-          >
-            {{ heroContent.action }}
-          </AppButton>
-          <!-- 切换回初始模式的按钮 -->
-          <button
-            class="mode-toggle-btn compact-toggle"
-            :class="frequencyStore.isFocus ? 'toggle-focus' : 'toggle-vibe'"
-            @click="toggleReadingMode"
-          >
-            <ChevronDown :size="20" />
-          </button>
-        </div>
+        <SpectrumTabs v-model="mode" :compact="true" />
+      </div>
+      <div class="compact-right">
+        <AppButton
+          variant="primary"
+          size="sm"
+          :class="frequencyStore.isVibe ? 'vibe-button' : ''"
+          @click="openPostModal"
+        >
+          {{ heroContent.action }}
+        </AppButton>
+        <button class="focus-toggle focus-toggle--solid" @click="exitCompactMode">
+          <Minimize2 :size="16" />
+          <span>退出专注</span>
+        </button>
       </div>
     </header>
 
-    <!-- Signal 模式 (Vibe) -->
-    <Transition name="fade-slide" mode="out-in">
-      <section v-if="mode === 'signal'" key="signal" class="signal-section">
+    <div class="forum-content">
+      <!-- Signal 模式 (Vibe) -->
+      <Transition name="fade-slide" mode="out-in">
+        <section v-if="mode === 'signal'" key="signal" class="signal-section">
         <div class="signal-grid">
           <!-- 情报流 -->
           <div class="signal-feed scrollable-content">
@@ -482,12 +444,12 @@ async function handleBookmark() {
             </div>
           </aside>
         </div>
-      </section>
-    </Transition>
+        </section>
+      </Transition>
 
-    <!-- Depth 模式 (Focus) -->
-    <Transition name="fade-slide" mode="out-in">
-      <section v-if="mode === 'depth'" key="depth" class="depth-section">
+      <!-- Depth 模式 (Focus) -->
+      <Transition name="fade-slide" mode="out-in">
+        <section v-if="mode === 'depth'" key="depth" class="depth-section">
         <!-- 分类筛选 -->
         <div class="category-filter">
           <button
@@ -692,8 +654,9 @@ async function handleBookmark() {
             </div>
           </Transition>
         </div>
-      </section>
-    </Transition>
+        </section>
+      </Transition>
+    </div>
 
     <!-- 发帖弹窗 -->
     <Transition name="modal">
@@ -781,15 +744,19 @@ async function handleBookmark() {
 
 <style scoped>
 .forum-wrapper {
-  @apply flex-1 w-full min-h-screen px-6 lg:px-12 py-12 space-y-10 transition-all duration-500;
+  @apply w-full px-6 lg:px-12 py-12 gap-6 transition-all duration-500;
+  @apply flex flex-col;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.forum-wrapper.reading-mode {
-  @apply pt-20 space-y-6 px-6 lg:px-12;
-  @apply h-screen overflow-hidden fixed top-0 bottom-0;
-  left: 15rem;
-  right: 0;
-  touch-action: none;
+.forum-wrapper.compact-mode {
+  @apply py-6 gap-4;
+}
+
+.forum-content {
+  @apply flex-1 w-full min-h-0;
 }
 
 /* 可滚动内容区域 */
@@ -807,70 +774,6 @@ async function handleBookmark() {
 }
 
 /* 切换按钮样式 */
-.mode-toggle-btn {
-  @apply w-10 h-10 rounded-full flex items-center justify-center;
-  @apply border shadow-morandi-sm;
-  @apply transition-all duration-300 cursor-pointer;
-  @apply hover:shadow-morandi hover:scale-105;
-  @apply mt-6 mx-auto;
-}
-
-.toggle-focus {
-  @apply bg-white border-focus-primary/30 text-focus-accent;
-  @apply hover:bg-focus-primary/10;
-}
-
-.toggle-vibe {
-  @apply bg-white border-vibe-primary/30 text-vibe-accent;
-  @apply hover:bg-vibe-primary/10;
-}
-
-/* 阅览模式的紧凑 Header */
-.hero-compact {
-  @apply fixed top-0 z-40;
-  left: 15rem;
-  right: 0;
-  @apply bg-transparent;
-  @apply py-3;
-  @apply transition-all duration-500;
-  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.compact-content {
-  @apply w-full flex items-center justify-between gap-4 px-6 lg:px-12;
-}
-
-.compact-left {
-  @apply flex items-center gap-6;
-}
-
-.compact-title {
-  @apply text-h3 font-semibold text-charcoal whitespace-nowrap;
-}
-
-.compact-right {
-  @apply flex items-center gap-3;
-}
-
-.compact-mode-hint {
-  @apply text-xs tracking-wider uppercase whitespace-nowrap;
-}
-
-.compact-toggle {
-  @apply mt-0;
-}
-
 .hero-subtitle {
   @apply font-mono text-xs tracking-[0.3em] uppercase mb-3;
 }
@@ -891,60 +794,67 @@ async function handleBookmark() {
   @apply flex justify-center mt-6;
 }
 
+.focus-toggle {
+  @apply inline-flex items-center gap-2 rounded-full text-sm transition-all duration-200;
+  @apply font-sans;
+}
+
+.focus-toggle--ghost {
+  @apply px-4 py-2 border border-slate/30 text-slate hover:text-charcoal hover:border-charcoal/40 bg-white/70;
+}
+
+.focus-toggle--solid {
+  @apply px-4 py-2 bg-charcoal text-white hover:bg-charcoal/90 shadow-morandi-sm;
+}
+
 .vibe-button {
   @apply bg-vibe-accent hover:bg-vibe-accent/90;
+}
+
+.compact-bar {
+  @apply flex items-center justify-between rounded-2xl bg-white/80 shadow-morandi-sm border border-slate/10 px-5 py-4;
+}
+
+.compact-left {
+  @apply flex items-center gap-6;
+}
+
+.compact-right {
+  @apply flex items-center gap-3;
+}
+
+.compact-label {
+  @apply font-mono text-xs tracking-[0.3em] uppercase text-slate;
+}
+
+.compact-title {
+  @apply text-h3 font-semibold text-charcoal;
 }
 
 /* Signal 模式样式 */
 .signal-section,
 .depth-section {
-  @apply w-full;
-}
-
-.reading-mode .signal-section,
-.reading-mode .depth-section {
-  @apply flex-1;
-  overflow: hidden;
-  height: calc(100vh - 100px);
+  @apply w-full h-full flex flex-col;
 }
 
 
 .signal-grid {
   @apply grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_320px];
-}
-
-.reading-mode .signal-grid {
-  height: 100%;
-  overflow: hidden;
-  /* 情报流自动扩展，侧边栏固定宽度 */
-  grid-template-columns: 1fr 280px;
+  @apply flex-1 min-h-0;
 }
 
 .signal-feed {
-  @apply space-y-6 relative;
-}
-
-.reading-mode .signal-feed {
-  @apply pr-2 pb-8;
-  height: calc(100vh - 140px);
+  @apply space-y-6 relative pr-2;
+  height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* 自动扩展 */
-  flex: 1;
-  min-width: 0;
 }
 
 .signal-aside {
   @apply space-y-6;
-}
-
-.reading-mode .signal-aside {
-  height: calc(100vh - 140px);
+  height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* 固定宽度 */
-  width: 280px;
-  flex-shrink: 0;
 }
 
 .hot-topic-card,
@@ -1003,6 +913,7 @@ async function handleBookmark() {
 
 .depth-grid {
   @apply grid gap-8;
+  @apply flex-1 min-h-0;
 }
 
 @media (min-width: 1024px) {
@@ -1012,15 +923,9 @@ async function handleBookmark() {
   }
 }
 
-.reading-mode .depth-grid {
-  height: 100%;
-  overflow: hidden;
-  grid-template-columns: 360px minmax(0, 1fr);
-}
-
 .depth-list {
   @apply rounded-morandi bg-white shadow-morandi border overflow-hidden;
-  max-height: calc(100vh - 300px);
+  @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
   width: 100%;
@@ -1033,27 +938,11 @@ async function handleBookmark() {
   }
 }
 
-.reading-mode .depth-list {
-  height: calc(100vh - 180px);
-  max-height: none;
-  width: 360px;
-}
-
 .depth-detail {
   @apply rounded-morandi bg-white shadow-morandi border border-slate/10 p-8 flex flex-col gap-6;
-  max-height: calc(100vh - 300px);
+  @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.reading-mode .depth-detail {
-  height: calc(100vh - 180px);
-  max-height: none;
-  /* 自动扩展填满剩余空间 */
-  flex: 1;
-  min-width: 0;
-  max-width: 820px;
-  margin-right: auto;
 }
 
 .detail-header {
