@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import FrequencySwitch from '@/components/common/FrequencySwitch.vue'
 import BinaryOrbitAnimation from '@/components/common/BinaryOrbitAnimation.vue'
-import { LogOut, User, Settings } from 'lucide-vue-next'
+import { LogOut, User, Settings, ChevronUp } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -124,6 +124,15 @@ function goAuth() {
           @click="toggleUserMenu"
           class="px-3 py-2 rounded-soft cursor-pointer transition-all duration-200 hover:bg-slate/5"
         >
+          <!-- 箭头按钮 - 显示在头像上方 -->
+          <div class="flex justify-center mb-2">
+            <div
+              class="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
+              :class="showUserMenu ? 'rotate-180' : ''"
+            >
+              <ChevronUp :size="18" class="text-slate" />
+            </div>
+          </div>
           <div class="flex items-end gap-3">
             <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
               <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
@@ -137,7 +146,7 @@ function goAuth() {
             >
               {{ profile?.username?.charAt(0)?.toUpperCase() }}
             </div>
-            <p class="font-sans text-sm font-medium text-charcoal truncate flex-1 min-w-0 pb-0.5">{{ profile?.username }}</p>
+            <p class="font-sans text-sm font-medium text-charcoal truncate flex-1 min-w-0">{{ profile?.username }}</p>
           </div>
           <p v-if="profile?.bio" class="font-sans text-xs text-slate mt-2 line-clamp-2 indent-[2em]">{{ profile.bio }}</p>
         </div>
