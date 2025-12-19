@@ -75,49 +75,28 @@ const stats = computed(() => ({
 <template>
   <div class="space-y-8">
     <!-- 页面头部 -->
-    <section class="py-8 lg:py-10">
-      <div class="max-w-2xl mx-auto text-center space-y-5">
-        <div>
-          <p class="font-mono text-mono text-slate mb-2 tracking-wider">INFOCROSS CREW</p>
-          <h1 class="text-hero font-sans font-bold text-charcoal mb-3 leading-tight">协作空间</h1>
-          <p class="text-body font-sans text-slate leading-relaxed">
-            统一管理你加入与发起的队伍，查看申请状态，与队长保持轻盈沟通
-          </p>
+    <section class="header-section">
+      <div class="header-left">
+        <p class="font-mono text-mono text-slate mb-2 tracking-wider">INFOCROSS CREW</p>
+        <h1 class="text-hero font-sans font-bold text-charcoal mb-3 leading-tight">协作空间</h1>
+        <p class="text-body font-sans text-slate leading-relaxed max-w-md">
+          统一管理你加入与发起的队伍，查看申请状态，与队员保持沟通
+        </p>
+      </div>
+      
+      <!-- 统计卡片 -->
+      <div class="stats-cards">
+        <div class="stat-card" :class="frequencyStore.isFocus ? 'stat-card-focus' : 'stat-card-vibe'">
+          <p class="font-mono text-3xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.owned }}</p>
+          <p class="font-sans text-sm text-slate mt-1">发起队伍</p>
         </div>
-        
-        <!-- 统计数据 -->
-        <div class="flex justify-center gap-6">
-          <div class="text-center">
-            <p class="font-mono text-2xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.owned }}</p>
-            <p class="font-sans text-sm text-slate">发起队伍</p>
-          </div>
-          <div class="w-px bg-slate/20"></div>
-          <div class="text-center">
-            <p class="font-mono text-2xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.joined }}</p>
-            <p class="font-sans text-sm text-slate">已加入</p>
-          </div>
-          <div class="w-px bg-slate/20"></div>
-          <div class="text-center">
-            <p class="font-mono text-2xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.pending }}</p>
-            <p class="font-sans text-sm text-slate">待确认</p>
-          </div>
+        <div class="stat-card" :class="frequencyStore.isFocus ? 'stat-card-focus' : 'stat-card-vibe'">
+          <p class="font-mono text-3xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.joined }}</p>
+          <p class="font-sans text-sm text-slate mt-1">已加入</p>
         </div>
-        
-        <!-- 操作链接 -->
-        <div class="flex justify-center items-center gap-4">
-          <RouterLink 
-            to="/team" 
-            class="font-sans text-sm transition-colors"
-            :class="frequencyStore.isFocus ? 'text-focus-accent hover:text-focus-accent/80' : 'text-vibe-accent hover:text-vibe-accent/80'"
-          >
-            返回组队大厅 →
-          </RouterLink>
-          <span 
-            class="px-3 py-1 rounded-full font-mono text-xs"
-            :class="frequencyStore.isFocus ? 'bg-focus-primary/10 text-focus-accent' : 'bg-vibe-primary/15 text-vibe-accent'"
-          >
-            {{ frequencyStore.isFocus ? 'Focus' : 'Vibe' }} 模式
-          </span>
+        <div class="stat-card" :class="frequencyStore.isFocus ? 'stat-card-focus' : 'stat-card-vibe'">
+          <p class="font-mono text-3xl font-bold" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'">{{ stats.pending }}</p>
+          <p class="font-sans text-sm text-slate mt-1">待确认</p>
         </div>
       </div>
     </section>
@@ -278,6 +257,33 @@ const stats = computed(() => ({
 </template>
 
 <style scoped>
+/* 头部区域 */
+.header-section {
+  @apply flex items-start justify-between py-8 lg:py-10 gap-8;
+}
+
+.header-left {
+  @apply flex-1;
+}
+
+/* 统计卡片 */
+.stats-cards {
+  @apply flex gap-4;
+}
+
+.stat-card {
+  @apply px-6 py-5 rounded-2xl bg-white border border-slate/10 text-center min-w-[100px];
+  @apply transition-all duration-300 hover:shadow-morandi hover:-translate-y-0.5;
+}
+
+.stat-card-focus {
+  @apply hover:border-focus-primary/30;
+}
+
+.stat-card-vibe {
+  @apply hover:border-vibe-primary/30;
+}
+
 /* 小组卡片骨架屏 */
 .team-card-skeleton {
   @apply rounded-2xl bg-white/60 p-5 animate-pulse;

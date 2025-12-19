@@ -151,15 +151,10 @@
     @apply bg-morandi-green/10 text-morandi-green border border-morandi-green/20;
   }
 
-  /* 左侧导航 - 固定侧边栏 */
+  /* 左侧导航 - Flex 布局，不用 fixed */
   .sidebar-nav {
-    @apply fixed left-0 top-0 h-screen w-60 bg-cream border-r border-slate/20;
-    @apply flex flex-col p-6 z-50 shadow-morandi;
-  }
-
-  /* 主内容区 - 自适应宽度 */
-  .main-content {
-    @apply ml-60 min-h-screen p-8 bg-cream;
+    @apply w-60 h-full flex-shrink-0 bg-cream border-r border-slate/20;
+    @apply flex flex-col p-6 z-50;
   }
 
   /* 数据磁贴 - 磨砂玻璃效果 */

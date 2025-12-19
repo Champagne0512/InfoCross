@@ -124,7 +124,7 @@ function goAuth() {
               <ChevronUp :size="18" class="text-slate" />
             </div>
           </div>
-          <div class="flex items-end gap-3">
+          <div class="flex items-start gap-3">
             <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
               <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
             </div>
@@ -137,9 +137,23 @@ function goAuth() {
             >
               {{ profile?.username?.charAt(0)?.toUpperCase() }}
             </div>
-            <p class="font-sans text-sm font-medium text-charcoal truncate flex-1 min-w-0">{{ profile?.username }}</p>
+            <div class="flex flex-col justify-between h-10 flex-1 min-w-0">
+              <p class="font-sans text-base font-semibold text-charcoal truncate">{{ profile?.username }}</p>
+              <span class="inline-flex items-center gap-1 text-[11px] text-slate/70">
+                <span
+                  class="w-1.5 h-1.5 rounded-full"
+                  :class="frequencyStore.isFocus ? 'bg-focus-accent' : 'bg-vibe-accent'"
+                />
+                在线
+              </span>
+            </div>
           </div>
-          <p v-if="profile?.bio" class="font-sans text-xs text-slate mt-2 line-clamp-2 indent-[2em]">{{ profile.bio }}</p>
+          <p
+            v-if="profile?.bio"
+            class="font-sans text-xs text-slate/80 mt-2 line-clamp-2 leading-snug"
+          >
+            {{ profile.bio }}
+          </p>
         </div>
 
         <!-- 用户菜单弹出卡片 -->
