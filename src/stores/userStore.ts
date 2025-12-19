@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import type { Interaction, UserProfile } from '@/types/models'
 import { getCurrentUserProfile, registerUser, signInWithEmail, signOut } from '@/api/auth'
 import { fetchInteractions } from '@/api/interaction'
+import { useSettingsStore } from './settingsStore'
+import { useFrequencyStore } from './frequencyStore'
 
 interface UserState {
   profile: UserProfile | null
@@ -26,6 +28,11 @@ export const useUserStore = defineStore('user', {
         this.profile = profile
         if (profile) {
           this.interactions = await fetchInteractions()
+          // 加载用户设置并应用默认模式
+          const settingsStore = useSettingsStore()
+          await settingsStore.loadUserSettings(profile.id)
+          const frequencyStore = useFrequencyStore()
+          frequencyStore.setMode(settingsStore.getDefaultMode())
         }
       } finally {
         this.loading = false
@@ -36,6 +43,13 @@ export const useUserStore = defineStore('user', {
       try {
         this.profile = await signInWithEmail(email, password)
         this.interactions = await fetchInteractions()
+        // 加载用户设置并应用默认模式
+        if (this.profile) {
+          const settingsStore = useSettingsStore()
+          await settingsStore.loadUserSettings(this.profile.id)
+          const frequencyStore = useFrequencyStore()
+          frequencyStore.setMode(settingsStore.getDefaultMode())
+        }
       } finally {
         this.loading = false
       }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ArticleCard from '@/components/business/ArticleCard.vue'
 import InsightPanel from '@/components/business/InsightPanel.vue'
 import AiIcon from '@/components/common/AiIcon.vue'
@@ -10,6 +11,7 @@ import { useAuth } from '@/composables/useAuth'
 import { recordInteraction } from '@/api/interaction'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
+const { t } = useI18n()
 const frequencyStore = useFrequencyStore()
 
 const articles = ref<Article[]>([])
@@ -19,27 +21,25 @@ const searchQuery = ref('')
 const loading = ref(true)
 const { profile } = useAuth()
 
-// Focus 模式分类
-const focusCategories = [
-  { label: '全部', value: 'all' },
-  { label: '讲座', value: 'lecture' },
-  { label: '比赛', value: 'competition' },
-  { label: '研究', value: 'research' },
-  { label: '通知', value: 'notice' },
-]
-
-// Vibe 模式分类
-const vibeCategories = [
-  { label: '全部', value: 'all' },
-  { label: '约饭', value: 'meal' },
-  { label: '运动', value: 'sports' },
-  { label: '拼车', value: 'carpool' },
-  { label: '闲聊', value: 'chat' },
-]
-
-const categories = computed(() =>
-  frequencyStore.isFocus ? focusCategories : vibeCategories,
-)
+// 分类配置
+const categories = computed(() => {
+  if (frequencyStore.isFocus) {
+    return [
+      { label: t('home.categories.all'), value: 'all' },
+      { label: t('home.categories.lecture'), value: 'lecture' },
+      { label: t('home.categories.competition'), value: 'competition' },
+      { label: t('home.categories.research'), value: 'research' },
+      { label: t('home.categories.notice'), value: 'notice' },
+    ]
+  }
+  return [
+    { label: t('home.categories.all'), value: 'all' },
+    { label: t('home.categories.meal'), value: 'meal' },
+    { label: t('home.categories.sports'), value: 'sports' },
+    { label: t('home.categories.carpool'), value: 'carpool' },
+    { label: t('home.categories.chat'), value: 'chat' },
+  ]
+})
 
 const allowedCategoryValues = computed(() =>
   categories.value
@@ -53,33 +53,33 @@ const displayName = computed(() => profile.value?.username || 'Explorer')
 const pageConfig = computed(() => {
   if (frequencyStore.isFocus) {
     return {
-      greeting: `Hello, ${displayName.value}`,
-      desc: 'InfoCross 聚合各学院的讲座、竞赛与通知，并由 AI 自动摘要、打标、向量检索，为你推送最值得跨界投入的机会。',
-      publishText: '发布活动',
-      refreshText: '刷新流',
-      featuredTitle: '精选破壁线索',
+      greeting: `${t('home.greeting.focus')}, ${displayName.value}`,
+      desc: t('home.desc.focus'),
+      publishText: t('home.publishActivity'),
+      refreshText: t('home.refreshFeed'),
+      featuredTitle: t('home.featured.focus'),
       featuredSubtitle: 'FEATURED',
-      aiTitle: '破壁推荐',
+      aiTitle: t('home.aiRecommend.focus'),
       aiSubtitle: 'AI RECOMMENDATIONS',
-      aiDesc: '根据你的兴趣标签与向量空间距离，AI 为你挑选跨学院内容',
-      insightTitle: '跨学科提示',
-      summaryTitle: '今日重点',
-      statsTitle: '今日数据',
+      aiDesc: t('home.aiRecommendDesc.focus'),
+      insightTitle: t('home.insightTitle.focus'),
+      summaryTitle: t('home.summaryTitle.focus'),
+      statsTitle: t('home.statsTitle.focus'),
     }
   }
   return {
-    greeting: 'What\'s up',
-    desc: '校园生活脉动，即时约伴、限时动态。所有内容限时可见，永远新鲜有趣。',
-    publishText: '发起约伴',
-    refreshText: '刷新动态',
-    featuredTitle: '热门动态',
+    greeting: t('home.greeting.vibe'),
+    desc: t('home.desc.vibe'),
+    publishText: t('home.startMeetup'),
+    refreshText: t('home.refreshDynamic'),
+    featuredTitle: t('home.featured.vibe'),
     featuredSubtitle: 'TRENDING',
-    aiTitle: '附近的人',
+    aiTitle: t('home.aiRecommend.vibe'),
     aiSubtitle: 'NEARBY',
-    aiDesc: '发现你身边正在发起约伴的同学',
-    insightTitle: '热门话题',
-    summaryTitle: '即时速递',
-    statsTitle: '实时数据',
+    aiDesc: t('home.aiRecommendDesc.vibe'),
+    insightTitle: t('home.insightTitle.vibe'),
+    summaryTitle: t('home.summaryTitle.vibe'),
+    statsTitle: t('home.statsTitle.vibe'),
   }
 })
 
@@ -170,7 +170,7 @@ function handleSearch() {
             <input
               v-model="searchQuery"
               type="text"
-              :placeholder="frequencyStore.isFocus ? '搜索讲座、比赛、研究项目...' : '搜索约伴、活动、话题...'"
+              :placeholder="frequencyStore.isFocus ? t('home.searchPlaceholder.focus') : t('home.searchPlaceholder.vibe')"
               class="w-full pl-12 pr-4 py-3 rounded-full border bg-white/80 backdrop-blur-sm font-sans text-body text-charcoal placeholder:text-slate/60 transition-all duration-300 focus:outline-none focus:ring-2"
               :class="frequencyStore.isFocus 
                 ? 'border-slate/20 focus:border-focus-primary focus:ring-focus-primary/20' 
@@ -330,10 +330,10 @@ function handleSearch() {
                   class="font-mono text-mono text-xs mb-2"
                   :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'"
                 >
-                  {{ frequencyStore.isFocus ? '时间' : '热度' }}
+                  {{ frequencyStore.isFocus ? t('home.summary.time') : t('home.summary.heat') }}
                 </p>
                 <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '12 月 20 日 14:00' : '32 人正在约伴' }}
+                  {{ frequencyStore.isFocus ? '12/20 14:00' : '32 meeting up' }}
                 </p>
               </div>
               <div 
@@ -344,10 +344,10 @@ function handleSearch() {
                   class="font-mono text-mono text-xs mb-2"
                   :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'"
                 >
-                  {{ frequencyStore.isFocus ? '地点' : '最近' }}
+                  {{ frequencyStore.isFocus ? t('home.summary.location') : t('home.summary.recent') }}
                 </p>
                 <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '图书馆 B1' : '二食堂 · 5分钟前' }}
+                  {{ frequencyStore.isFocus ? 'Library B1' : 'Cafeteria · 5min ago' }}
                 </p>
               </div>
               <div 
@@ -358,10 +358,10 @@ function handleSearch() {
                   class="font-mono text-mono text-xs mb-2"
                   :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
                 >
-                  {{ frequencyStore.isFocus ? '要求' : '话题' }}
+                  {{ frequencyStore.isFocus ? t('home.summary.requirement') : t('home.summary.topic') }}
                 </p>
                 <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '仅限大二及以上' : '期末复习搭子' }}
+                  {{ frequencyStore.isFocus ? 'Sophomore+' : 'Study Buddy' }}
                 </p>
               </div>
             </div>
@@ -384,7 +384,7 @@ function handleSearch() {
                 :class="frequencyStore.isFocus ? 'bg-morandi-green/10' : 'bg-vibe-primary/10'"
               >
                 <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '新活动' : '新动态' }}
+                  {{ frequencyStore.isFocus ? t('home.stats.newActivities') : t('home.stats.newDynamics') }}
                 </span>
                 <span 
                   class="font-mono text-mono font-semibold"
@@ -398,7 +398,7 @@ function handleSearch() {
                 :class="frequencyStore.isFocus ? 'bg-morandi-lavender/10' : 'bg-vibe-secondary/20'"
               >
                 <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? 'AI 推荐' : '正在约伴' }}
+                  {{ frequencyStore.isFocus ? t('home.stats.aiRecommend') : t('home.stats.meetingUp') }}
                 </span>
                 <span 
                   class="font-mono text-mono font-semibold"
@@ -412,7 +412,7 @@ function handleSearch() {
                 :class="frequencyStore.isFocus ? 'bg-morandi-blue/10' : 'bg-vibe-primary/10'"
               >
                 <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '跨学科指数' : '活跃度' }}
+                  {{ frequencyStore.isFocus ? t('home.stats.crossIndex') : t('home.stats.activeness') }}
                 </span>
                 <span 
                   class="font-mono text-mono font-semibold"

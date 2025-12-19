@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { Users, FileText, MessageSquare, ShieldCheck, ChevronRight } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Users, FileText, MessageSquare, Settings, ChevronRight } from 'lucide-vue-next'
 
-const actions = [
+const { t } = useI18n()
+
+const actions = computed(() => [
   {
     id: 'team',
-    title: '寻找搭子管理',
+    title: t('profile.actions.team'),
     description: '管理你的组队项目，查看队友动态',
     icon: Users,
     color: 'text-morandi-green',
@@ -13,7 +17,7 @@ const actions = [
   },
   {
     id: 'progress',
-    title: '比赛/研究进度',
+    title: t('profile.actions.progress'),
     description: '追踪项目进展，管理任务清单',
     icon: FileText,
     color: 'text-morandi-blue',
@@ -22,7 +26,7 @@ const actions = [
   },
   {
     id: 'forum',
-    title: '校园论坛动态',
+    title: t('profile.actions.forum'),
     description: '查看你的发帖、评论和互动',
     icon: MessageSquare,
     color: 'text-morandi-clay',
@@ -31,14 +35,14 @@ const actions = [
   },
   {
     id: 'security',
-    title: '认证与安全',
-    description: '管理账户设置和隐私权限',
-    icon: ShieldCheck,
+    title: t('nav.settings'),
+    description: '语言、默认模式等设置',
+    icon: Settings,
     color: 'text-slate',
     bgColor: 'bg-slate/10',
     borderColor: 'border-slate/20',
   },
-]
+])
 
 const emit = defineEmits<{
   action: [id: string]

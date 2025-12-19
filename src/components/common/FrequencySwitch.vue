@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
+const { t } = useI18n()
 const frequencyStore = useFrequencyStore()
 </script>
 
@@ -10,7 +12,7 @@ const frequencyStore = useFrequencyStore()
       class="switch-track"
       :class="frequencyStore.isFocus ? 'track-focus' : 'track-vibe'"
       @click="frequencyStore.toggle()"
-      :aria-label="frequencyStore.isFocus ? '切换到 Vibe 模式' : '切换到 Focus 模式'"
+      :aria-label="frequencyStore.isFocus ? t('frequency.vibe') : t('frequency.focus')"
     >
       <!-- 滑块 -->
       <div 
@@ -29,7 +31,7 @@ const frequencyStore = useFrequencyStore()
             frequencyStore.isFocus ? 'text-focus-accent active' : 'text-focus-accent'
           ]"
         >
-          Focus
+          {{ t('frequency.focus') }}
         </span>
         <span 
           class="switch-label"
@@ -37,7 +39,7 @@ const frequencyStore = useFrequencyStore()
             frequencyStore.isVibe ? 'text-vibe-accent active' : 'text-vibe-accent'
           ]"
         >
-          Vibe
+          {{ t('frequency.vibe') }}
         </span>
       </div>
     </button>

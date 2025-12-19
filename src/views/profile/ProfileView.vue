@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ProfileHeader from '@/components/profile/ProfileHeader.vue'
 import UserStats from '@/components/profile/UserStats.vue'
 import ActionGrid from '@/components/profile/ActionGrid.vue'
@@ -9,6 +10,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { User, LogOut } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const { profile, logout } = useAuth()
 const router = useRouter()
 
@@ -93,7 +95,7 @@ async function handleLogout() {
         class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-soft border border-red-200 text-red-500 font-sans text-sm font-medium transition-all duration-200 hover:bg-red-50 hover:border-red-300"
       >
         <LogOut :size="18" />
-        <span>退出登录</span>
+        <span>{{ t('common.logout') }}</span>
       </button>
     </div>
   </div>
@@ -104,13 +106,13 @@ async function handleLogout() {
       <div class="w-16 h-16 rounded-full bg-slate/10 flex items-center justify-center mx-auto mb-6">
         <User :size="32" class="text-slate" />
       </div>
-      <h2 class="text-h2 font-sans font-bold text-charcoal mb-3">请先登录</h2>
-      <p class="text-body font-sans text-slate mb-8">登录后即可查看个人资料</p>
+      <h2 class="text-h2 font-sans font-bold text-charcoal mb-3">{{ t('profile.notLoggedIn') }}</h2>
+      <p class="text-body font-sans text-slate mb-8">{{ t('profile.notLoggedInDesc') }}</p>
       <button 
         @click="$router.push('/auth')"
         class="px-6 py-3 rounded-soft bg-morandi-lavender text-white font-sans font-medium hover:bg-morandi-lavender/90 transition-colors"
       >
-        前往登录
+        {{ t('profile.goLogin') }}
       </button>
     </div>
   </div>

@@ -9,6 +9,7 @@ export const RouteName = {
   TEAM_DETAIL: 'team-detail',
   FORUM: 'forum',
   PROFILE: 'profile',
+  SETTINGS: 'settings',
 } as const
 
 export const routes: RouteRecordRaw[] = [
@@ -59,5 +60,11 @@ export const routes: RouteRecordRaw[] = [
     name: RouteName.PROFILE,
     component: () => import('@/views/profile/ProfileView.vue'),
     meta: { title: '个人空间', requiresAuth: true },
+  },
+  {
+    path: '/settings',
+    name: RouteName.SETTINGS,
+    component: () => import('@/views/settings/SettingsView.vue'),
+    meta: { title: '设置' },
   },
 ]

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import FrequencySwitch from '@/components/common/FrequencySwitch.vue'
 import BinaryOrbitAnimation from '@/components/common/BinaryOrbitAnimation.vue'
 import { LogOut, User, Settings, ChevronUp } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const { isAuthenticated, profile, logout } = useAuth()
@@ -22,24 +24,13 @@ function closeUserMenu() {
   showUserMenu.value = false
 }
 
-const navItems = computed(() => {
-  if (frequencyStore.isFocus) {
-    return [
-      { label: '首页', path: '/' },
-      { label: '发现', path: '/team' },
-      { label: '协作', path: '/team/hub' },
-      { label: '论坛', path: '/forum' },
-      { label: '个人', path: '/profile' },
-    ]
-  }
-  return [
-    { label: '动态', path: '/' },
-    { label: '发现', path: '/team' },
-    { label: '协作', path: '/team/hub' },
-    { label: '论坛', path: '/forum' },
-    { label: '我的', path: '/profile' },
-  ]
-})
+const navItems = computed(() => [
+  { label: t('nav.home'), path: '/' },
+  { label: t('nav.team'), path: '/team' },
+  { label: t('team.hub'), path: '/team/hub' },
+  { label: t('nav.forum'), path: '/forum' },
+  { label: t('nav.profile'), path: '/profile' },
+])
 
 const activePath = computed(() => route.path)
 
@@ -72,7 +63,7 @@ function goAuth() {
         InfoCross
       </RouterLink>
       <p class="font-sans text-sm text-slate mt-1">
-        {{ frequencyStore.isFocus ? '跨学科信息聚合' : '校园生活脉动' }}
+        {{ frequencyStore.isFocus ? t('sidebar.focusSlogan') : t('sidebar.vibeSlogan') }}
       </p>
     </div>
 
@@ -115,7 +106,7 @@ function goAuth() {
             ? 'bg-focus-accent hover:bg-focus-accent/90' 
             : 'bg-vibe-accent hover:bg-vibe-accent/90'"
         >
-          登录
+          {{ t('common.login') }}
         </button>
       </div>
       <div v-else class="relative">
@@ -159,7 +150,7 @@ function goAuth() {
           >
             <div class="p-3 border-b border-slate/10">
               <p class="font-sans text-sm font-medium text-charcoal">{{ profile?.username }}</p>
-              <p class="font-sans text-xs text-slate">{{ profile?.email || '未设置邮箱' }}</p>
+              <p class="font-sans text-xs text-slate">{{ profile?.email || t('sidebar.emailNotSet') }}</p>
             </div>
             <div class="py-1">
               <button 
@@ -167,21 +158,21 @@ function goAuth() {
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-charcoal hover:bg-slate/5 transition-colors"
               >
                 <User :size="16" class="text-slate" />
-                <span>个人资料</span>
+                <span>{{ t('nav.profile') }}</span>
               </button>
               <button 
                 @click="goToSettings"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-charcoal hover:bg-slate/5 transition-colors"
               >
                 <Settings :size="16" class="text-slate" />
-                <span>设置</span>
+                <span>{{ t('nav.settings') }}</span>
               </button>
               <button 
                 @click="handleLogout"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-red-500 hover:bg-red-50 transition-colors"
               >
                 <LogOut :size="16" />
-                <span>退出登录</span>
+                <span>{{ t('common.logout') }}</span>
               </button>
             </div>
           </div>

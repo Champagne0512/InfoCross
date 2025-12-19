@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SpectrumTabs from '@/components/forum/SpectrumTabs.vue'
 import SignalFeedItem from '@/components/forum/SignalFeedItem.vue'
 import DepthArticleCard from '@/components/forum/DepthArticleCard.vue'
@@ -36,6 +37,7 @@ import type {
   DepthCategory,
 } from '@/types/models'
 
+const { t } = useI18n()
 const { profile } = useAuth()
 const userCollege = computed(() => profile.value?.college)
 const frequencyStore = useFrequencyStore()
@@ -72,14 +74,14 @@ const posting = ref(false)
 
 // 深度文章分类筛选
 const selectedCategory = ref<DepthCategory | 'all'>('all')
-const depthCategories: { value: DepthCategory | 'all'; label: string }[] = [
-  { value: 'all', label: '全部' },
-  { value: 'review', label: '测评' },
-  { value: 'guide', label: '指南' },
-  { value: 'discussion', label: '讨论' },
-  { value: 'debate', label: '辩论' },
-  { value: 'question', label: '提问' },
-]
+const depthCategories = computed(() => [
+  { value: 'all' as const, label: t('forum.categories.all') },
+  { value: 'review' as DepthCategory, label: t('forum.categories.review') },
+  { value: 'guide' as DepthCategory, label: t('forum.categories.guide') },
+  { value: 'discussion' as DepthCategory, label: t('forum.categories.discussion') },
+  { value: 'debate' as DepthCategory, label: t('forum.categories.debate') },
+  { value: 'question' as DepthCategory, label: t('forum.categories.question') },
+])
 
 // 评论相关
 const newComment = ref('')
@@ -124,19 +126,17 @@ const filteredDepthThreads = computed(() => {
 const heroContent = computed(() => {
   if (mode.value === 'signal') {
     return {
-      title: 'Signal · 情报频道',
-      subtitle: '消除"我不知道"',
-      description:
-        '捕捉校园里的即时情报与跨学院爆料，AI 自动聚合热词，帮你在最短时间知道发生了什么。',
-      action: '发布情报',
+      title: t('forum.signalChannel'),
+      subtitle: t('forum.signalSubtitle'),
+      description: t('forum.signalDesc'),
+      action: t('forum.publishSignal'),
     }
   }
   return {
-    title: 'Depth · 深潜频道',
-    subtitle: '消除"我不懂"',
-    description:
-      '沉浸式阅读跨学科经验与测评，支持引用 InfoCross 活动/组队，AI 还会推送关联资源。',
-    action: '写长文',
+    title: t('forum.depthChannel'),
+    subtitle: t('forum.depthSubtitle'),
+    description: t('forum.depthDesc'),
+    action: t('forum.writeArticle'),
   }
 })
 
@@ -334,7 +334,7 @@ async function handleBookmark() {
         class="hero-subtitle transition-colors duration-300"
         :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
       >
-        The Spectrum · 全谱论坛
+        {{ t('forum.theSpectrum') }}
       </p>
       <h1 class="hero-title font-sans">{{ heroContent.title }}</h1>
       <p class="hero-desc font-sans">{{ heroContent.description }}</p>
@@ -378,14 +378,14 @@ async function handleBookmark() {
               key="focus"
               class="compact-mode-hint font-mono text-focus-accent"
             >
-              Focus Mode · 深度聚焦
+              {{ t('forum.focusMode') }}
             </span>
             <span
               v-else
               key="vibe"
               class="compact-mode-hint font-mono text-vibe-accent"
             >
-              Vibe Mode · 生活脉动
+              {{ t('forum.vibeMode') }}
             </span>
           </Transition>
           <AppButton
@@ -438,8 +438,8 @@ async function handleBookmark() {
               <div class="empty-icon bg-vibe-primary/20 text-vibe-accent">
                 <Radio :size="28" />
               </div>
-              <h3 class="font-sans text-h2 text-charcoal">暂无情报</h3>
-              <p class="font-sans text-body text-slate">成为第一个发布情报的人吧</p>
+              <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.noSignal') }}</h3>
+              <p class="font-sans text-body text-slate">{{ t('forum.beFirstSignal') }}</p>
             </div>
           </div>
 
@@ -452,9 +452,9 @@ async function handleBookmark() {
             >
               <h3 class="font-sans flex items-center gap-2">
                 <Flame :size="20" class="text-vibe-accent" />
-                热门合辑
+                {{ t('forum.hotTopics') }}
               </h3>
-              <p class="aside-desc font-sans">AI 自动聚类，避免相同吐槽刷屏。</p>
+              <p class="aside-desc font-sans">{{ t('forum.hotTopicsDesc') }}</p>
               <ul class="hot-topic-list">
                 <li
                   v-for="topic in hotTopics"
@@ -463,7 +463,7 @@ async function handleBookmark() {
                 >
                   <p class="topic-title font-sans">{{ topic.title }}</p>
                   <p class="topic-meta font-mono">
-                    {{ topic.threadCount }} 条讨论 · 热度
+                    {{ topic.threadCount }} {{ t('forum.discussions') }} · {{ t('forum.heat') }}
                     {{ Math.round(topic.heatScore * 100) }}%
                   </p>
                 </li>
@@ -474,10 +474,10 @@ async function handleBookmark() {
             <div class="tip-card border-vibe-primary/20 bg-vibe-primary/5">
               <h4 class="font-sans text-vibe-accent flex items-center gap-2">
                 <Lightbulb :size="16" />
-                匿名提示
+                {{ t('common.anonymous') }}
               </h4>
               <p class="font-sans text-sm text-slate">
-                Signal 默认实名，发布时可选择匿名身份保护隐私。
+                {{ t('forum.anonymousTip') }}
               </p>
             </div>
           </aside>
@@ -532,9 +532,9 @@ async function handleBookmark() {
               <div class="empty-icon bg-focus-primary/20 text-focus-accent">
                 <BookOpen :size="28" />
               </div>
-              <h3 class="font-sans text-h2 text-charcoal">暂无文章</h3>
+              <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.noArticle') }}</h3>
               <p class="font-sans text-body text-slate">
-                {{ selectedCategory === 'all' ? '成为第一个写长文的人吧' : '该分类暂无文章' }}
+                {{ selectedCategory === 'all' ? t('forum.beFirstArticle') : t('forum.noCategoryArticle') }}
               </p>
             </div>
           </div>
@@ -554,12 +554,12 @@ async function handleBookmark() {
                     {{ selectedDepth.title }}
                   </h2>
                   <p class="detail-meta font-mono">
-                    {{ selectedDepth.authorName || '匿名作者' }} ·
-                    {{ selectedDepth.readTimeMinutes }} min read ·
+                    {{ selectedDepth.authorName || t('forum.anonymousAuthor') }} ·
+                    {{ selectedDepth.readTimeMinutes }} {{ t('forum.minRead') }} ·
                     {{ new Date(selectedDepth.createdAt).toLocaleDateString() }}
                   </p>
                 </div>
-                <AppButton variant="ghost" @click="handleBookmark">保存到书签</AppButton>
+                <AppButton variant="ghost" @click="handleBookmark">{{ t('forum.saveToBookmark') }}</AppButton>
               </div>
 
               <p class="detail-summary font-sans">
@@ -601,9 +601,9 @@ async function handleBookmark() {
               <div class="related-panel">
                 <div class="related-header">
                   <p class="related-title font-mono flex items-center gap-1">
-                    <Link :size="12" /> 相关资源
+                    <Link :size="12" /> {{ t('forum.relatedResources') }}
                   </p>
-                  <span v-if="sidebarLoading" class="loading-text font-mono">加载中...</span>
+                  <span v-if="sidebarLoading" class="loading-text font-mono">{{ t('common.loading') }}</span>
                 </div>
                 <ul v-if="relatedResources.length" class="related-list">
                   <li
@@ -619,19 +619,19 @@ async function handleBookmark() {
                           : 'text-morandi-blue'
                       "
                     >
-                      {{ resource.type === 'team' ? '组队' : '活动' }}
+                      {{ resource.type === 'team' ? t('team.teamType') : t('team.eventType') }}
                     </span>
                     <span class="resource-title font-sans">{{ resource.title }}</span>
                   </li>
                 </ul>
-                <p v-else class="aside-desc font-sans">暂无关联资源</p>
+                <p v-else class="aside-desc font-sans">{{ t('forum.noRelatedResources') }}</p>
               </div>
 
               <!-- 评论区 -->
               <div class="comments-panel">
                 <div class="comments-header">
                   <p class="comments-title font-mono flex items-center gap-1">
-                    <MessageCircle :size="12" /> 评论 ({{ comments.length }})
+                    <MessageCircle :size="12" /> {{ t('forum.comments') }} ({{ comments.length }})
                   </p>
                 </div>
 
@@ -641,12 +641,12 @@ async function handleBookmark() {
                     v-model="newComment"
                     class="comment-input font-sans"
                     rows="2"
-                    placeholder="写下你的评论..."
+                    :placeholder="t('forum.writeComment')"
                   />
                   <div class="comment-input-actions">
                     <label class="anonymous-toggle">
                       <input v-model="commentAnonymous" type="checkbox" class="toggle-input" />
-                      <span class="toggle-label font-sans text-xs">匿名</span>
+                      <span class="toggle-label font-sans text-xs">{{ t('common.anonymous') }}</span>
                     </label>
                     <AppButton
                       variant="primary"
@@ -655,16 +655,16 @@ async function handleBookmark() {
                       :disabled="!newComment.trim()"
                       @click="submitComment"
                     >
-                      发送
+                      {{ t('common.send') }}
                     </AppButton>
                   </div>
                 </div>
 
                 <div v-if="commentsLoading" class="text-center py-4">
-                  <span class="font-mono text-sm text-slate">加载评论中...</span>
+                  <span class="font-mono text-sm text-slate">{{ t('forum.loadingComments') }}</span>
                 </div>
                 <div v-else-if="comments.length === 0" class="text-center py-4">
-                  <span class="font-sans text-sm text-slate">暂无评论，来说两句吧</span>
+                  <span class="font-sans text-sm text-slate">{{ t('forum.noComments') }}</span>
                 </div>
                 <div v-else class="comments-list">
                   <TransitionGroup name="list" tag="div">
@@ -674,11 +674,11 @@ async function handleBookmark() {
                       class="comment-item"
                     >
                       <div class="comment-avatar">
-                        {{ (comment.authorName || '匿')[0] }}
+                        {{ (comment.authorName || 'A')[0] }}
                       </div>
                       <div class="comment-content">
                         <div class="comment-meta font-mono">
-                          <span class="comment-author">{{ comment.authorName || '匿名用户' }}</span>
+                          <span class="comment-author">{{ comment.authorName || t('forum.anonymousUser') }}</span>
                           <span class="comment-time">
                             {{ new Date(comment.createdAt).toLocaleDateString() }}
                           </span>
@@ -704,7 +704,7 @@ async function handleBookmark() {
         >
           <div class="modal-header">
             <h3 class="font-sans text-h2 text-charcoal">
-              {{ mode === 'signal' ? '发布情报' : '写长文' }}
+              {{ mode === 'signal' ? t('forum.publishSignal') : t('forum.writeArticle') }}
             </h3>
             <button class="close-btn" @click="closePostModal">✕</button>
           </div>
@@ -713,16 +713,16 @@ async function handleBookmark() {
             <!-- 深度模式需要标题和分类 -->
             <template v-if="mode === 'depth'">
               <div class="form-group">
-                <label class="form-label font-mono">标题</label>
+                <label class="form-label font-mono">{{ t('forum.articleTitle') }}</label>
                 <input
                   v-model="postTitle"
                   type="text"
                   class="form-input font-sans"
-                  placeholder="给你的文章起个标题"
+                  :placeholder="t('forum.articleTitle')"
                 />
               </div>
               <div class="form-group">
-                <label class="form-label font-mono">分类</label>
+                <label class="form-label font-mono">{{ t('forum.category') }}</label>
                 <div class="category-select">
                   <button
                     v-for="cat in depthCategories.filter((c) => c.value !== 'all')"
@@ -739,7 +739,7 @@ async function handleBookmark() {
 
             <div class="form-group">
               <label class="form-label font-mono">
-                {{ mode === 'signal' ? '情报内容' : '正文' }}
+                {{ mode === 'signal' ? t('forum.signalContent') : t('forum.articleContent') }}
               </label>
               <textarea
                 v-model="postContent"
@@ -747,8 +747,8 @@ async function handleBookmark() {
                 :rows="mode === 'signal' ? 4 : 8"
                 :placeholder="
                   mode === 'signal'
-                    ? '分享你知道的校园情报...'
-                    : '写下你的经验、测评或思考...'
+                    ? t('forum.shareSignalPlaceholder')
+                    : t('forum.writeArticlePlaceholder')
                 "
               />
             </div>
@@ -756,13 +756,13 @@ async function handleBookmark() {
             <div class="form-group">
               <label class="anonymous-toggle">
                 <input v-model="postAnonymous" type="checkbox" class="toggle-input" />
-                <span class="toggle-label font-sans">匿名发布</span>
+                <span class="toggle-label font-sans">{{ t('forum.anonymousPost') }}</span>
               </label>
             </div>
           </div>
 
           <div class="modal-footer">
-            <AppButton variant="ghost" @click="closePostModal">取消</AppButton>
+            <AppButton variant="ghost" @click="closePostModal">{{ t('common.cancel') }}</AppButton>
             <AppButton
               variant="primary"
               :loading="posting"
@@ -770,7 +770,7 @@ async function handleBookmark() {
               :class="frequencyStore.isVibe ? 'vibe-button' : ''"
               @click="submitPost"
             >
-              发布
+              {{ t('common.publish') }}
             </AppButton>
           </div>
         </div>
