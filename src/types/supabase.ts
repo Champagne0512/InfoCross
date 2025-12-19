@@ -173,6 +173,26 @@ export type Database = {
         Args: { user_id: string | null; limit_count?: number }
         Returns: ArticleRow[]
       }
+      increment_view_count: {
+        Args: { thread_id: number }
+        Returns: void
+      }
+      toggle_thread_like: {
+        Args: { p_thread_id: number; p_user_id: string }
+        Returns: { liked: boolean; likeCount: number }
+      }
+      toggle_comment_like: {
+        Args: { p_comment_id: number; p_user_id: string }
+        Returns: { liked: boolean; likeCount: number }
+      }
+      toggle_thread_bookmark: {
+        Args: { p_thread_id: number; p_user_id: string }
+        Returns: { bookmarked: boolean }
+      }
+      increment_share_count: {
+        Args: { p_thread_id: number; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

@@ -7,6 +7,7 @@ const props = defineProps<{
   thread: ForumThread
   userCollege?: string
   isLast?: boolean
+  liked?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -115,8 +116,12 @@ const sentimentColor = computed(() => {
 
       <!-- 操作栏 -->
       <div class="action-bar">
-        <button class="action-btn like-btn" @click="emit('like', thread)">
-          <Heart :size="16" />
+        <button
+          class="action-btn like-btn"
+          :class="{ 'liked-active': props.liked }"
+          @click="emit('like', thread)"
+        >
+          <Heart :size="16" :fill="props.liked ? 'currentColor' : 'none'" />
           <span v-if="thread.likeCount">{{ thread.likeCount }}</span>
         </button>
         <button class="action-btn comment-btn" @click="emit('comment', thread)">
@@ -263,6 +268,10 @@ const sentimentColor = computed(() => {
 
 .like-btn:hover {
   @apply text-vibe-accent bg-vibe-primary/10;
+}
+
+.like-btn.liked-active {
+  @apply text-vibe-accent;
 }
 
 .comment-btn:hover {

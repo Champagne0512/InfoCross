@@ -18,6 +18,8 @@ import {
   Heart,
   Maximize2,
   Minimize2,
+  Share2,
+  X,
 } from 'lucide-vue-next'
 import {
   fetchForumThreads,
@@ -25,9 +27,14 @@ import {
   fetchRelatedResources,
   fetchComments,
   likeThread,
+  likeComment,
   createThread,
   createComment,
   bookmarkThread,
+  shareThread,
+  incrementViewCount,
+  checkUserInteractions,
+  checkUserCommentLikes,
 } from '@/api/forum'
 import type {
   ForumThread,
@@ -88,8 +95,16 @@ const newComment = ref('')
 const commentAnonymous = ref(false)
 const submittingComment = ref(false)
 
+// 用户交互状态
+const userLikedThreads = ref<Set<number>>(new Set())
+const userBookmarkedThreads = ref<Set<number>>(new Set())
+const userLikedComments = ref<Set<number>>(new Set())
+
 // 专注模式
 const compactMode = ref(false)
+
+// 评论区 ref
+const commentsPanelRef = ref<HTMLElement | null>(null)
 
 function enterCompactMode() {
   compactMode.value = true
@@ -155,12 +170,31 @@ watch(selectedDepth, async (thread) => {
   sidebarLoading.value = true
   commentsLoading.value = true
   try {
-    const [resources, threadComments] = await Promise.all([
+    // 增加浏览量
+    incrementViewCount(thread.id)
+
+    const [resources, threadComments, interactions] = await Promise.all([
       fetchRelatedResources(thread.id),
       fetchComments(thread.id),
+      checkUserInteractions(thread.id),
     ])
     relatedResources.value = resources
     comments.value = threadComments
+
+    // 更新用户交互状态
+    if (interactions.liked) {
+      userLikedThreads.value.add(thread.id)
+    }
+    if (interactions.bookmarked) {
+      userBookmarkedThreads.value.add(thread.id)
+    }
+
+    // 获取评论点赞状态
+    if (threadComments.length > 0) {
+      const commentIds = threadComments.map((c) => c.id)
+      const likedCommentIds = await checkUserCommentLikes(commentIds)
+      likedCommentIds.forEach((id) => userLikedComments.value.add(id))
+    }
   } finally {
     sidebarLoading.value = false
     commentsLoading.value = false
@@ -198,33 +232,157 @@ function handleDepthSelect(thread: ForumThread) {
 
 async function handleSignalLike(thread: ForumThread) {
   try {
-    await likeThread(thread.id)
-    // 乐观更新
+    const result = await likeThread(thread.id)
     const idx = signalThreads.value.findIndex((t) => t.id === thread.id)
     if (idx !== -1) {
       const current = signalThreads.value[idx]
       if (current) {
         signalThreads.value[idx] = {
           ...current,
-          likeCount: current.likeCount + 1,
+          likeCount: result.likeCount,
         }
       }
+    }
+    // 更新用户点赞状态
+    if (result.liked) {
+      userLikedThreads.value.add(thread.id)
+    } else {
+      userLikedThreads.value.delete(thread.id)
     }
   } catch (error) {
     console.error('点赞失败', error)
   }
 }
 
-function handleSignalComment(thread: ForumThread) {
-  // TODO: 打开评论弹窗
-  console.log('comment thread', thread.id)
+// Signal 评论弹窗相关
+const showSignalCommentModal = ref(false)
+const signalCommentTarget = ref<ForumThread | null>(null)
+const signalComments = ref<ForumComment[]>([])
+const signalNewComment = ref('')
+const signalCommentAnonymous = ref(false)
+const signalCommentsLoading = ref(false)
+const signalSubmittingComment = ref(false)
+
+async function handleSignalComment(thread: ForumThread) {
+  signalCommentTarget.value = thread
+  showSignalCommentModal.value = true
+  signalCommentsLoading.value = true
+
+  // 增加浏览量
+  incrementViewCount(thread.id)
+
+  try {
+    const [threadComments, interactions] = await Promise.all([
+      fetchComments(thread.id),
+      checkUserInteractions(thread.id),
+    ])
+    signalComments.value = threadComments
+    if (interactions.liked) {
+      userLikedThreads.value.add(thread.id)
+    }
+
+    // 获取评论点赞状态
+    if (threadComments.length > 0) {
+      const commentIds = threadComments.map((c) => c.id)
+      const likedCommentIds = await checkUserCommentLikes(commentIds)
+      likedCommentIds.forEach((id) => userLikedComments.value.add(id))
+    }
+  } catch (error) {
+    console.error('加载评论失败', error)
+  } finally {
+    signalCommentsLoading.value = false
+  }
 }
 
-function handleSignalShare(thread: ForumThread) {
-  // 复制链接到剪贴板
+function closeSignalCommentModal() {
+  showSignalCommentModal.value = false
+  signalCommentTarget.value = null
+  signalComments.value = []
+  signalNewComment.value = ''
+  signalCommentAnonymous.value = false
+}
+
+async function submitSignalComment() {
+  if (!signalNewComment.value.trim() || !signalCommentTarget.value) return
+  
+  signalSubmittingComment.value = true
+  try {
+    const comment = await createComment(
+      signalCommentTarget.value.id,
+      signalNewComment.value,
+      signalCommentAnonymous.value,
+    )
+    signalComments.value.push(comment)
+    signalNewComment.value = ''
+    signalCommentAnonymous.value = false
+    
+    // 更新帖子评论数
+    const idx = signalThreads.value.findIndex((t) => t.id === signalCommentTarget.value?.id)
+    if (idx !== -1) {
+      const current = signalThreads.value[idx]
+      if (current) {
+        signalThreads.value[idx] = {
+          ...current,
+          commentCount: current.commentCount + 1,
+        }
+      }
+    }
+  } catch (error) {
+    console.error('评论失败', error)
+  } finally {
+    signalSubmittingComment.value = false
+  }
+}
+
+async function handleSignalShare(thread: ForumThread) {
   const url = `${window.location.origin}/forum/${thread.id}`
-  navigator.clipboard.writeText(url)
-  console.log('share thread', thread.id)
+  try {
+    await navigator.clipboard.writeText(url)
+    // 记录分享并更新计数
+    const newCount = await shareThread(thread.id)
+    const idx = signalThreads.value.findIndex((t) => t.id === thread.id)
+    if (idx !== -1) {
+      const current = signalThreads.value[idx]
+      if (current) {
+        signalThreads.value[idx] = {
+          ...current,
+          shareCount: newCount,
+        }
+      }
+    }
+  } catch (error) {
+    console.error('分享失败', error)
+  }
+}
+
+async function handleCommentLike(comment: ForumComment) {
+  try {
+    const result = await likeComment(comment.id)
+    // 更新评论点赞数
+    const idx = comments.value.findIndex((c) => c.id === comment.id)
+    if (idx !== -1) {
+      const existing = comments.value[idx]
+      if (existing) {
+        comments.value[idx] = { ...existing, likeCount: result.likeCount }
+      }
+    }
+    // 同时更新 signal 评论列表
+    const signalIdx = signalComments.value.findIndex((c) => c.id === comment.id)
+    if (signalIdx !== -1) {
+      const existing = signalComments.value[signalIdx]
+      if (existing) {
+        signalComments.value[signalIdx] = { ...existing, likeCount: result.likeCount }
+      }
+    }
+    // 更新用户点赞状态
+    if (result.liked) {
+      userLikedComments.value.add(comment.id)
+    } else {
+      userLikedComments.value.delete(comment.id)
+    }
+  } catch (error) {
+    console.error('评论点赞失败', error)
+  }
 }
 
 function openPostModal() {
@@ -299,11 +457,75 @@ async function submitComment() {
 async function handleBookmark() {
   if (!selectedDepth.value) return
   try {
-    await bookmarkThread(selectedDepth.value.id)
-    // 可以添加 toast 提示
+    const result = await bookmarkThread(selectedDepth.value.id)
+    if (result.bookmarked) {
+      userBookmarkedThreads.value.add(selectedDepth.value.id)
+    } else {
+      userBookmarkedThreads.value.delete(selectedDepth.value.id)
+    }
   } catch (error) {
     console.error('收藏失败', error)
   }
+}
+
+async function handleDepthLike() {
+  if (!selectedDepth.value) return
+  try {
+    const result = await likeThread(selectedDepth.value.id)
+    const threadId = selectedDepth.value.id
+    selectedDepth.value = { ...selectedDepth.value, likeCount: result.likeCount }
+    // 同步更新列表中的数据
+    const idx = depthThreads.value.findIndex((t) => t.id === threadId)
+    if (idx !== -1) {
+      const existing = depthThreads.value[idx]
+      if (existing) {
+        depthThreads.value[idx] = { ...existing, likeCount: result.likeCount }
+      }
+    }
+    if (result.liked) {
+      userLikedThreads.value.add(threadId)
+    } else {
+      userLikedThreads.value.delete(threadId)
+    }
+  } catch (error) {
+    console.error('点赞失败', error)
+  }
+}
+
+async function handleDepthShare() {
+  if (!selectedDepth.value) return
+  const url = `${window.location.origin}/forum/${selectedDepth.value.id}`
+  try {
+    await navigator.clipboard.writeText(url)
+    const newCount = await shareThread(selectedDepth.value.id)
+    const threadId = selectedDepth.value.id
+    selectedDepth.value = { ...selectedDepth.value, shareCount: newCount }
+    const idx = depthThreads.value.findIndex((t) => t.id === threadId)
+    if (idx !== -1) {
+      const existing = depthThreads.value[idx]
+      if (existing) {
+        depthThreads.value[idx] = { ...existing, shareCount: newCount }
+      }
+    }
+  } catch (error) {
+    console.error('分享失败', error)
+  }
+}
+
+function isThreadLiked(threadId: number): boolean {
+  return userLikedThreads.value.has(threadId)
+}
+
+function isThreadBookmarked(threadId: number): boolean {
+  return userBookmarkedThreads.value.has(threadId)
+}
+
+function isCommentLiked(commentId: number): boolean {
+  return userLikedComments.value.has(commentId)
+}
+
+function scrollToComments() {
+  commentsPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
 
@@ -386,6 +608,7 @@ async function handleBookmark() {
                 :thread="thread"
                 :user-college="userCollege || undefined"
                 :is-last="index === signalThreads.length - 1"
+                :liked="isThreadLiked(thread.id)"
                 @like="handleSignalLike"
                 @comment="handleSignalComment"
                 @share="handleSignalShare"
@@ -521,7 +744,12 @@ async function handleBookmark() {
                     {{ new Date(selectedDepth.createdAt).toLocaleDateString() }}
                   </p>
                 </div>
-                <AppButton variant="ghost" @click="handleBookmark">{{ t('forum.saveToBookmark') }}</AppButton>
+                <AppButton
+                  :variant="isThreadBookmarked(selectedDepth.id) ? 'primary' : 'ghost'"
+                  @click="handleBookmark"
+                >
+                  {{ isThreadBookmarked(selectedDepth.id) ? t('forum.bookmarked') : t('forum.saveToBookmark') }}
+                </AppButton>
               </div>
 
               <p class="detail-summary font-sans">
@@ -544,16 +772,26 @@ async function handleBookmark() {
                 </span>
               </div>
 
-              <!-- 统计数据 -->
+              <!-- 统计数据和交互按钮 -->
               <div class="detail-stats">
+                <div class="stats-actions">
+                  <button
+                    class="stat-btn font-mono"
+                    :class="{ 'stat-active': isThreadLiked(selectedDepth.id) }"
+                    @click="handleDepthLike"
+                  >
+                    <Heart :size="14" :fill="isThreadLiked(selectedDepth.id) ? 'currentColor' : 'none'" />
+                    {{ selectedDepth.likeCount }}
+                  </button>
+                  <button class="stat-btn font-mono" @click="scrollToComments">
+                    <MessageCircle :size="14" /> {{ selectedDepth.commentCount }}
+                  </button>
+                  <button class="stat-btn font-mono" @click="handleDepthShare">
+                    <Share2 :size="14" /> {{ selectedDepth.shareCount }}
+                  </button>
+                </div>
                 <span class="stat-item font-mono">
                   <Eye :size="14" class="stat-icon" /> {{ selectedDepth.viewCount }}
-                </span>
-                <span class="stat-item font-mono">
-                  <Heart :size="14" class="stat-icon" /> {{ selectedDepth.likeCount }}
-                </span>
-                <span class="stat-item font-mono">
-                  <MessageCircle :size="14" class="stat-icon" /> {{ selectedDepth.commentCount }}
                 </span>
               </div>
 
@@ -590,7 +828,7 @@ async function handleBookmark() {
               </div>
 
               <!-- 评论区 -->
-              <div class="comments-panel">
+              <div ref="commentsPanelRef" class="comments-panel">
                 <div class="comments-header">
                   <p class="comments-title font-mono flex items-center gap-1">
                     <MessageCircle :size="12" /> {{ t('forum.comments') }} ({{ comments.length }})
@@ -646,6 +884,14 @@ async function handleBookmark() {
                           </span>
                         </div>
                         <p class="comment-text font-sans">{{ comment.content }}</p>
+                        <button
+                          class="comment-like-btn font-mono"
+                          :class="{ 'comment-liked': isCommentLiked(comment.id) }"
+                          @click="handleCommentLike(comment)"
+                        >
+                          <Heart :size="12" :fill="isCommentLiked(comment.id) ? 'currentColor' : 'none'" />
+                          {{ comment.likeCount || 0 }}
+                        </button>
                       </div>
                     </div>
                   </TransitionGroup>
@@ -735,6 +981,98 @@ async function handleBookmark() {
             >
               {{ t('common.publish') }}
             </AppButton>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Signal 评论弹窗 -->
+    <Transition name="modal">
+      <div v-if="showSignalCommentModal" class="modal-overlay" @click.self="closeSignalCommentModal">
+        <div class="modal-content signal-comment-modal border-vibe-primary/30">
+          <div class="modal-header">
+            <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.comments') }}</h3>
+            <button class="close-btn" @click="closeSignalCommentModal">
+              <X :size="18" />
+            </button>
+          </div>
+
+          <!-- 原帖内容 -->
+          <div v-if="signalCommentTarget" class="signal-original">
+            <p class="signal-original-text font-sans">{{ signalCommentTarget.contentText }}</p>
+            <div class="signal-original-meta font-mono">
+              <span>{{ signalCommentTarget.authorName || '匿名用户' }}</span>
+              <span>·</span>
+              <span>{{ signalCommentTarget.likeCount }} 赞</span>
+              <span>·</span>
+              <span>{{ signalCommentTarget.commentCount }} 评论</span>
+            </div>
+          </div>
+
+          <div class="modal-body signal-comment-body">
+            <!-- 评论输入 -->
+            <div class="comment-input-area">
+              <textarea
+                v-model="signalNewComment"
+                class="comment-input font-sans"
+                rows="2"
+                :placeholder="t('forum.writeComment')"
+              />
+              <div class="comment-input-actions">
+                <label class="anonymous-toggle">
+                  <input v-model="signalCommentAnonymous" type="checkbox" class="toggle-input" />
+                  <span class="toggle-label font-sans text-xs">{{ t('common.anonymous') }}</span>
+                </label>
+                <AppButton
+                  variant="primary"
+                  size="sm"
+                  class="vibe-button"
+                  :loading="signalSubmittingComment"
+                  :disabled="!signalNewComment.trim()"
+                  @click="submitSignalComment"
+                >
+                  发送
+                </AppButton>
+              </div>
+            </div>
+
+            <!-- 评论列表 -->
+            <div v-if="signalCommentsLoading" class="text-center py-4">
+              <span class="font-mono text-sm text-slate">{{ t('forum.loadingComments') }}</span>
+            </div>
+            <div v-else-if="signalComments.length === 0" class="text-center py-4">
+              <span class="font-sans text-sm text-slate">{{ t('forum.noComments') }}</span>
+            </div>
+            <div v-else class="comments-list">
+              <TransitionGroup name="list" tag="div">
+                <div
+                  v-for="comment in signalComments"
+                  :key="comment.id"
+                  class="comment-item"
+                >
+                  <div class="comment-avatar vibe-avatar">
+                    {{ (comment.authorName || '匿')[0] }}
+                  </div>
+                  <div class="comment-content">
+                    <div class="comment-meta font-mono">
+                      <span class="comment-author">{{ comment.authorName || t('forum.anonymousUser') }}</span>
+                      <span class="comment-time">
+                        {{ new Date(comment.createdAt).toLocaleDateString() }}
+                      </span>
+                    </div>
+                    <p class="comment-text font-sans">{{ comment.content }}</p>
+                    <button
+                      class="comment-like-btn font-mono"
+                      :class="{ 'comment-liked': isCommentLiked(comment.id) }"
+                      @click="handleCommentLike(comment)"
+                    >
+                      <Heart :size="12" :fill="isCommentLiked(comment.id) ? 'currentColor' : 'none'" />
+                      {{ comment.likeCount || 0 }}
+                    </button>
+                  </div>
+                </div>
+              </TransitionGroup>
+            </div>
           </div>
         </div>
       </div>
@@ -970,7 +1308,11 @@ async function handleBookmark() {
 }
 
 .detail-stats {
-  @apply flex gap-6;
+  @apply flex items-center justify-between;
+}
+
+.stats-actions {
+  @apply flex items-center gap-4;
 }
 
 .stat-item {
@@ -1221,5 +1563,48 @@ async function handleBookmark() {
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
   transform: scale(0.95) translateY(20px);
+}
+
+/* Signal 评论弹窗样式 */
+.signal-comment-modal {
+  @apply max-w-md;
+}
+
+.signal-original {
+  @apply px-6 py-4 bg-vibe-primary/5 border-b border-vibe-primary/10;
+}
+
+.signal-original-text {
+  @apply text-sm text-charcoal leading-relaxed;
+}
+
+.signal-original-meta {
+  @apply flex items-center gap-2 text-xs text-slate mt-2;
+}
+
+.signal-comment-body {
+  @apply max-h-96 overflow-y-auto;
+}
+
+.vibe-avatar {
+  @apply bg-vibe-primary/20 text-vibe-accent;
+}
+
+/* 统计按钮样式 */
+.stat-btn {
+  @apply flex items-center gap-1 text-sm text-slate cursor-pointer transition-colors duration-200 hover:text-focus-accent;
+}
+
+.stat-btn.stat-active {
+  @apply text-focus-accent;
+}
+
+/* 评论点赞按钮 */
+.comment-like-btn {
+  @apply flex items-center gap-1 text-xs text-slate mt-2 cursor-pointer transition-colors duration-200 hover:text-vibe-accent;
+}
+
+.comment-like-btn.comment-liked {
+  @apply text-vibe-accent;
 }
 </style>

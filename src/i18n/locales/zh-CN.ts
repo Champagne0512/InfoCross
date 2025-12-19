@@ -143,6 +143,7 @@ export default {
     noComments: '暂无评论，来说两句吧',
     loadingComments: '加载评论中...',
     saveToBookmark: '保存到书签',
+    bookmarked: '已收藏',
     minRead: 'min read',
     anonymousAuthor: '匿名作者',
     anonymousUser: '匿名用户',

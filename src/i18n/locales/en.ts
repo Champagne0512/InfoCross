@@ -143,6 +143,7 @@ export default {
     noComments: 'No comments yet, be the first',
     loadingComments: 'Loading comments...',
     saveToBookmark: 'Save to Bookmarks',
+    bookmarked: 'Bookmarked',
     minRead: 'min read',
     anonymousAuthor: 'Anonymous Author',
     anonymousUser: 'Anonymous User',

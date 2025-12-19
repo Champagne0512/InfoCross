@@ -428,22 +428,30 @@ export async function fetchComments(threadId: number): Promise<ForumComment[]> {
   return []
 }
 
-export async function likeThread(threadId: number): Promise<void> {
+export async function likeThread(threadId: number): Promise<{ liked: boolean; likeCount: number }> {
   const userId = await getUserId()
   if (!userId) throw new Error('请先登录')
-  const { error } = await supabase
-    .from('forum_interactions')
-    .upsert(
-      {
-        user_id: userId,
-        thread_id: threadId,
-        type: 'like',
-      },
-      { onConflict: 'user_id,thread_id,type' },
-    )
-  if (error && error.code !== '23505') {
-    throw error
-  }
+  
+  const { data, error } = await supabase.rpc('toggle_thread_like', {
+    p_thread_id: threadId,
+    p_user_id: userId,
+  })
+  
+  if (error) throw error
+  return data as { liked: boolean; likeCount: number }
+}
+
+export async function likeComment(commentId: number): Promise<{ liked: boolean; likeCount: number }> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+  
+  const { data, error } = await supabase.rpc('toggle_comment_like', {
+    p_comment_id: commentId,
+    p_user_id: userId,
+  })
+  
+  if (error) throw error
+  return data as { liked: boolean; likeCount: number }
 }
 
 export async function fetchRelatedResources(
@@ -487,22 +495,30 @@ export async function createComment(
   return mapComment(data as unknown as CommentRow)
 }
 
-export async function bookmarkThread(threadId: number): Promise<void> {
+export async function bookmarkThread(threadId: number): Promise<{ bookmarked: boolean }> {
   const userId = await getUserId()
   if (!userId) throw new Error('请先登录')
-  const { error } = await supabase
-    .from('forum_interactions')
-    .upsert(
-      {
-        user_id: userId,
-        thread_id: threadId,
-        type: 'bookmark',
-      },
-      { onConflict: 'user_id,thread_id,type' },
-    )
-  if (error && error.code !== '23505') {
-    throw error
-  }
+  
+  const { data, error } = await supabase.rpc('toggle_thread_bookmark', {
+    p_thread_id: threadId,
+    p_user_id: userId,
+  })
+  
+  if (error) throw error
+  return data as { bookmarked: boolean }
+}
+
+export async function shareThread(threadId: number): Promise<number> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+  
+  const { data, error } = await supabase.rpc('increment_share_count', {
+    p_thread_id: threadId,
+    p_user_id: userId,
+  })
+  
+  if (error) throw error
+  return data as number
 }
 
 export async function checkUserInteractions(
@@ -534,5 +550,24 @@ export async function incrementViewCount(threadId: number): Promise<void> {
     await supabase.rpc('increment_view_count', { thread_id: threadId })
   } catch (error) {
     console.error('[incrementViewCount] failed', error)
+  }
+}
+
+export async function checkUserCommentLikes(commentIds: number[]): Promise<Set<number>> {
+  const userId = await getUserId()
+  if (!userId || commentIds.length === 0) return new Set()
+
+  try {
+    const { data, error } = await supabase
+      .from('forum_interactions')
+      .select('comment_id')
+      .eq('user_id', userId)
+      .eq('type', 'like')
+      .in('comment_id', commentIds)
+    if (error) throw error
+
+    return new Set((data ?? []).map((d) => d.comment_id).filter((id): id is number => id !== null))
+  } catch {
+    return new Set()
   }
 }
