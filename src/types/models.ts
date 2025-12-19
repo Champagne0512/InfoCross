@@ -26,6 +26,85 @@ export interface UserProfile {
   bio?: string
 }
 
+export type NotificationCategory = 'forum' | 'team' | 'task' | 'system'
+
+export interface NotificationItem {
+  id: string
+  category: NotificationCategory
+  title: string
+  description: string
+  createdAt: string
+  read: boolean
+  source?: {
+    type: 'thread' | 'comment' | 'team' | 'task' | 'system'
+    id?: number | string
+    label?: string
+  }
+  action?: {
+    label: string
+    route: string
+  }
+}
+
+export type InboxCategory = 'chats' | 'applications' | 'activity' | 'system'
+
+export interface InboxPreview {
+  id: string
+  category: InboxCategory
+  title: string
+  preview: string
+  timestamp: string
+  unread: boolean
+  avatarUrl?: string
+  icon?: 'heart' | 'file' | 'bell'
+}
+
+export interface InboxChatMessage {
+  id: string
+  author: string
+  content: string
+  timestamp: string
+  isMine: boolean
+}
+
+export interface InboxChatThread {
+  id: string
+  name: string
+  onlineCount: number
+  messages: InboxChatMessage[]
+}
+
+export interface InboxApplicationDetail {
+  id: string
+  projectName: string
+  role: string
+  applicant: {
+    name: string
+    college: string
+    avatarUrl?: string
+    skills: string[]
+  }
+  matchScore: number
+  message: string
+}
+
+export interface InboxActivityDetail {
+  id: string
+  title: string
+  origin: {
+    title: string
+    excerpt: string
+  }
+  participants: string[]
+  comment?: string
+}
+
+export interface InboxSystemDetail {
+  id: string
+  title: string
+  body: string
+}
+
 export interface Interaction {
   id: number
   articleId: number

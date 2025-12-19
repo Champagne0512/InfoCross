@@ -24,13 +24,26 @@ function closeUserMenu() {
   showUserMenu.value = false
 }
 
-const navItems = computed(() => [
-  { label: t('nav.home'), path: '/' },
-  { label: t('nav.team'), path: '/team' },
-  { label: t('team.hub'), path: '/team/hub' },
-  { label: t('nav.forum'), path: '/forum' },
-  { label: t('nav.profile'), path: '/profile' },
-])
+const navItems = computed(() => {
+  if (frequencyStore.isFocus) {
+    return [
+      { label: '首页', path: '/' },
+      { label: '发现', path: '/team' },
+      { label: '协作', path: '/team/hub' },
+      { label: '消息', path: '/inbox' },
+      { label: '论坛', path: '/forum' },
+      { label: '个人', path: '/profile' },
+    ]
+  }
+  return [
+    { label: '动态', path: '/' },
+    { label: '发现', path: '/team' },
+    { label: '协作', path: '/team/hub' },
+    { label: '消息', path: '/inbox' },
+    { label: '论坛', path: '/forum' },
+    { label: '我的', path: '/profile' },
+  ]
+})
 
 const activePath = computed(() => route.path)
 

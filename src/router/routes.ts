@@ -8,6 +8,7 @@ export const RouteName = {
   TEAM_HUB: 'team-hub',
   TEAM_DETAIL: 'team-detail',
   FORUM: 'forum',
+  INBOX: 'inbox',
   PROFILE: 'profile',
   SETTINGS: 'settings',
 } as const
@@ -54,6 +55,12 @@ export const routes: RouteRecordRaw[] = [
     name: RouteName.FORUM,
     component: () => import('@/views/forum/ForumView.vue'),
     meta: { title: 'The Spectrum · 全谱论坛' },
+  },
+  {
+    path: '/inbox',
+    name: RouteName.INBOX,
+    component: () => import('@/views/inbox/InboxView.vue'),
+    meta: { title: 'InfoCross · 消息中心', requiresAuth: true },
   },
   {
     path: '/profile',
