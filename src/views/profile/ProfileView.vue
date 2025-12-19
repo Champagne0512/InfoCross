@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@/i18n'
 import ProfileHeader from '@/components/profile/ProfileHeader.vue'
 import UserStats from '@/components/profile/UserStats.vue'
 import ActionGrid from '@/components/profile/ActionGrid.vue'

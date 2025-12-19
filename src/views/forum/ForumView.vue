@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@/i18n'
 import SpectrumTabs from '@/components/forum/SpectrumTabs.vue'
 import SignalFeedItem from '@/components/forum/SignalFeedItem.vue'
 import DepthArticleCard from '@/components/forum/DepthArticleCard.vue'

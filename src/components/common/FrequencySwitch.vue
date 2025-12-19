@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@/i18n'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
 const { t } = useI18n()

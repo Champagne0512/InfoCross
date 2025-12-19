@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '@/i18n'
 import { ArrowLeft, Globe, Zap } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
