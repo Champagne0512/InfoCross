@@ -8,16 +8,20 @@ const frequencyStore = useFrequencyStore()
 
 <template>
   <div 
-    class="min-h-screen text-charcoal transition-colors duration-500"
+    class="flex h-screen w-screen overflow-hidden text-charcoal transition-colors duration-500"
     :class="frequencyStore.isFocus ? 'bg-focus-bg' : 'bg-vibe-bg'"
   >
     <ThreeBodyAnimation />
+    <!-- 左侧导航：固定宽度，不用 fixed -->
     <AppNavBar />
+    <!-- 右侧主内容：flex-1 自动填满 -->
     <main 
-      class="main-content transition-colors duration-500"
+      class="flex-1 w-full h-full overflow-y-auto transition-colors duration-500"
       :class="frequencyStore.isFocus ? 'bg-focus-bg' : 'bg-vibe-bg'"
     >
-      <slot />
+      <div class="w-full min-h-full px-8 py-8">
+        <slot />
+      </div>
     </main>
   </div>
 </template>

@@ -1,51 +1,29 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  Calendar, Users, MessageCircle, 
+  ArrowRight, Clock, MapPin, Sparkles
+} from 'lucide-vue-next'
 import ArticleCard from '@/components/business/ArticleCard.vue'
-import InsightPanel from '@/components/business/InsightPanel.vue'
-import AiIcon from '@/components/common/AiIcon.vue'
 import { fetchArticles, fetchRecommendedArticles } from '@/api/article'
-import type { Article } from '@/types/models'
-import { buildMockInsights } from '@/utils/ai-parser'
+import { fetchTeams } from '@/api/team'
+import { fetchForumThreads } from '@/api/forum'
+import type { Article, Team, ForumThread } from '@/types/models'
 import { useAuth } from '@/composables/useAuth'
 import { recordInteraction } from '@/api/interaction'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
+const router = useRouter()
 const frequencyStore = useFrequencyStore()
+const { profile } = useAuth()
 
 const articles = ref<Article[]>([])
 const recommended = ref<Article[]>([])
-const selectedCategory = ref<string>('all')
+const teams = ref<Team[]>([])
+const forumThreads = ref<ForumThread[]>([])
 const searchQuery = ref('')
 const loading = ref(true)
-const { profile } = useAuth()
-
-// Focus 模式分类
-const focusCategories = [
-  { label: '全部', value: 'all' },
-  { label: '讲座', value: 'lecture' },
-  { label: '比赛', value: 'competition' },
-  { label: '研究', value: 'research' },
-  { label: '通知', value: 'notice' },
-]
-
-// Vibe 模式分类
-const vibeCategories = [
-  { label: '全部', value: 'all' },
-  { label: '约饭', value: 'meal' },
-  { label: '运动', value: 'sports' },
-  { label: '拼车', value: 'carpool' },
-  { label: '闲聊', value: 'chat' },
-]
-
-const categories = computed(() =>
-  frequencyStore.isFocus ? focusCategories : vibeCategories,
-)
-
-const allowedCategoryValues = computed(() =>
-  categories.value
-    .map((category) => category.value)
-    .filter((value) => value !== 'all'),
-)
 
 // 页面配置
 const displayName = computed(() => profile.value?.username || 'Explorer')
@@ -54,81 +32,79 @@ const pageConfig = computed(() => {
   if (frequencyStore.isFocus) {
     return {
       greeting: `Hello, ${displayName.value}`,
-      desc: 'InfoCross 聚合各学院的讲座、竞赛与通知，并由 AI 自动摘要、打标、向量检索，为你推送最值得跨界投入的机会。',
-      publishText: '发布活动',
-      refreshText: '刷新流',
-      featuredTitle: '精选破壁线索',
-      featuredSubtitle: 'FEATURED',
-      aiTitle: '破壁推荐',
-      aiSubtitle: 'AI RECOMMENDATIONS',
-      aiDesc: '根据你的兴趣标签与向量空间距离，AI 为你挑选跨学院内容',
-      insightTitle: '跨学科提示',
-      summaryTitle: '今日重点',
-      statsTitle: '今日数据',
+      desc: 'InfoCross 聚合各学院的讲座、竞赛与通知，AI 为你推送最值得跨界投入的机会',
+      searchPlaceholder: '搜索讲座、比赛、研究项目...',
+      quickActions: [
+        { label: '发布活动', path: '/publish', icon: Calendar },
+        { label: '发现协作', path: '/team', icon: Users },
+        { label: '全谱论坛', path: '/forum', icon: MessageCircle },
+      ],
+      sectionTitles: {
+        recommended: 'AI 为你推荐',
+        teams: '正在招募的团队',
+        forum: '论坛热议',
+      }
     }
   }
   return {
-    greeting: 'What\'s up',
-    desc: '校园生活脉动，即时约伴、限时动态。所有内容限时可见，永远新鲜有趣。',
-    publishText: '发起约伴',
-    refreshText: '刷新动态',
-    featuredTitle: '热门动态',
-    featuredSubtitle: 'TRENDING',
-    aiTitle: '附近的人',
-    aiSubtitle: 'NEARBY',
-    aiDesc: '发现你身边正在发起约伴的同学',
-    insightTitle: '热门话题',
-    summaryTitle: '即时速递',
-    statsTitle: '实时数据',
+    greeting: `What's up, ${displayName.value}`,
+    desc: '校园生活脉动，即时约伴、限时动态，永远新鲜有趣',
+    searchPlaceholder: '搜索约伴、活动、话题...',
+    quickActions: [
+      { label: '发起约伴', path: '/publish', icon: Users },
+      { label: '找搭子', path: '/team', icon: Sparkles },
+      { label: '聊一聊', path: '/forum', icon: MessageCircle },
+    ],
+    sectionTitles: {
+      recommended: '附近的约伴',
+      teams: '热门搭子局',
+      forum: '大家在聊',
+    }
   }
 })
 
-const modeArticles = computed(() =>
-  articles.value.filter((article) =>
-    allowedCategoryValues.value.includes(article.category),
-  ),
-)
+// 筛选当前模式的数据
+const focusCategories = ['lecture', 'competition', 'research', 'notice']
+const vibeCategories = ['meal', 'sports', 'carpool', 'chat']
 
-const modeRecommended = computed(() =>
-  recommended.value.filter((article) =>
-    allowedCategoryValues.value.includes(article.category),
-  ),
-)
-
-const heroInsights = computed(() =>
-  modeArticles.value[0] ? buildMockInsights(modeArticles.value[0]) : [],
-)
-
-const filteredArticles = computed(() => {
-  const source = modeArticles.value
-  if (
-    selectedCategory.value !== 'all' &&
-    allowedCategoryValues.value.includes(selectedCategory.value)
-  ) {
-    return source.filter((article) => article.category === selectedCategory.value)
-  }
-  return source
+const modeArticles = computed(() => {
+  const allowed = frequencyStore.isFocus ? focusCategories : vibeCategories
+  return articles.value.filter(a => allowed.includes(a.category))
 })
 
-const spotlightArticles = computed(() => filteredArticles.value.slice(0, 3))
-const breakerHighlights = computed(() => modeRecommended.value.slice(0, 2))
+const modeRecommended = computed(() => {
+  const allowed = frequencyStore.isFocus ? focusCategories : vibeCategories
+  return recommended.value.filter(a => allowed.includes(a.category))
+})
+
+const modeTeams = computed(() => 
+  teams.value.filter(t => frequencyStore.isFocus ? !t.isVibe : t.isVibe).slice(0, 4)
+)
+
+const latestArticles = computed(() => modeArticles.value.slice(0, 6))
+const aiRecommended = computed(() => modeRecommended.value.slice(0, 3))
 
 onMounted(async () => {
-  await loadArticles()
+  await loadData()
 })
 
-watch(
-  () => frequencyStore.mode,
-  () => {
-    selectedCategory.value = 'all'
-  },
-)
+watch(() => frequencyStore.mode, () => {
+  // 模式切换时可以重新加载数据
+})
 
-async function loadArticles() {
+async function loadData() {
   loading.value = true
   try {
-    articles.value = await fetchArticles()
-    recommended.value = await fetchRecommendedArticles(profile.value?.tags ?? [])
+    const [articlesData, recommendedData, teamsData, forumData] = await Promise.all([
+      fetchArticles(),
+      fetchRecommendedArticles(profile.value?.tags ?? []),
+      fetchTeams(),
+      fetchForumThreads({ type: 'signal' }),
+    ])
+    articles.value = articlesData
+    recommended.value = recommendedData
+    teams.value = teamsData
+    forumThreads.value = forumData
   } finally {
     loading.value = false
   }
@@ -140,289 +116,215 @@ async function handleBookmark(article: Article) {
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
-  // 搜索逻辑 - 可以跳转到搜索结果页或过滤当前列表
   console.log('搜索:', searchQuery.value)
+}
+
+function navigateTo(path: string) {
+  router.push(path)
 }
 </script>
 
 <template>
-  <div class="space-y-10">
+  <div class="home-page">
     <!-- Hero 区域 -->
-    <section class="py-8 lg:py-10">
-      <div class="max-w-2xl mx-auto text-center">
-        <!-- 问候语 + 价值主张 + 搜索栏 -->
-        <div class="space-y-5">
-          <div>
-            <h1 class="text-hero font-sans font-bold text-charcoal mb-3 leading-tight">
-              {{ pageConfig.greeting }}
-            </h1>
-            <p class="text-body font-sans text-slate leading-relaxed">
-              {{ pageConfig.desc }}
-            </p>
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">{{ pageConfig.greeting }}</h1>
+        <p class="hero-desc">{{ pageConfig.desc }}</p>
+        
+        <!-- 搜索栏 -->
+        <div class="search-wrapper">
+          <div class="search-icon">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
-          <!-- 全局搜索栏 -->
-          <div class="relative max-w-lg mx-auto">
-            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <svg class="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              v-model="searchQuery"
-              type="text"
-              :placeholder="frequencyStore.isFocus ? '搜索讲座、比赛、研究项目...' : '搜索约伴、活动、话题...'"
-              class="w-full pl-12 pr-4 py-3 rounded-full border bg-white/80 backdrop-blur-sm font-sans text-body text-charcoal placeholder:text-slate/60 transition-all duration-300 focus:outline-none focus:ring-2"
-              :class="frequencyStore.isFocus 
-                ? 'border-slate/20 focus:border-focus-primary focus:ring-focus-primary/20' 
-                : 'border-vibe-primary/20 focus:border-vibe-primary focus:ring-vibe-primary/20'"
-              @keyup.enter="handleSearch"
-            />
-            <button
-              v-if="searchQuery"
-              @click="searchQuery = ''"
-              class="absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="pageConfig.searchPlaceholder"
+            class="search-input"
+            :class="frequencyStore.isFocus ? 'search-focus' : 'search-vibe'"
+            @keyup.enter="handleSearch"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="search-clear">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- 快捷入口 -->
+        <div class="quick-actions">
+          <button
+            v-for="action in pageConfig.quickActions"
+            :key="action.path"
+            class="quick-action-btn"
+            :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'"
+            @click="navigateTo(action.path)"
+          >
+            <component :is="action.icon" :size="18" />
+            <span>{{ action.label }}</span>
+          </button>
         </div>
       </div>
     </section>
 
     <!-- 主内容区域 -->
-    <section class="grid gap-10 lg:grid-cols-3">
-      <!-- 左侧：主要内容 -->
-      <div class="lg:col-span-2 space-y-10">
-        <!-- 精选内容 -->
-        <div 
-          class="rounded-morandi p-8 transition-all duration-500 shadow-morandi backdrop-blur-sm"
-          :class="frequencyStore.isFocus 
-            ? 'bg-card-focus border border-focus-primary/20' 
-            : 'bg-card-vibe border border-vibe-primary/20'"
-        >
-          <header class="flex items-center justify-between mb-8">
-            <div>
-              <p 
-                class="font-mono text-mono mb-2 transition-colors duration-300"
-                :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
-              >
-                {{ pageConfig.featuredSubtitle }}
-              </p>
-              <h2 class="text-display font-sans font-semibold text-charcoal">{{ pageConfig.featuredTitle }}</h2>
+    <section class="main-content">
+      <!-- AI 推荐区块 -->
+      <div class="content-section">
+        <header class="section-header">
+          <div class="section-title-group">
+            <Sparkles :size="20" :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'" />
+            <h2 class="section-title">{{ pageConfig.sectionTitles.recommended }}</h2>
+          </div>
+          <button class="see-more-btn" @click="navigateTo('/team')">
+            查看更多
+            <ArrowRight :size="16" />
+          </button>
+        </header>
+        
+        <div v-if="loading" class="loading-grid">
+          <div v-for="i in 3" :key="i" class="skeleton-card" />
+        </div>
+        <div v-else class="article-grid">
+          <ArticleCard
+            v-for="article in aiRecommended"
+            :key="article.id"
+            :article="article"
+            :mode="frequencyStore.mode"
+            @bookmark="handleBookmark"
+          />
+        </div>
+      </div>
+
+      <!-- 双栏布局：团队招募 + 论坛热议 -->
+      <div class="two-column-section">
+        <!-- 团队招募 -->
+        <div class="column-card">
+          <header class="column-header">
+            <div class="section-title-group">
+              <Users :size="20" :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'" />
+              <h2 class="section-title">{{ pageConfig.sectionTitles.teams }}</h2>
             </div>
-            <div class="flex gap-2">
-              <button
-                v-for="category in categories"
-                :key="category.value"
-                class="px-4 py-2 rounded-soft font-sans text-caption uppercase tracking-wider transition-all"
-                :class="selectedCategory === category.value
-                  ? (frequencyStore.isFocus 
-                      ? 'bg-focus-accent text-white' 
-                      : 'bg-vibe-accent text-white')
-                  : 'bg-white border border-slate/20 text-slate hover:bg-slate/5'"
-                @click="selectedCategory = category.value"
-              >
-                {{ category.label }}
-              </button>
-            </div>
+            <button class="see-more-btn" @click="navigateTo('/team')">
+              更多
+              <ArrowRight :size="14" />
+            </button>
           </header>
           
-          <div v-if="loading" class="grid gap-6 md:grid-cols-2">
-            <div 
-              v-for="index in 4" 
-              :key="index" 
-              class="h-80 rounded-morandi animate-pulse"
-              :class="frequencyStore.isFocus ? 'bg-focus-primary/10' : 'bg-vibe-primary/10'"
-            />
+          <div v-if="loading" class="team-loading">
+            <div v-for="i in 3" :key="i" class="skeleton-team" />
           </div>
-          
-          <div v-else class="grid gap-6 md:grid-cols-2">
-            <ArticleCard
-              v-for="article in spotlightArticles"
-              :key="article.id"
-              :article="article"
-              :mode="frequencyStore.mode"
-              @bookmark="handleBookmark"
-            />
+          <div v-else class="team-list">
+            <div
+              v-for="team in modeTeams"
+              :key="team.id"
+              class="team-item"
+              @click="navigateTo(`/team/${team.id}`)"
+            >
+              <div 
+                class="team-avatar"
+                :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
+              >
+                {{ team.name.charAt(0) }}
+              </div>
+              <div class="team-info">
+                <h3 class="team-name">{{ team.name }}</h3>
+                <p class="team-meta">
+                  <span class="meta-item">
+                    <Users :size="12" />
+                    {{ team.currentMembers }}/{{ team.maxMembers }}
+                  </span>
+                  <span class="meta-item">
+                    <MapPin :size="12" />
+                    {{ team.college }}
+                  </span>
+                </p>
+              </div>
+              <ArrowRight :size="16" class="team-arrow" />
+            </div>
+            
+            <div v-if="!modeTeams.length" class="empty-hint">
+              暂无{{ frequencyStore.isFocus ? '招募中的团队' : '热门搭子局' }}
+            </div>
           </div>
         </div>
 
-        <!-- AI 推荐 / 附近的人 -->
-        <div 
-          class="rounded-morandi p-8 transition-all duration-500 shadow-morandi"
-          :class="frequencyStore.isFocus 
-            ? 'bg-card-lavender border border-morandi-lavender/20' 
-            : 'bg-card-vibe border border-vibe-primary/20'"
-        >
-          <header class="text-center mb-10">
-            <p 
-              class="font-mono text-mono mb-3 transition-colors duration-300"
-              :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
-            >
-              {{ pageConfig.aiSubtitle }}
-            </p>
-            <h2 class="text-display font-sans font-semibold text-charcoal mb-4">{{ pageConfig.aiTitle }}</h2>
-            <p class="text-body font-sans text-slate max-w-2xl mx-auto">
-              {{ pageConfig.aiDesc }}
-            </p>
+        <!-- 论坛热议 -->
+        <div class="column-card">
+          <header class="column-header">
+            <div class="section-title-group">
+              <MessageCircle :size="20" :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'" />
+              <h2 class="section-title">{{ pageConfig.sectionTitles.forum }}</h2>
+            </div>
+            <button class="see-more-btn" @click="navigateTo('/forum')">
+              更多
+              <ArrowRight :size="14" />
+            </button>
           </header>
           
-          <div class="grid gap-6 md:grid-cols-2">
-            <ArticleCard
-              v-for="article in breakerHighlights"
-              :key="`rec-${article.id}`"
-              :article="article"
-              :mode="frequencyStore.mode"
-              @bookmark="handleBookmark"
-            />
+          <div v-if="loading" class="forum-loading">
+            <div v-for="i in 4" :key="i" class="skeleton-forum" />
+          </div>
+          <div v-else class="forum-list">
+            <div
+              v-for="thread in forumThreads.slice(0, 5)"
+              :key="thread.id"
+              class="forum-item"
+              @click="navigateTo('/forum')"
+            >
+              <div class="forum-content">
+                <p class="forum-text">{{ thread.contentText }}</p>
+                <div class="forum-meta">
+                  <span>{{ thread.authorName }}</span>
+                  <span>{{ thread.likeCount }} 赞</span>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="!forumThreads.length" class="empty-hint">
+              暂无热议话题
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 右侧：边栏 -->
-      <div class="lg:col-span-1">
-        <div class="sticky top-8 space-y-8">
-          <!-- AI 洞察 / 热门话题 -->
-          <div 
-            v-if="heroInsights.length" 
-            class="rounded-morandi p-6 transition-all duration-500 shadow-morandi"
-            :class="frequencyStore.isFocus 
-              ? 'bg-card-lavender border border-morandi-lavender/20' 
-              : 'bg-card-vibe border border-vibe-primary/20'"
-          >
-            <div class="text-center mb-6">
-              <div 
-                class="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"
-                :class="frequencyStore.isFocus ? 'bg-morandi-lavender/10' : 'bg-vibe-primary/20'"
-              >
-                <AiIcon size="lg" :color="frequencyStore.isFocus ? '#B4A8BF' : '#C4887E'" />
-              </div>
-              <p 
-                class="font-mono text-mono mb-2"
-                :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
-              >
-                AI INSIGHT
-              </p>
-              <h3 class="text-h2 font-sans font-semibold text-charcoal">{{ pageConfig.insightTitle }}</h3>
-            </div>
-            <InsightPanel :insights="heroInsights" />
+      <!-- 最新动态流 -->
+      <div class="content-section">
+        <header class="section-header">
+          <div class="section-title-group">
+            <Clock :size="20" class="text-slate" />
+            <h2 class="section-title">{{ frequencyStore.isFocus ? '最新活动' : '最新动态' }}</h2>
           </div>
-
-          <!-- 今日摘要 / 即时速递 -->
-          <div 
-            class="rounded-morandi p-6 transition-all duration-500 shadow-morandi"
-            :class="frequencyStore.isFocus 
-              ? 'bg-card-mist border border-slate/10' 
-              : 'bg-card-vibe border border-vibe-secondary/20'"
-          >
-            <header class="text-center mb-6">
-              <p class="font-mono text-mono text-slate mb-2">TL;DR</p>
-              <h3 class="text-h2 font-sans font-semibold text-charcoal">{{ pageConfig.summaryTitle }}</h3>
-            </header>
-            <div class="space-y-4">
-              <div 
-                class="p-4 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-blue/5' : 'bg-vibe-primary/10'"
-              >
-                <p 
-                  class="font-mono text-mono text-xs mb-2"
-                  :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'"
-                >
-                  {{ frequencyStore.isFocus ? '时间' : '热度' }}
-                </p>
-                <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '12 月 20 日 14:00' : '32 人正在约伴' }}
-                </p>
-              </div>
-              <div 
-                class="p-4 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-green/5' : 'bg-vibe-secondary/20'"
-              >
-                <p 
-                  class="font-mono text-mono text-xs mb-2"
-                  :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'"
-                >
-                  {{ frequencyStore.isFocus ? '地点' : '最近' }}
-                </p>
-                <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '图书馆 B1' : '二食堂 · 5分钟前' }}
-                </p>
-              </div>
-              <div 
-                class="p-4 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-lavender/5' : 'bg-vibe-primary/10'"
-              >
-                <p 
-                  class="font-mono text-mono text-xs mb-2"
-                  :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
-                >
-                  {{ frequencyStore.isFocus ? '要求' : '话题' }}
-                </p>
-                <p class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '仅限大二及以上' : '期末复习搭子' }}
-                </p>
-              </div>
-            </div>
+          <div class="filter-tabs">
+            <button 
+              class="filter-tab active"
+              :class="frequencyStore.isFocus ? 'tab-focus' : 'tab-vibe'"
+            >
+              全部
+            </button>
           </div>
-
-          <!-- 快速统计 -->
-          <div 
-            class="rounded-morandi p-6 transition-all duration-500 shadow-morandi"
-            :class="frequencyStore.isFocus 
-              ? 'bg-card-base border border-slate/10' 
-              : 'bg-card-vibe border border-vibe-primary/20'"
-          >
-            <header class="text-center mb-6">
-              <p class="font-mono text-mono text-slate mb-2">STATS</p>
-              <h3 class="text-h2 font-sans font-semibold text-charcoal">{{ pageConfig.statsTitle }}</h3>
-            </header>
-            <div class="space-y-3">
-              <div 
-                class="flex items-center justify-between p-3 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-green/10' : 'bg-vibe-primary/10'"
-              >
-                <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '新活动' : '新动态' }}
-                </span>
-                <span 
-                  class="font-mono text-mono font-semibold"
-                  :class="frequencyStore.isFocus ? 'text-morandi-green' : 'text-vibe-accent'"
-                >
-                  {{ modeArticles.length }}
-                </span>
-              </div>
-              <div 
-                class="flex items-center justify-between p-3 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-lavender/10' : 'bg-vibe-secondary/20'"
-              >
-                <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? 'AI 推荐' : '正在约伴' }}
-                </span>
-                <span 
-                  class="font-mono text-mono font-semibold"
-                  :class="frequencyStore.isFocus ? 'text-morandi-lavender' : 'text-vibe-accent'"
-                >
-                  {{ modeRecommended.length }}
-                </span>
-              </div>
-              <div 
-                class="flex items-center justify-between p-3 rounded-soft"
-                :class="frequencyStore.isFocus ? 'bg-morandi-blue/10' : 'bg-vibe-primary/10'"
-              >
-                <span class="font-sans text-sm text-charcoal">
-                  {{ frequencyStore.isFocus ? '跨学科指数' : '活跃度' }}
-                </span>
-                <span 
-                  class="font-mono text-mono font-semibold"
-                  :class="frequencyStore.isFocus ? 'text-morandi-blue' : 'text-vibe-accent'"
-                >
-                  {{ frequencyStore.isFocus ? '89%' : 'HIGH' }}
-                </span>
-              </div>
-            </div>
-          </div>
+        </header>
+        
+        <div v-if="loading" class="loading-grid loading-grid-2">
+          <div v-for="i in 4" :key="i" class="skeleton-card" />
+        </div>
+        <div v-else class="article-grid article-grid-2">
+          <ArticleCard
+            v-for="article in latestArticles"
+            :key="article.id"
+            :article="article"
+            :mode="frequencyStore.mode"
+            @bookmark="handleBookmark"
+          />
+        </div>
+        
+        <div v-if="latestArticles.length" class="load-more">
+          <button class="load-more-btn">
+            加载更多
+          </button>
         </div>
       </div>
     </section>
@@ -430,7 +332,250 @@ function handleSearch() {
 </template>
 
 <style scoped>
-.vibe-button {
-  @apply bg-vibe-accent hover:bg-vibe-accent/90;
+.home-page {
+  @apply space-y-8;
+}
+
+/* Hero 区域 */
+.hero-section {
+  @apply py-8 lg:py-10;
+}
+
+.hero-content {
+  @apply max-w-xl text-center space-y-5 mx-auto;
+}
+
+.hero-title {
+  @apply text-hero font-sans font-bold text-charcoal leading-tight;
+}
+
+.hero-desc {
+  @apply text-body font-sans text-slate leading-relaxed;
+}
+
+/* 搜索栏 */
+.search-wrapper {
+  @apply relative max-w-lg mx-auto;
+}
+
+.search-icon {
+  @apply absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate;
+}
+
+.search-input {
+  @apply w-full pl-12 pr-10 py-3 rounded-full border bg-white/80 backdrop-blur-sm;
+  @apply font-sans text-body text-charcoal placeholder:text-slate/60;
+  @apply transition-all duration-300 focus:outline-none focus:ring-2;
+}
+
+.search-focus {
+  @apply border-slate/20 focus:border-focus-primary focus:ring-focus-primary/20;
+}
+
+.search-vibe {
+  @apply border-vibe-primary/20 focus:border-vibe-primary focus:ring-vibe-primary/20;
+}
+
+.search-clear {
+  @apply absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors;
+}
+
+/* 快捷入口 */
+.quick-actions {
+  @apply flex justify-center gap-3;
+}
+
+.quick-action-btn {
+  @apply flex items-center gap-2 px-4 py-2 rounded-full;
+  @apply font-sans text-sm font-medium;
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+.action-focus {
+  @apply bg-focus-primary/10 text-focus-accent hover:bg-focus-primary/20;
+}
+
+.action-vibe {
+  @apply bg-vibe-primary/10 text-vibe-accent hover:bg-vibe-primary/20;
+}
+
+/* 主内容区域 */
+.main-content {
+  @apply space-y-10;
+}
+
+/* 区块通用样式 */
+.content-section {
+  @apply space-y-6;
+}
+
+.section-header {
+  @apply flex items-center justify-between;
+}
+
+.section-title-group {
+  @apply flex items-center gap-2;
+}
+
+.section-title {
+  @apply text-h2 font-sans font-semibold text-charcoal;
+}
+
+.see-more-btn {
+  @apply flex items-center gap-1 font-sans text-sm text-slate hover:text-charcoal transition-colors;
+}
+
+/* 文章网格 */
+.article-grid {
+  @apply grid gap-6 md:grid-cols-2 lg:grid-cols-3;
+}
+
+.article-grid-2 {
+  @apply lg:grid-cols-2;
+}
+
+/* 双栏布局 */
+.two-column-section {
+  @apply grid gap-6 lg:grid-cols-2;
+}
+
+.column-card {
+  @apply rounded-2xl bg-white border border-slate/10 p-6;
+  @apply transition-all duration-300 hover:shadow-morandi;
+  @apply flex flex-col;
+}
+
+.column-card .team-list,
+.column-card .forum-list {
+  @apply flex-1;
+}
+
+.column-header {
+  @apply flex items-center justify-between mb-4 pb-4 border-b border-slate/10;
+}
+
+/* 团队列表 */
+.team-list {
+  @apply space-y-3;
+}
+
+.team-item {
+  @apply flex items-center gap-3 p-3 rounded-xl;
+  @apply cursor-pointer transition-all duration-200;
+  @apply hover:bg-slate/5;
+}
+
+.team-avatar {
+  @apply w-10 h-10 rounded-xl flex items-center justify-center;
+  @apply font-sans font-bold text-white text-sm;
+}
+
+.avatar-focus {
+  @apply bg-gradient-to-br from-focus-primary to-focus-accent;
+}
+
+.avatar-vibe {
+  @apply bg-gradient-to-br from-vibe-primary to-vibe-accent;
+}
+
+.team-info {
+  @apply flex-1 min-w-0;
+}
+
+.team-name {
+  @apply font-sans text-sm font-medium text-charcoal truncate;
+}
+
+.team-meta {
+  @apply flex items-center gap-3 mt-0.5;
+}
+
+.meta-item {
+  @apply flex items-center gap-1 font-mono text-xs text-slate;
+}
+
+.team-arrow {
+  @apply text-slate/30 transition-colors;
+}
+
+.team-item:hover .team-arrow {
+  @apply text-slate;
+}
+
+/* 论坛列表 */
+.forum-list {
+  @apply space-y-3;
+}
+
+.forum-item {
+  @apply p-3 rounded-xl cursor-pointer transition-all duration-200;
+  @apply hover:bg-slate/5;
+}
+
+.forum-text {
+  @apply font-sans text-sm text-charcoal line-clamp-2;
+}
+
+.forum-meta {
+  @apply flex items-center gap-3 mt-2 font-mono text-xs text-slate;
+}
+
+/* 筛选标签 */
+.filter-tabs {
+  @apply flex gap-2;
+}
+
+.filter-tab {
+  @apply px-3 py-1.5 rounded-full font-sans text-sm transition-all;
+  @apply bg-slate/5 text-slate hover:bg-slate/10;
+}
+
+.filter-tab.active.tab-focus {
+  @apply bg-focus-accent text-white;
+}
+
+.filter-tab.active.tab-vibe {
+  @apply bg-vibe-accent text-white;
+}
+
+/* 加载更多 */
+.load-more {
+  @apply flex justify-center pt-4;
+}
+
+.load-more-btn {
+  @apply px-6 py-2 rounded-full border border-slate/20;
+  @apply font-sans text-sm text-slate hover:bg-slate/5 transition-all;
+}
+
+/* 空状态 */
+.empty-hint {
+  @apply text-center py-8 font-sans text-sm text-slate;
+}
+
+/* 骨架屏 */
+.loading-grid {
+  @apply grid gap-6 md:grid-cols-2 lg:grid-cols-3;
+}
+
+.loading-grid-2 {
+  @apply lg:grid-cols-2;
+}
+
+.skeleton-card {
+  @apply h-64 rounded-2xl bg-slate/10 animate-pulse;
+}
+
+.team-loading,
+.forum-loading {
+  @apply space-y-3;
+}
+
+.skeleton-team {
+  @apply h-16 rounded-xl bg-slate/10 animate-pulse;
+}
+
+.skeleton-forum {
+  @apply h-20 rounded-xl bg-slate/10 animate-pulse;
 }
 </style>
