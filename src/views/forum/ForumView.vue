@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
 import SpectrumTabs from '@/components/forum/SpectrumTabs.vue'
 import SignalFeedItem from '@/components/forum/SignalFeedItem.vue'
 import DepthArticleCard from '@/components/forum/DepthArticleCard.vue'
@@ -16,8 +15,8 @@ import {
   MessageCircle,
   Eye,
   Heart,
-  ChevronUp,
-  ChevronDown,
+  Maximize2,
+  Minimize2,
 } from 'lucide-vue-next'
 import {
   fetchForumThreads,
@@ -37,7 +36,6 @@ import type {
   DepthCategory,
 } from '@/types/models'
 
-const { t } = useI18n()
 const { profile } = useAuth()
 const userCollege = computed(() => profile.value?.college)
 const frequencyStore = useFrequencyStore()
@@ -74,47 +72,33 @@ const posting = ref(false)
 
 // 深度文章分类筛选
 const selectedCategory = ref<DepthCategory | 'all'>('all')
-const depthCategories = computed(() => [
-  { value: 'all' as const, label: t('forum.categories.all') },
-  { value: 'review' as DepthCategory, label: t('forum.categories.review') },
-  { value: 'guide' as DepthCategory, label: t('forum.categories.guide') },
-  { value: 'discussion' as DepthCategory, label: t('forum.categories.discussion') },
-  { value: 'debate' as DepthCategory, label: t('forum.categories.debate') },
-  { value: 'question' as DepthCategory, label: t('forum.categories.question') },
-])
+const depthCategories: { value: DepthCategory | 'all'; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'review', label: '测评' },
+  { value: 'guide', label: '指南' },
+  { value: 'discussion', label: '讨论' },
+  { value: 'debate', label: '辩论' },
+  { value: 'question', label: '提问' },
+]
 
 // 评论相关
 const newComment = ref('')
 const commentAnonymous = ref(false)
 const submittingComment = ref(false)
 
-// 阅览模式状态
-const isReadingMode = ref(false)
+// 专注模式
+const compactMode = ref(false)
 
-// 切换阅览模式
-function toggleReadingMode() {
-  isReadingMode.value = !isReadingMode.value
+function enterCompactMode() {
+  compactMode.value = true
 }
 
-// 监听滚动事件，向下滚动时进入阅览模式
-function handleScroll(event: WheelEvent) {
-  if (!isReadingMode.value && event.deltaY > 30) {
-    isReadingMode.value = true
-  }
+function exitCompactMode() {
+  compactMode.value = false
 }
 
-// 监听阅览模式变化，控制body滚动
-watch(isReadingMode, (reading) => {
-  if (reading) {
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = ''
-  }
-})
-
-onUnmounted(() => {
-  window.removeEventListener('wheel', handleScroll)
-  document.body.style.overflow = ''
+watch(compactMode, (value) => {
+  document.body.style.overflow = value ? 'hidden' : ''
 })
 
 // 筛选后的深度文章
@@ -126,25 +110,28 @@ const filteredDepthThreads = computed(() => {
 const heroContent = computed(() => {
   if (mode.value === 'signal') {
     return {
-      title: t('forum.signalChannel'),
-      subtitle: t('forum.signalSubtitle'),
-      description: t('forum.signalDesc'),
-      action: t('forum.publishSignal'),
+      title: 'Signal · 情报频道',
+      subtitle: '消除"我不知道"',
+      description:
+        '捕捉校园里的即时情报与跨学院爆料，AI 自动聚合热词，帮你在最短时间知道发生了什么。',
+      action: '发布情报',
     }
   }
   return {
-    title: t('forum.depthChannel'),
-    subtitle: t('forum.depthSubtitle'),
-    description: t('forum.depthDesc'),
-    action: t('forum.writeArticle'),
+    title: 'Depth · 深潜频道',
+    subtitle: '消除"我不懂"',
+    description:
+      '沉浸式阅读跨学科经验与测评，支持引用 InfoCross 活动/组队，AI 还会推送关联资源。',
+    action: '写长文',
   }
 })
 
 onMounted(async () => {
-  // 添加滚动监听
-  window.addEventListener('wheel', handleScroll, { passive: true })
-  // 加载数据
   await Promise.all([loadSignalThreads(), loadDepthThreads(), loadHotTopics()])
+})
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
 })
 
 // 监听模式变化，重新加载数据
@@ -325,16 +312,16 @@ async function handleBookmark() {
     class="forum-wrapper transition-colors duration-500"
     :class="[
       frequencyStore.isFocus ? 'bg-focus-bg' : 'bg-vibe-bg',
-      isReadingMode ? 'reading-mode' : ''
+      compactMode ? 'compact-mode' : ''
     ]"
   >
-    <!-- Hero 区域 - 初始状态（竖直排列） -->
-    <section v-if="!isReadingMode" class="hero hero-initial">
+    <!-- Hero 区域 -->
+    <section v-if="!compactMode" class="hero hero-initial">
       <p
         class="hero-subtitle transition-colors duration-300"
         :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
       >
-        {{ t('forum.theSpectrum') }}
+        The Spectrum · 全谱论坛
       </p>
       <h1 class="hero-title font-sans">{{ heroContent.title }}</h1>
       <p class="hero-desc font-sans">{{ heroContent.description }}</p>
@@ -351,66 +338,41 @@ async function handleBookmark() {
         >
           {{ heroContent.action }}
         </AppButton>
+        <button class="focus-toggle focus-toggle--ghost" @click="enterCompactMode">
+          <Maximize2 :size="16" />
+          <span>进入专注</span>
+        </button>
       </div>
-
-      <!-- 切换到阅览模式的按钮 -->
-      <button
-        class="mode-toggle-btn"
-        :class="frequencyStore.isFocus ? 'toggle-focus' : 'toggle-vibe'"
-        @click="toggleReadingMode"
-      >
-        <ChevronUp :size="20" />
-      </button>
     </section>
 
-    <!-- Hero 区域 - 阅览状态（水平排列，固定在顶部） -->
-    <header v-else class="hero-compact">
-      <div class="compact-content">
-        <div class="compact-left">
-          <h1 class="compact-title font-sans">{{ heroContent.title }}</h1>
-          <SpectrumTabs v-model="mode" :compact="true" />
+    <header v-else class="compact-bar">
+      <div class="compact-left">
+        <div>
+          <p class="compact-label">The Spectrum</p>
+          <h2 class="compact-title">{{ heroContent.title }}</h2>
         </div>
-        <div class="compact-right">
-          <!-- 模式说明 - 紧凑模式下显示在发布按钮左侧 -->
-          <Transition name="hint-fade" mode="out-in">
-            <span
-              v-if="frequencyStore.isFocus"
-              key="focus"
-              class="compact-mode-hint font-mono text-focus-accent"
-            >
-              {{ t('forum.focusMode') }}
-            </span>
-            <span
-              v-else
-              key="vibe"
-              class="compact-mode-hint font-mono text-vibe-accent"
-            >
-              {{ t('forum.vibeMode') }}
-            </span>
-          </Transition>
-          <AppButton
-            variant="primary"
-            size="sm"
-            :class="frequencyStore.isVibe ? 'vibe-button' : ''"
-            @click="openPostModal"
-          >
-            {{ heroContent.action }}
-          </AppButton>
-          <!-- 切换回初始模式的按钮 -->
-          <button
-            class="mode-toggle-btn compact-toggle"
-            :class="frequencyStore.isFocus ? 'toggle-focus' : 'toggle-vibe'"
-            @click="toggleReadingMode"
-          >
-            <ChevronDown :size="20" />
-          </button>
-        </div>
+        <SpectrumTabs v-model="mode" :compact="true" />
+      </div>
+      <div class="compact-right">
+        <AppButton
+          variant="primary"
+          size="sm"
+          :class="frequencyStore.isVibe ? 'vibe-button' : ''"
+          @click="openPostModal"
+        >
+          {{ heroContent.action }}
+        </AppButton>
+        <button class="focus-toggle focus-toggle--solid" @click="exitCompactMode">
+          <Minimize2 :size="16" />
+          <span>退出专注</span>
+        </button>
       </div>
     </header>
 
-    <!-- Signal 模式 (Vibe) -->
-    <Transition name="fade-slide" mode="out-in">
-      <section v-if="mode === 'signal'" key="signal" class="signal-section">
+    <div class="forum-content">
+      <!-- Signal 模式 (Vibe) -->
+      <Transition name="fade-slide" mode="out-in">
+        <section v-if="mode === 'signal'" key="signal" class="signal-section">
         <div class="signal-grid">
           <!-- 情报流 -->
           <div class="signal-feed scrollable-content">
@@ -438,8 +400,8 @@ async function handleBookmark() {
               <div class="empty-icon bg-vibe-primary/20 text-vibe-accent">
                 <Radio :size="28" />
               </div>
-              <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.noSignal') }}</h3>
-              <p class="font-sans text-body text-slate">{{ t('forum.beFirstSignal') }}</p>
+              <h3 class="font-sans text-h2 text-charcoal">暂无情报</h3>
+              <p class="font-sans text-body text-slate">成为第一个发布情报的人吧</p>
             </div>
           </div>
 
@@ -452,9 +414,9 @@ async function handleBookmark() {
             >
               <h3 class="font-sans flex items-center gap-2">
                 <Flame :size="20" class="text-vibe-accent" />
-                {{ t('forum.hotTopics') }}
+                热门合辑
               </h3>
-              <p class="aside-desc font-sans">{{ t('forum.hotTopicsDesc') }}</p>
+              <p class="aside-desc font-sans">AI 自动聚类，避免相同吐槽刷屏。</p>
               <ul class="hot-topic-list">
                 <li
                   v-for="topic in hotTopics"
@@ -463,7 +425,7 @@ async function handleBookmark() {
                 >
                   <p class="topic-title font-sans">{{ topic.title }}</p>
                   <p class="topic-meta font-mono">
-                    {{ topic.threadCount }} {{ t('forum.discussions') }} · {{ t('forum.heat') }}
+                    {{ topic.threadCount }} 条讨论 · 热度
                     {{ Math.round(topic.heatScore * 100) }}%
                   </p>
                 </li>
@@ -474,20 +436,20 @@ async function handleBookmark() {
             <div class="tip-card border-vibe-primary/20 bg-vibe-primary/5">
               <h4 class="font-sans text-vibe-accent flex items-center gap-2">
                 <Lightbulb :size="16" />
-                {{ t('common.anonymous') }}
+                匿名提示
               </h4>
               <p class="font-sans text-sm text-slate">
-                {{ t('forum.anonymousTip') }}
+                Signal 默认实名，发布时可选择匿名身份保护隐私。
               </p>
             </div>
           </aside>
         </div>
-      </section>
-    </Transition>
+        </section>
+      </Transition>
 
-    <!-- Depth 模式 (Focus) -->
-    <Transition name="fade-slide" mode="out-in">
-      <section v-if="mode === 'depth'" key="depth" class="depth-section">
+      <!-- Depth 模式 (Focus) -->
+      <Transition name="fade-slide" mode="out-in">
+        <section v-if="mode === 'depth'" key="depth" class="depth-section">
         <!-- 分类筛选 -->
         <div class="category-filter">
           <button
@@ -532,9 +494,9 @@ async function handleBookmark() {
               <div class="empty-icon bg-focus-primary/20 text-focus-accent">
                 <BookOpen :size="28" />
               </div>
-              <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.noArticle') }}</h3>
+              <h3 class="font-sans text-h2 text-charcoal">暂无文章</h3>
               <p class="font-sans text-body text-slate">
-                {{ selectedCategory === 'all' ? t('forum.beFirstArticle') : t('forum.noCategoryArticle') }}
+                {{ selectedCategory === 'all' ? '成为第一个写长文的人吧' : '该分类暂无文章' }}
               </p>
             </div>
           </div>
@@ -554,12 +516,12 @@ async function handleBookmark() {
                     {{ selectedDepth.title }}
                   </h2>
                   <p class="detail-meta font-mono">
-                    {{ selectedDepth.authorName || t('forum.anonymousAuthor') }} ·
-                    {{ selectedDepth.readTimeMinutes }} {{ t('forum.minRead') }} ·
+                    {{ selectedDepth.authorName || '匿名作者' }} ·
+                    {{ selectedDepth.readTimeMinutes }} min read ·
                     {{ new Date(selectedDepth.createdAt).toLocaleDateString() }}
                   </p>
                 </div>
-                <AppButton variant="ghost" @click="handleBookmark">{{ t('forum.saveToBookmark') }}</AppButton>
+                <AppButton variant="ghost" @click="handleBookmark">保存到书签</AppButton>
               </div>
 
               <p class="detail-summary font-sans">
@@ -601,9 +563,9 @@ async function handleBookmark() {
               <div class="related-panel">
                 <div class="related-header">
                   <p class="related-title font-mono flex items-center gap-1">
-                    <Link :size="12" /> {{ t('forum.relatedResources') }}
+                    <Link :size="12" /> 相关资源
                   </p>
-                  <span v-if="sidebarLoading" class="loading-text font-mono">{{ t('common.loading') }}</span>
+                  <span v-if="sidebarLoading" class="loading-text font-mono">加载中...</span>
                 </div>
                 <ul v-if="relatedResources.length" class="related-list">
                   <li
@@ -619,19 +581,19 @@ async function handleBookmark() {
                           : 'text-morandi-blue'
                       "
                     >
-                      {{ resource.type === 'team' ? t('team.teamType') : t('team.eventType') }}
+                      {{ resource.type === 'team' ? '组队' : '活动' }}
                     </span>
                     <span class="resource-title font-sans">{{ resource.title }}</span>
                   </li>
                 </ul>
-                <p v-else class="aside-desc font-sans">{{ t('forum.noRelatedResources') }}</p>
+                <p v-else class="aside-desc font-sans">暂无关联资源</p>
               </div>
 
               <!-- 评论区 -->
               <div class="comments-panel">
                 <div class="comments-header">
                   <p class="comments-title font-mono flex items-center gap-1">
-                    <MessageCircle :size="12" /> {{ t('forum.comments') }} ({{ comments.length }})
+                    <MessageCircle :size="12" /> 评论 ({{ comments.length }})
                   </p>
                 </div>
 
@@ -641,12 +603,12 @@ async function handleBookmark() {
                     v-model="newComment"
                     class="comment-input font-sans"
                     rows="2"
-                    :placeholder="t('forum.writeComment')"
+                    placeholder="写下你的评论..."
                   />
                   <div class="comment-input-actions">
                     <label class="anonymous-toggle">
                       <input v-model="commentAnonymous" type="checkbox" class="toggle-input" />
-                      <span class="toggle-label font-sans text-xs">{{ t('common.anonymous') }}</span>
+                      <span class="toggle-label font-sans text-xs">匿名</span>
                     </label>
                     <AppButton
                       variant="primary"
@@ -655,16 +617,16 @@ async function handleBookmark() {
                       :disabled="!newComment.trim()"
                       @click="submitComment"
                     >
-                      {{ t('common.send') }}
+                      发送
                     </AppButton>
                   </div>
                 </div>
 
                 <div v-if="commentsLoading" class="text-center py-4">
-                  <span class="font-mono text-sm text-slate">{{ t('forum.loadingComments') }}</span>
+                  <span class="font-mono text-sm text-slate">加载评论中...</span>
                 </div>
                 <div v-else-if="comments.length === 0" class="text-center py-4">
-                  <span class="font-sans text-sm text-slate">{{ t('forum.noComments') }}</span>
+                  <span class="font-sans text-sm text-slate">暂无评论，来说两句吧</span>
                 </div>
                 <div v-else class="comments-list">
                   <TransitionGroup name="list" tag="div">
@@ -674,11 +636,11 @@ async function handleBookmark() {
                       class="comment-item"
                     >
                       <div class="comment-avatar">
-                        {{ (comment.authorName || 'A')[0] }}
+                        {{ (comment.authorName || '匿')[0] }}
                       </div>
                       <div class="comment-content">
                         <div class="comment-meta font-mono">
-                          <span class="comment-author">{{ comment.authorName || t('forum.anonymousUser') }}</span>
+                          <span class="comment-author">{{ comment.authorName || '匿名用户' }}</span>
                           <span class="comment-time">
                             {{ new Date(comment.createdAt).toLocaleDateString() }}
                           </span>
@@ -692,8 +654,9 @@ async function handleBookmark() {
             </div>
           </Transition>
         </div>
-      </section>
-    </Transition>
+        </section>
+      </Transition>
+    </div>
 
     <!-- 发帖弹窗 -->
     <Transition name="modal">
@@ -704,7 +667,7 @@ async function handleBookmark() {
         >
           <div class="modal-header">
             <h3 class="font-sans text-h2 text-charcoal">
-              {{ mode === 'signal' ? t('forum.publishSignal') : t('forum.writeArticle') }}
+              {{ mode === 'signal' ? '发布情报' : '写长文' }}
             </h3>
             <button class="close-btn" @click="closePostModal">✕</button>
           </div>
@@ -713,16 +676,16 @@ async function handleBookmark() {
             <!-- 深度模式需要标题和分类 -->
             <template v-if="mode === 'depth'">
               <div class="form-group">
-                <label class="form-label font-mono">{{ t('forum.articleTitle') }}</label>
+                <label class="form-label font-mono">标题</label>
                 <input
                   v-model="postTitle"
                   type="text"
                   class="form-input font-sans"
-                  :placeholder="t('forum.articleTitle')"
+                  placeholder="给你的文章起个标题"
                 />
               </div>
               <div class="form-group">
-                <label class="form-label font-mono">{{ t('forum.category') }}</label>
+                <label class="form-label font-mono">分类</label>
                 <div class="category-select">
                   <button
                     v-for="cat in depthCategories.filter((c) => c.value !== 'all')"
@@ -739,7 +702,7 @@ async function handleBookmark() {
 
             <div class="form-group">
               <label class="form-label font-mono">
-                {{ mode === 'signal' ? t('forum.signalContent') : t('forum.articleContent') }}
+                {{ mode === 'signal' ? '情报内容' : '正文' }}
               </label>
               <textarea
                 v-model="postContent"
@@ -747,8 +710,8 @@ async function handleBookmark() {
                 :rows="mode === 'signal' ? 4 : 8"
                 :placeholder="
                   mode === 'signal'
-                    ? t('forum.shareSignalPlaceholder')
-                    : t('forum.writeArticlePlaceholder')
+                    ? '分享你知道的校园情报...'
+                    : '写下你的经验、测评或思考...'
                 "
               />
             </div>
@@ -756,13 +719,13 @@ async function handleBookmark() {
             <div class="form-group">
               <label class="anonymous-toggle">
                 <input v-model="postAnonymous" type="checkbox" class="toggle-input" />
-                <span class="toggle-label font-sans">{{ t('forum.anonymousPost') }}</span>
+                <span class="toggle-label font-sans">匿名发布</span>
               </label>
             </div>
           </div>
 
           <div class="modal-footer">
-            <AppButton variant="ghost" @click="closePostModal">{{ t('common.cancel') }}</AppButton>
+            <AppButton variant="ghost" @click="closePostModal">取消</AppButton>
             <AppButton
               variant="primary"
               :loading="posting"
@@ -770,7 +733,7 @@ async function handleBookmark() {
               :class="frequencyStore.isVibe ? 'vibe-button' : ''"
               @click="submitPost"
             >
-              {{ t('common.publish') }}
+              发布
             </AppButton>
           </div>
         </div>
@@ -781,15 +744,19 @@ async function handleBookmark() {
 
 <style scoped>
 .forum-wrapper {
-  @apply flex-1 w-full min-h-screen px-6 lg:px-12 py-12 space-y-10 transition-all duration-500;
+  @apply w-full px-6 lg:px-12 py-12 gap-6 transition-all duration-500;
+  @apply flex flex-col;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.forum-wrapper.reading-mode {
-  @apply pt-20 space-y-6 px-6 lg:px-12;
-  @apply h-screen overflow-hidden fixed top-0 bottom-0;
-  left: 15rem;
-  right: 0;
-  touch-action: none;
+.forum-wrapper.compact-mode {
+  @apply py-6 gap-4;
+}
+
+.forum-content {
+  @apply flex-1 w-full min-h-0;
 }
 
 /* 可滚动内容区域 */
@@ -807,70 +774,6 @@ async function handleBookmark() {
 }
 
 /* 切换按钮样式 */
-.mode-toggle-btn {
-  @apply w-10 h-10 rounded-full flex items-center justify-center;
-  @apply border shadow-morandi-sm;
-  @apply transition-all duration-300 cursor-pointer;
-  @apply hover:shadow-morandi hover:scale-105;
-  @apply mt-6 mx-auto;
-}
-
-.toggle-focus {
-  @apply bg-white border-focus-primary/30 text-focus-accent;
-  @apply hover:bg-focus-primary/10;
-}
-
-.toggle-vibe {
-  @apply bg-white border-vibe-primary/30 text-vibe-accent;
-  @apply hover:bg-vibe-primary/10;
-}
-
-/* 阅览模式的紧凑 Header */
-.hero-compact {
-  @apply fixed top-0 z-40;
-  left: 15rem;
-  right: 0;
-  @apply bg-transparent;
-  @apply py-3;
-  @apply transition-all duration-500;
-  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.compact-content {
-  @apply w-full flex items-center justify-between gap-4 px-6 lg:px-12;
-}
-
-.compact-left {
-  @apply flex items-center gap-6;
-}
-
-.compact-title {
-  @apply text-h3 font-semibold text-charcoal whitespace-nowrap;
-}
-
-.compact-right {
-  @apply flex items-center gap-3;
-}
-
-.compact-mode-hint {
-  @apply text-xs tracking-wider uppercase whitespace-nowrap;
-}
-
-.compact-toggle {
-  @apply mt-0;
-}
-
 .hero-subtitle {
   @apply font-mono text-xs tracking-[0.3em] uppercase mb-3;
 }
@@ -891,60 +794,67 @@ async function handleBookmark() {
   @apply flex justify-center mt-6;
 }
 
+.focus-toggle {
+  @apply inline-flex items-center gap-2 rounded-full text-sm transition-all duration-200;
+  @apply font-sans;
+}
+
+.focus-toggle--ghost {
+  @apply px-4 py-2 border border-slate/30 text-slate hover:text-charcoal hover:border-charcoal/40 bg-white/70;
+}
+
+.focus-toggle--solid {
+  @apply px-4 py-2 bg-charcoal text-white hover:bg-charcoal/90 shadow-morandi-sm;
+}
+
 .vibe-button {
   @apply bg-vibe-accent hover:bg-vibe-accent/90;
+}
+
+.compact-bar {
+  @apply flex items-center justify-between rounded-2xl bg-white/80 shadow-morandi-sm border border-slate/10 px-5 py-4;
+}
+
+.compact-left {
+  @apply flex items-center gap-6;
+}
+
+.compact-right {
+  @apply flex items-center gap-3;
+}
+
+.compact-label {
+  @apply font-mono text-xs tracking-[0.3em] uppercase text-slate;
+}
+
+.compact-title {
+  @apply text-h3 font-semibold text-charcoal;
 }
 
 /* Signal 模式样式 */
 .signal-section,
 .depth-section {
-  @apply w-full;
-}
-
-.reading-mode .signal-section,
-.reading-mode .depth-section {
-  @apply flex-1;
-  overflow: hidden;
-  height: calc(100vh - 100px);
+  @apply w-full h-full flex flex-col;
 }
 
 
 .signal-grid {
   @apply grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_320px];
-}
-
-.reading-mode .signal-grid {
-  height: 100%;
-  overflow: hidden;
-  /* 情报流自动扩展，侧边栏固定宽度 */
-  grid-template-columns: 1fr 280px;
+  @apply flex-1 min-h-0;
 }
 
 .signal-feed {
-  @apply space-y-6 relative;
-}
-
-.reading-mode .signal-feed {
-  @apply pr-2 pb-8;
-  height: calc(100vh - 140px);
+  @apply space-y-6 relative pr-2;
+  height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* 自动扩展 */
-  flex: 1;
-  min-width: 0;
 }
 
 .signal-aside {
   @apply space-y-6;
-}
-
-.reading-mode .signal-aside {
-  height: calc(100vh - 140px);
+  height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* 固定宽度 */
-  width: 280px;
-  flex-shrink: 0;
 }
 
 .hot-topic-card,
@@ -1003,6 +913,7 @@ async function handleBookmark() {
 
 .depth-grid {
   @apply grid gap-8;
+  @apply flex-1 min-h-0;
 }
 
 @media (min-width: 1024px) {
@@ -1012,15 +923,9 @@ async function handleBookmark() {
   }
 }
 
-.reading-mode .depth-grid {
-  height: 100%;
-  overflow: hidden;
-  grid-template-columns: 360px minmax(0, 1fr);
-}
-
 .depth-list {
   @apply rounded-morandi bg-white shadow-morandi border overflow-hidden;
-  max-height: calc(100vh - 300px);
+  @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
   width: 100%;
@@ -1033,27 +938,11 @@ async function handleBookmark() {
   }
 }
 
-.reading-mode .depth-list {
-  height: calc(100vh - 180px);
-  max-height: none;
-  width: 360px;
-}
-
 .depth-detail {
   @apply rounded-morandi bg-white shadow-morandi border border-slate/10 p-8 flex flex-col gap-6;
-  max-height: calc(100vh - 300px);
+  @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.reading-mode .depth-detail {
-  height: calc(100vh - 180px);
-  max-height: none;
-  /* 自动扩展填满剩余空间 */
-  flex: 1;
-  min-width: 0;
-  max-width: 820px;
-  margin-right: auto;
 }
 
 .detail-header {

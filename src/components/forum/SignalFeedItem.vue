@@ -183,7 +183,7 @@ const sentimentColor = computed(() => {
 }
 
 .cross-badge {
-  @apply absolute -top-2 right-4;
+  @apply absolute top-3 right-4;
   @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full;
   @apply bg-vibe-accent text-white;
   @apply font-mono text-xs;
