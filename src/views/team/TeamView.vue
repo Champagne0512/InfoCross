@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import TeamCard from '@/components/team/TeamCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
-import AppInput from '@/components/common/AppInput.vue'
 import { fetchTeams, joinTeam } from '@/api/team'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import JoinTeamModal from '@/components/team/JoinTeamModal.vue'
@@ -222,23 +221,23 @@ async function handleDrawerSubmit(payload: { teamId: number; role: string; messa
       <p class="text-body font-sans text-slate mb-8 max-w-2xl mx-auto leading-relaxed">
         {{ pageConfig.desc }}
       </p>
-    <div class="flex justify-center gap-4">
-      <AppButton 
-        variant="primary" 
-        :class="frequencyStore.isVibe ? 'vibe-button' : ''"
-        @click="$router.push('/publish?type=team&mode=' + frequencyStore.mode)"
+      <div class="flex justify-center gap-4">
+        <AppButton 
+          variant="primary" 
+          :class="frequencyStore.isVibe ? 'vibe-button' : ''"
+          @click="$router.push('/publish?type=team&mode=' + frequencyStore.mode)"
+        >
+          {{ pageConfig.createText }}
+        </AppButton>
+        <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
+      </div>
+      <p
+        v-if="toastMessage"
+        class="mt-4 text-center text-sm text-focus-accent"
       >
-        {{ pageConfig.createText }}
-      </AppButton>
-      <AppButton variant="ghost" @click="loadTeams">刷新列表</AppButton>
-    </div>
-    <p
-      v-if="toastMessage"
-      class="mt-4 text-center text-sm text-focus-accent"
-    >
-      {{ toastMessage }}
-    </p>
-  </section>
+        {{ toastMessage }}
+      </p>
+    </section>
 
     <!-- 筛选面板 -->
     <section 
@@ -250,11 +249,23 @@ async function handleDrawerSubmit(payload: { teamId: number; role: string; messa
       <!-- 筛选头部 -->
       <div class="flex items-end gap-4">
         <div class="flex-1">
-          <AppInput 
-            :label="pageConfig.searchLabel"
-            v-model="searchQuery"
-            :placeholder="pageConfig.searchPlaceholder"
-          />
+          <label class="block text-xs font-semibold text-slate mb-2">{{ pageConfig.searchLabel }}</label>
+          <div class="relative">
+            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate/70">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.5 12h-.79l-.28-.27A6 6 0 1013.5 12zm-5 0a4 4 0 110-8 4 4 0 010 8zm5.71 1.29L17 16.09 15.59 17.5l-2.79-2.79 1.41-1.42z" />
+              </svg>
+            </span>
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="pageConfig.searchPlaceholder"
+              class="w-full rounded-soft border px-11 py-3 font-sans text-sm outline-none transition"
+              :class="frequencyStore.isFocus
+                ? 'border-slate/20 bg-white focus:border-focus-primary focus:ring-2 focus:ring-focus-primary/20'
+                : 'border-vibe-primary/20 bg-white focus:border-vibe-primary focus:ring-2 focus:ring-vibe-primary/20'"
+            />
+          </div>
         </div>
         <button
           class="flex items-center gap-2 px-4 py-3 rounded-soft font-sans text-sm transition-all"

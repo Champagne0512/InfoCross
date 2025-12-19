@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 <template>
   <label class="flex flex-col gap-2 text-sm font-medium text-ink font-sans">
-    <span class="font-mono text-xs text-ink-soft">{{ props.label }}</span>
+    <span class="font-sans text-[0.7rem] uppercase tracking-[0.3em] text-slate/80">{{ props.label }}</span>
     <input
       :value="modelValue"
       :type="props.type ?? 'text'"

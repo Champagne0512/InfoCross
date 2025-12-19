@@ -781,12 +781,14 @@ async function handleBookmark() {
 
 <style scoped>
 .forum-wrapper {
-  @apply py-12 space-y-10 min-h-screen transition-all duration-500;
+  @apply flex-1 w-full min-h-screen px-6 lg:px-12 py-12 space-y-10 transition-all duration-500;
 }
 
 .forum-wrapper.reading-mode {
-  @apply pt-20 space-y-6;
-  @apply h-screen overflow-hidden fixed inset-0;
+  @apply pt-20 space-y-6 px-6 lg:px-12;
+  @apply h-screen overflow-hidden fixed top-0 bottom-0;
+  left: 15rem;
+  right: 0;
   touch-action: none;
 }
 
@@ -797,7 +799,7 @@ async function handleBookmark() {
 }
 
 .hero {
-  @apply max-w-5xl mx-auto text-center px-6;
+  @apply w-full text-center;
 }
 
 .hero-initial {
@@ -825,9 +827,11 @@ async function handleBookmark() {
 
 /* 阅览模式的紧凑 Header */
 .hero-compact {
-  @apply fixed top-0 left-0 right-0 z-40;
+  @apply fixed top-0 z-40;
+  left: 15rem;
+  right: 0;
   @apply bg-transparent;
-  @apply px-6 py-3;
+  @apply py-3;
   @apply transition-all duration-500;
   animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -844,7 +848,7 @@ async function handleBookmark() {
 }
 
 .compact-content {
-  @apply max-w-6xl mx-auto flex items-center justify-between gap-4;
+  @apply w-full flex items-center justify-between gap-4 px-6 lg:px-12;
 }
 
 .compact-left {
@@ -894,7 +898,7 @@ async function handleBookmark() {
 /* Signal 模式样式 */
 .signal-section,
 .depth-section {
-  @apply max-w-6xl mx-auto px-6;
+  @apply w-full;
 }
 
 .reading-mode .signal-section,
@@ -904,8 +908,9 @@ async function handleBookmark() {
   height: calc(100vh - 100px);
 }
 
+
 .signal-grid {
-  @apply grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,0.8fr)];
+  @apply grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_320px];
 }
 
 .reading-mode .signal-grid {
@@ -997,14 +1002,20 @@ async function handleBookmark() {
 }
 
 .depth-grid {
-  @apply grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)];
+  @apply grid gap-8;
+}
+
+@media (min-width: 1024px) {
+  .depth-grid {
+    grid-template-columns: 360px minmax(0, 1fr);
+    align-items: start;
+  }
 }
 
 .reading-mode .depth-grid {
   height: 100%;
   overflow: hidden;
-  /* 列表固定宽度320px，详情自动扩展 */
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 360px minmax(0, 1fr);
 }
 
 .depth-list {
@@ -1012,14 +1023,20 @@ async function handleBookmark() {
   max-height: calc(100vh - 300px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .depth-list {
+    width: 360px;
+    flex-shrink: 0;
+  }
 }
 
 .reading-mode .depth-list {
   height: calc(100vh - 180px);
   max-height: none;
-  /* 固定宽度，不随窗口变化 */
-  width: 320px;
-  flex-shrink: 0;
+  width: 360px;
 }
 
 .depth-detail {
@@ -1035,6 +1052,8 @@ async function handleBookmark() {
   /* 自动扩展填满剩余空间 */
   flex: 1;
   min-width: 0;
+  max-width: 820px;
+  margin-right: auto;
 }
 
 .detail-header {

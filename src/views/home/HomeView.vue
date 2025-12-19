@@ -153,9 +153,6 @@ function handleSearch() {
         <!-- 问候语 + 价值主张 + 搜索栏 -->
         <div class="space-y-5">
           <div>
-            <p class="font-mono text-mono text-slate mb-2 tracking-wider">
-              {{ new Date().toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' }) }}
-            </p>
             <h1 class="text-hero font-sans font-bold text-charcoal mb-3 leading-tight">
               {{ pageConfig.greeting }}
             </h1>

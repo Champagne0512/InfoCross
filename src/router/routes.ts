@@ -6,6 +6,7 @@ export const RouteName = {
   PUBLISH: 'publish',
   TEAM: 'team',
   TEAM_HUB: 'team-hub',
+  TEAM_DETAIL: 'team-detail',
   FORUM: 'forum',
   PROFILE: 'profile',
 } as const
@@ -40,6 +41,12 @@ export const routes: RouteRecordRaw[] = [
     name: RouteName.TEAM_HUB,
     component: () => import('@/views/team/TeamHubView.vue'),
     meta: { title: '协作空间', requiresAuth: true },
+  },
+  {
+    path: '/team/:id',
+    name: RouteName.TEAM_DETAIL,
+    component: () => import('@/views/team/TeamDetailView.vue'),
+    meta: { title: '小组详情', requiresAuth: true },
   },
   {
     path: '/forum',

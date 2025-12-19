@@ -148,6 +148,7 @@ export async function createTeam(team: Partial<Team>): Promise<Team> {
     max_members: team.maxMembers ?? 5,
     deadline: team.deadline ?? null,
     status: team.status ?? 'recruiting',
+    is_vibe: team.isVibe ?? false,
   }
 
   const { data, error } = await supabase
