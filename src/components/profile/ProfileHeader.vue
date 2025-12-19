@@ -79,6 +79,11 @@ const joinDate = computed(() => {
               </div>
             </div>
             
+            <!-- 个性签名 -->
+            <p v-if="profile.bio" class="font-sans text-sm text-slate mb-4 italic">
+              "{{ profile.bio }}"
+            </p>
+
             <!-- 兴趣标签 -->
             <div v-if="profile.tags && profile.tags.length > 0" class="flex flex-wrap justify-center lg:justify-start gap-2">
               <span 

@@ -19,7 +19,8 @@ const form = ref({
   username: props.profile.username,
   college: props.profile.college,
   major: props.profile.major,
-  tags: props.profile.tags.join(', ')
+  tags: props.profile.tags.join(', '),
+  bio: props.profile.bio || ''
 })
 
 const avatarFile = ref<File | null>(null)
@@ -67,7 +68,8 @@ async function handleSubmit() {
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0),
-      avatarUrl
+      avatarUrl,
+      bio: form.value.bio.trimEnd() || undefined
     })
 
     await userStore.init()
@@ -200,6 +202,23 @@ function handleCancel() {
           placeholder="例如: AI, 摄影, 创业"
           class="w-full px-4 py-3 rounded-lg border border-slate/20 bg-white font-sans text-charcoal focus:outline-none focus:ring-2 focus:ring-morandi-lavender/20 focus:border-morandi-lavender transition-colors"
         />
+      </div>
+
+      <!-- 个性签名 -->
+      <div>
+        <label for="bio" class="block text-sm font-sans font-medium text-charcoal mb-2">
+          个性签名
+          <span class="text-xs text-slate font-normal ml-2">可选</span>
+        </label>
+        <input 
+          type="text"
+          id="bio"
+          v-model="form.bio"
+          maxlength="20"
+          placeholder="写一句话介绍自己..."
+          class="w-full px-4 py-3 rounded-lg border border-slate/20 bg-white font-sans text-charcoal focus:outline-none focus:ring-2 focus:ring-morandi-lavender/20 focus:border-morandi-lavender transition-colors"
+        />
+        <p class="text-xs text-slate mt-1 text-right">{{ form.bio.length }}/20</p>
       </div>
 
       <!-- 按钮组 -->

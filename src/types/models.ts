@@ -23,6 +23,7 @@ export interface UserProfile {
   major: string
   tags: string[]
   avatarUrl?: string
+  bio?: string
 }
 
 export interface Interaction {

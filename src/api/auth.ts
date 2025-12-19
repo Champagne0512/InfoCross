@@ -17,6 +17,7 @@ export interface UpdateProfilePayload {
   major: string
   tags: string[]
   avatarUrl?: string
+  bio?: string
 }
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
@@ -31,6 +32,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     major: row.major ?? '未填写专业',
     tags: row.tags ?? [],
     avatarUrl: row.avatar_url ?? undefined,
+    bio: row.bio ?? undefined,
   }
 }
 
@@ -126,6 +128,7 @@ export async function updateProfile(userId: string, payload: UpdateProfilePayloa
     major: payload.major,
     tags: payload.tags,
     avatar_url: payload.avatarUrl,
+    bio: payload.bio,
   }
 
   const { error: updateError } = await supabase

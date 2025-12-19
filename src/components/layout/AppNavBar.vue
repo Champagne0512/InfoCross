@@ -122,24 +122,24 @@ function goAuth() {
         <!-- 用户信息区域（可点击） -->
         <div 
           @click="toggleUserMenu"
-          class="flex items-center gap-3 px-3 py-2 rounded-soft cursor-pointer transition-all duration-200 hover:bg-slate/5"
+          class="px-3 py-2 rounded-soft cursor-pointer transition-all duration-200 hover:bg-slate/5"
         >
-          <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden">
-            <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
+          <div class="flex items-end gap-3">
+            <div v-if="profile?.avatarUrl" class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              <img :src="profile.avatarUrl" :alt="profile.username" class="w-full h-full object-cover" />
+            </div>
+            <div 
+              v-else 
+              class="w-10 h-10 rounded-full flex items-center justify-center font-sans font-semibold flex-shrink-0"
+              :class="frequencyStore.isFocus 
+                ? 'bg-focus-primary/20 text-focus-accent' 
+                : 'bg-vibe-primary/20 text-vibe-accent'"
+            >
+              {{ profile?.username?.charAt(0)?.toUpperCase() }}
+            </div>
+            <p class="font-sans text-sm font-medium text-charcoal truncate flex-1 min-w-0 pb-0.5">{{ profile?.username }}</p>
           </div>
-          <div 
-            v-else 
-            class="w-10 h-10 rounded-full flex items-center justify-center font-sans font-semibold"
-            :class="frequencyStore.isFocus 
-              ? 'bg-focus-primary/20 text-focus-accent' 
-              : 'bg-vibe-primary/20 text-vibe-accent'"
-          >
-            {{ profile?.username?.charAt(0)?.toUpperCase() }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-sans text-sm font-medium text-charcoal truncate">{{ profile?.username }}</p>
-            <p class="font-sans text-xs text-slate truncate">点击查看更多</p>
-          </div>
+          <p v-if="profile?.bio" class="font-sans text-xs text-slate mt-2 line-clamp-2 indent-[2em]">{{ profile.bio }}</p>
         </div>
 
         <!-- 用户菜单弹出卡片 -->

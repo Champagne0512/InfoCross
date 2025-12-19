@@ -6,6 +6,7 @@ type ProfileRow = {
   major: string | null
   tags: string[] | null
   avatar_url: string | null
+  bio: string | null
   created_at: string | null
 }
 
