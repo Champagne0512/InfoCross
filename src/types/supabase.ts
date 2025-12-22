@@ -61,7 +61,65 @@ type TeamMemberRow = {
   skills: string[] | null
   status: 'applied' | 'approved' | 'rejected'
   is_owner: boolean | null
+  is_admin: boolean | null
   joined_at: string
+}
+
+type TeamApplicationRow = {
+  id: number
+  created_at: string
+  updated_at: string
+  team_id: number
+  applicant_id: string
+  message: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  mode: 'focus' | 'vibe'
+  extra: Record<string, unknown> | null
+}
+
+type TeamChatMessageRow = {
+  id: number
+  created_at: string
+  team_id: number
+  sender_id: string
+  content: string
+  attachments: Record<string, unknown>[] | null
+  status: 'sending' | 'delivered' | 'failed'
+}
+
+type TeamTaskRow = {
+  id: number
+  created_at: string
+  updated_at: string
+  team_id: number
+  title: string
+  status: 'todo' | 'in-progress' | 'done'
+  assignee_id: string | null
+  due_date: string | null
+  order_index: number | null
+  created_by: string | null
+}
+
+type TeamTaskAssigneeRow = {
+  id: number
+  created_at: string
+  updated_at: string
+  task_id: number
+  member_id: string
+  assigned_by: string | null
+  status: 'pending' | 'in-progress' | 'submitted' | 'done'
+}
+
+type TeamFileRow = {
+  id: number
+  created_at: string
+  team_id: number
+  uploader_id: string
+  file_name: string
+  file_url: string
+  file_size: number | null
+  mime_type: string | null
+  meta: Record<string, unknown> | null
 }
 
 type ForumThreadRow = {
@@ -146,6 +204,31 @@ export type Database = {
         Row: TeamMemberRow
         Insert: Partial<TeamMemberRow>
         Update: Partial<TeamMemberRow>
+      }
+      team_applications: {
+        Row: TeamApplicationRow
+        Insert: Partial<TeamApplicationRow>
+        Update: Partial<TeamApplicationRow>
+      }
+      team_chat_messages: {
+        Row: TeamChatMessageRow
+        Insert: Partial<TeamChatMessageRow>
+        Update: Partial<TeamChatMessageRow>
+      }
+      team_tasks: {
+        Row: TeamTaskRow
+        Insert: Partial<TeamTaskRow>
+        Update: Partial<TeamTaskRow>
+      }
+      team_task_assignees: {
+        Row: TeamTaskAssigneeRow
+        Insert: Partial<TeamTaskAssigneeRow>
+        Update: Partial<TeamTaskAssigneeRow>
+      }
+      team_files: {
+        Row: TeamFileRow
+        Insert: Partial<TeamFileRow>
+        Update: Partial<TeamFileRow>
       }
       forum_threads: {
         Row: ForumThreadRow

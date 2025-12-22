@@ -1,15 +1,39 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { 
-  ArrowLeft, Crown, Users, Calendar, MapPin, 
-  MessageCircle, CheckSquare, FileText, Settings,
-  Send, Plus, MoreHorizontal, Check, Circle
+import {
+  ArrowLeft,
+  Crown,
+  Users,
+  Calendar,
+  MapPin,
+  MessageCircle,
+  CheckSquare,
+  FileText,
+  Settings,
+  Send,
+  Plus,
+  MoreHorizontal,
+  Check,
+  Circle,
 } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
-import { fetchTeams } from '@/api/team'
-import type { Team } from '@/types/models'
+import { fetchTeamById, updateTeamInfo, deleteTeam, setTeamMemberAdmin } from '@/api/team'
+import {
+  fetchTeamChatMessages,
+  sendTeamChatMessage,
+  subscribeTeamChat,
+  fetchTeamTasks,
+  createTeamTask,
+  updateTeamTaskStatus,
+  fetchTeamFiles,
+  uploadTeamFile,
+  assignMembersToTask,
+  updateTaskAssignmentStatus,
+} from '@/api/teamWorkspace'
+import type { Team, TeamChatMessage, TeamTask, TeamFile } from '@/types/models'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 type TabType = 'chat' | 'tasks' | 'files' | 'settings'
 
@@ -20,109 +44,424 @@ const frequencyStore = useFrequencyStore()
 
 const team = ref<Team | null>(null)
 const loading = ref(true)
+const chatLoading = ref(true)
+const tasksLoading = ref(true)
+const filesLoading = ref(true)
+const uploadingFile = ref(false)
+const uploadError = ref('')
 const activeTab = ref<TabType>('chat')
 const newMessage = ref('')
 const newTaskTitle = ref('')
 const showNewTaskInput = ref(false)
+const newTaskAssignees = ref<string[]>([])
+const fileInputRef = ref<HTMLInputElement | null>(null)
+let chatChannel: RealtimeChannel | null = null
 
 const userId = computed(() => profile.value?.id ?? '')
 const isOwner = computed(() => team.value?.ownerId === userId.value)
+const currentMember = computed(() => team.value?.members.find((member) => member.id === userId.value))
+const isAdmin = computed(() => Boolean(currentMember.value?.isAdmin))
+const canManageTeam = computed(() => isOwner.value || isAdmin.value)
+const canManageTasks = computed(() => canManageTeam.value)
+const canUploadFiles = computed(() => canManageTeam.value)
+const canAssignAdmin = computed(() => isOwner.value)
 
-// 模拟聊天消息
-const messages = ref([
-  { id: 1, userId: 'u1', userName: '张三', content: '大家好，我们下周开始第一次线下会议吧', time: '10:30', isOwner: true },
-  { id: 2, userId: 'u2', userName: '李四', content: '好的，我周三下午有空', time: '10:32', isOwner: false },
-  { id: 3, userId: 'u3', userName: '王五', content: '我也可以，地点定在图书馆怎么样？', time: '10:35', isOwner: false },
-  { id: 4, userId: 'u1', userName: '张三', content: '图书馆 B1 讨论室，我去预约', time: '10:38', isOwner: true },
-])
-
-// 模拟任务列表
-const tasks = ref([
-  { id: 1, title: '完成需求文档初稿', assignee: '张三', status: 'done', dueDate: '12-20' },
-  { id: 2, title: '设计系统架构图', assignee: '李四', status: 'in-progress', dueDate: '12-22' },
-  { id: 3, title: '搭建开发环境', assignee: '王五', status: 'todo', dueDate: '12-25' },
-  { id: 4, title: '编写 API 接口文档', assignee: '待分配', status: 'todo', dueDate: '12-28' },
-])
-
-// 模拟文件列表
-const files = ref([
-  { id: 1, name: '项目需求文档 v1.0.pdf', size: '2.3 MB', uploadedBy: '张三', date: '12-18' },
-  { id: 2, name: '系统架构设计.pptx', size: '5.1 MB', uploadedBy: '李四', date: '12-19' },
-  { id: 3, name: '会议纪要 1220.md', size: '12 KB', uploadedBy: '王五', date: '12-20' },
-])
+const messages = ref<TeamChatMessage[]>([])
+const tasks = ref<TeamTask[]>([])
+const files = ref<TeamFile[]>([])
+const editForm = reactive({
+  name: '',
+  description: '',
+  maxMembers: 0,
+  tagsText: '',
+  college: '',
+})
+const savingSettings = ref(false)
+const settingsMessage = ref('')
+const settingsError = ref('')
+const disbandConfirm = ref(false)
+const disbandLoading = ref(false)
+const disbandError = ref('')
+const memberRoleLoading = ref<Record<string, boolean>>({})
+const assignmentEditor = ref<{ taskId: number; selected: Set<string> } | null>(null)
+const assignmentSaving = ref(false)
 
 const tabs = [
   { id: 'chat', label: '交流室', icon: MessageCircle },
   { id: 'tasks', label: '任务板', icon: CheckSquare },
   { id: 'files', label: '文件库', icon: FileText },
-  { id: 'settings', label: '设置', icon: Settings, ownerOnly: true },
+  { id: 'settings', label: '设置', icon: Settings },
 ]
 
-const visibleTabs = computed(() => 
-  tabs.filter(tab => !tab.ownerOnly || isOwner.value)
-)
+const visibleTabs = computed(() => tabs)
 
 const taskStats = computed(() => ({
   total: tasks.value.length,
-  done: tasks.value.filter(t => t.status === 'done').length,
-  inProgress: tasks.value.filter(t => t.status === 'in-progress').length,
-  todo: tasks.value.filter(t => t.status === 'todo').length,
+  done: tasks.value.filter((t) => t.status === 'done').length,
+  inProgress: tasks.value.filter((t) => t.status === 'in-progress').length,
+  todo: tasks.value.filter((t) => t.status === 'todo').length,
 }))
 
-onMounted(async () => {
+const formattedMessages = computed(() =>
+  messages.value.map((msg) => ({
+    ...msg,
+    time: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+  })),
+)
+
+function formatDate(value?: string) {
+  if (!value) return '待定'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return `${d.getMonth() + 1}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatFileSize(size?: number) {
+  if (!size) return '未知大小'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  if (size < 1024 * 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
+  return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+function syncEditForm() {
+  if (!team.value) return
+  editForm.name = team.value.name
+  editForm.description = team.value.description || ''
+  editForm.maxMembers = team.value.maxMembers
+  editForm.tagsText = team.value.tags?.join(', ') ?? ''
+  editForm.college = team.value.college || ''
+}
+
+async function loadTeamDetail() {
   loading.value = true
   try {
-    const allTeams = await fetchTeams()
     const teamId = Number(route.params.id)
-    team.value = allTeams.find(t => t.id === teamId) || null
+    if (!teamId) {
+      team.value = null
+      return
+    }
+    team.value = await fetchTeamById(teamId)
+    syncEditForm()
+    if (team.value) {
+      await Promise.all([loadChat(teamId), loadTasks(teamId), loadFiles(teamId)])
+    } else {
+      messages.value = []
+      tasks.value = []
+      files.value = []
+    }
+  } catch (error) {
+    console.error('加载队伍详情失败', error)
   } finally {
     loading.value = false
   }
-})
+}
+
+function subscribeChat(teamId: number) {
+  if (chatChannel) {
+    void chatChannel.unsubscribe()
+  }
+  chatChannel = subscribeTeamChat(
+    teamId,
+    (msg) => {
+      if (messages.value.some((m) => m.id === msg.id)) return
+      messages.value = [...messages.value, msg]
+    },
+    team.value?.ownerId,
+  )
+}
+
+async function loadChat(teamId: number) {
+  chatLoading.value = true
+  try {
+    messages.value = await fetchTeamChatMessages(teamId, 200, team.value?.ownerId)
+    subscribeChat(teamId)
+  } catch (error) {
+    console.error('加载聊天记录失败', error)
+    messages.value = []
+  } finally {
+    chatLoading.value = false
+  }
+}
+
+async function loadTasks(teamId: number) {
+  tasksLoading.value = true
+  try {
+    tasks.value = await fetchTeamTasks(teamId)
+  } catch (error) {
+    console.error('加载任务失败', error)
+    tasks.value = []
+  } finally {
+    tasksLoading.value = false
+  }
+}
+
+async function loadFiles(teamId: number) {
+  filesLoading.value = true
+  try {
+    files.value = await fetchTeamFiles(teamId)
+  } catch (error) {
+    console.error('加载文件失败', error)
+    files.value = []
+  } finally {
+    filesLoading.value = false
+  }
+}
 
 function goBack() {
   router.push('/team/hub')
 }
 
-function sendMessage() {
-  if (!newMessage.value.trim()) return
-  messages.value.push({
-    id: Date.now(),
-    userId: userId.value,
-    userName: profile.value?.username || '我',
-    content: newMessage.value,
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    isOwner: isOwner.value,
-  })
-  newMessage.value = ''
-}
-
-function addTask() {
-  if (!newTaskTitle.value.trim()) return
-  tasks.value.push({
-    id: Date.now(),
-    title: newTaskTitle.value,
-    assignee: '待分配',
-    status: 'todo',
-    dueDate: '待定',
-  })
-  newTaskTitle.value = ''
-  showNewTaskInput.value = false
-}
-
-function toggleTaskStatus(taskId: number) {
-  const task = tasks.value.find(t => t.id === taskId)
-  if (task) {
-    if (task.status === 'todo') task.status = 'in-progress'
-    else if (task.status === 'in-progress') task.status = 'done'
-    else task.status = 'todo'
+function toggleNewTaskAssignee(memberId: string) {
+  if (newTaskAssignees.value.includes(memberId)) {
+    newTaskAssignees.value = newTaskAssignees.value.filter((id) => id !== memberId)
+  } else {
+    newTaskAssignees.value = [...newTaskAssignees.value, memberId]
   }
 }
+
+function openAssignmentEditor(task: TeamTask) {
+  assignmentEditor.value = {
+    taskId: task.id,
+    selected: new Set(task.assignees.map((assignee) => assignee.memberId)),
+  }
+}
+
+function toggleAssignmentSelection(memberId: string) {
+  if (!assignmentEditor.value) return
+  const { selected } = assignmentEditor.value
+  if (selected.has(memberId)) {
+    selected.delete(memberId)
+  } else {
+    selected.add(memberId)
+  }
+  assignmentEditor.value = { ...assignmentEditor.value, selected: new Set(selected) }
+}
+
+async function saveAssignmentEditor() {
+  if (!assignmentEditor.value) return
+  assignmentSaving.value = true
+  try {
+    const memberIds = Array.from(assignmentEditor.value.selected)
+    const updatedAssignees = await assignMembersToTask(assignmentEditor.value.taskId, memberIds)
+    tasks.value = tasks.value.map((task) =>
+      task.id === assignmentEditor.value?.taskId ? { ...task, assignees: updatedAssignees } : task,
+    )
+    assignmentEditor.value = null
+  } catch (error) {
+    console.error('更新任务分配失败', error)
+  } finally {
+    assignmentSaving.value = false
+  }
+}
+
+const assignmentActionLoading = ref<Record<string, boolean>>({})
+
+async function submitAssignment(taskId: number) {
+  if (!team.value || !userId.value) return
+  assignmentActionLoading.value = { ...assignmentActionLoading.value, [`${taskId}-${userId.value}`]: true }
+  try {
+    await updateTaskAssignmentStatus(taskId, userId.value, 'submitted')
+    tasks.value = tasks.value.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            assignees: task.assignees.map((assignee) =>
+              assignee.memberId === userId.value ? { ...assignee, status: 'submitted' } : assignee,
+            ),
+          }
+        : task,
+    )
+  } catch (error) {
+    console.error('提交任务失败', error)
+  } finally {
+    assignmentActionLoading.value = { ...assignmentActionLoading.value, [`${taskId}-${userId.value}`]: false }
+  }
+}
+
+async function confirmAssignment(taskId: number, memberId: string) {
+  assignmentActionLoading.value = { ...assignmentActionLoading.value, [`${taskId}-${memberId}`]: true }
+  try {
+    await updateTaskAssignmentStatus(taskId, memberId, 'done')
+    tasks.value = tasks.value.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            assignees: task.assignees.map((assignee) =>
+              assignee.memberId === memberId ? { ...assignee, status: 'done' } : assignee,
+            ),
+          }
+        : task,
+    )
+    const target = tasks.value.find((task) => task.id === taskId)
+    if (target && target.assignees.length && target.assignees.every((assignee) => assignee.status === 'done')) {
+      tasks.value = tasks.value.map((task) => (task.id === taskId ? { ...task, status: 'done' } : task))
+    }
+  } catch (error) {
+    console.error('确认任务失败', error)
+  } finally {
+    assignmentActionLoading.value = { ...assignmentActionLoading.value, [`${taskId}-${memberId}`]: false }
+  }
+}
+
+async function sendMessage() {
+  if (!team.value || !newMessage.value.trim()) return
+  const content = newMessage.value.trim()
+  newMessage.value = ''
+  try {
+    const saved = await sendTeamChatMessage(team.value.id, content, team.value.ownerId)
+    if (!messages.value.some((m) => m.id === saved.id)) {
+      messages.value = [...messages.value, saved]
+    }
+  } catch (error) {
+    console.error('发送消息失败', error)
+    newMessage.value = content
+  }
+}
+
+async function addTask() {
+  if (!team.value || !newTaskTitle.value.trim() || !canManageTasks.value) return
+  try {
+    const task = await createTeamTask(team.value.id, newTaskTitle.value.trim(), newTaskAssignees.value)
+    tasks.value = [...tasks.value, task]
+    newTaskTitle.value = ''
+    newTaskAssignees.value = []
+    showNewTaskInput.value = false
+  } catch (error) {
+    console.error('创建任务失败', error)
+  }
+}
+
+async function toggleTaskStatus(taskId: number) {
+  if (!canManageTasks.value) return
+  const task = tasks.value.find((t) => t.id === taskId)
+  if (!task) return
+  const statusCycle: Record<'todo' | 'in-progress' | 'done', 'todo' | 'in-progress' | 'done'> = {
+    todo: 'in-progress',
+    'in-progress': 'done',
+    done: 'todo',
+  }
+  const nextStatus = statusCycle[task.status]
+  try {
+    const updated = await updateTeamTaskStatus(taskId, nextStatus)
+    tasks.value = tasks.value.map((t) => (t.id === taskId ? updated : t))
+  } catch (error) {
+    console.error('更新任务状态失败', error)
+  }
+}
+
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
+async function handleFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!team.value || !target.files?.length || !canUploadFiles.value) return
+  const file = target.files[0]!
+  uploadingFile.value = true
+  uploadError.value = ''
+  try {
+    const uploaded = await uploadTeamFile(team.value.id, file)
+    files.value = [uploaded, ...files.value]
+  } catch (error) {
+    uploadError.value = (error as Error).message || '上传失败'
+    console.error('上传文件失败', error)
+  } finally {
+    uploadingFile.value = false
+    target.value = ''
+  }
+}
+
+function openFile(url: string) {
+  window.open(url, '_blank')
+}
+
+async function handleSaveSettings() {
+  if (!team.value || !canManageTeam.value) return
+  savingSettings.value = true
+  settingsMessage.value = ''
+  settingsError.value = ''
+  try {
+    const parsedTags = editForm.tagsText
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0)
+    const updated = await updateTeamInfo(team.value.id, {
+      name: editForm.name.trim() || team.value.name,
+      description: editForm.description.trim(),
+      maxMembers: Number(editForm.maxMembers) || team.value.maxMembers,
+      tags: parsedTags,
+      college: editForm.college.trim() || team.value.college,
+    })
+    team.value = updated
+    syncEditForm()
+    settingsMessage.value = '设置已保存'
+    setTimeout(() => {
+      settingsMessage.value = ''
+    }, 3000)
+  } catch (error) {
+    settingsError.value = (error as Error).message || '保存失败'
+  } finally {
+    savingSettings.value = false
+  }
+}
+
+async function toggleMemberAdmin(memberId: string, value: boolean) {
+  if (!team.value || !canAssignAdmin.value) return
+  memberRoleLoading.value = { ...memberRoleLoading.value, [memberId]: true }
+  try {
+    await setTeamMemberAdmin(team.value.id, memberId, value)
+    team.value = {
+      ...team.value,
+      members: team.value.members.map((member) =>
+        member.id === memberId ? { ...member, isAdmin: value } : member,
+      ),
+    }
+  } catch (error) {
+    console.error('更新管理员失败', error)
+  } finally {
+    memberRoleLoading.value = { ...memberRoleLoading.value, [memberId]: false }
+  }
+}
+
+async function handleDisbandTeam() {
+  if (!team.value || !isOwner.value) return
+  disbandLoading.value = true
+  disbandError.value = ''
+  try {
+    await deleteTeam(team.value.id)
+    router.push('/team/hub')
+  } catch (error) {
+    disbandError.value = (error as Error).message || '解散失败'
+  } finally {
+    disbandLoading.value = false
+  }
+}
+
+function onAdminToggle(memberId: string, event: Event) {
+  const target = event.target as HTMLInputElement | null
+  if (!target) return
+  toggleMemberAdmin(memberId, target.checked)
+}
+
+onMounted(loadTeamDetail)
+
+watch(
+  () => route.params.id,
+  () => {
+    loadTeamDetail()
+  },
+)
+
+onUnmounted(() => {
+  if (chatChannel) {
+    void chatChannel.unsubscribe()
+  }
+})
 </script>
 
 <template>
   <div class="team-detail-page">
-    <!-- 加载状态 -->
     <div v-if="loading" class="loading-state">
       <div class="animate-pulse space-y-4">
         <div class="h-8 w-48 bg-slate/10 rounded"></div>
@@ -130,35 +469,27 @@ function toggleTaskStatus(taskId: number) {
       </div>
     </div>
 
-    <!-- 小组不存在 -->
     <div v-else-if="!team" class="empty-state">
       <p class="text-slate mb-4">小组不存在或已被删除</p>
       <button @click="goBack" class="text-focus-accent">返回协作空间</button>
     </div>
 
     <template v-else>
-      <!-- 顶部导航 -->
       <header class="page-header">
         <button @click="goBack" class="back-btn">
           <ArrowLeft :size="20" />
           <span>返回</span>
         </button>
-        
+
         <div class="header-info">
           <div class="flex items-center gap-3">
-            <div 
-              class="team-avatar"
-              :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-            >
+            <div class="team-avatar" :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'">
               {{ team.name.charAt(0).toUpperCase() }}
             </div>
             <div>
               <div class="flex items-center gap-2">
                 <h1 class="text-h2 font-sans font-bold text-charcoal">{{ team.name }}</h1>
-                <span 
-                  v-if="isOwner" 
-                  class="owner-badge"
-                >
+                <span v-if="isOwner" class="owner-badge">
                   <Crown :size="12" />
                   创建者
                 </span>
@@ -182,7 +513,6 @@ function toggleTaskStatus(taskId: number) {
         </div>
       </header>
 
-      <!-- 标签页导航 -->
       <nav class="tab-nav">
         <button
           v-for="tab in visibleTabs"
@@ -196,23 +526,23 @@ function toggleTaskStatus(taskId: number) {
         </button>
       </nav>
 
-      <!-- 内容区域 -->
       <main class="content-area">
-        <!-- 交流室 -->
         <div v-if="activeTab === 'chat'" class="chat-panel">
-          <div class="chat-messages">
+          <div v-if="chatLoading" class="chat-loading">加载中...</div>
+          <div v-else class="chat-messages">
+            <p v-if="!messages.length" class="chat-empty">暂无消息，开始第一条讨论吧</p>
             <div
-              v-for="msg in messages"
+              v-for="msg in formattedMessages"
               :key="msg.id"
               class="message-item"
-              :class="{ 'message-mine': msg.userId === userId }"
+              :class="{ 'message-mine': msg.senderId === userId }"
             >
               <div class="message-avatar">
-                {{ msg.userName.charAt(0) }}
+                {{ msg.senderName.charAt(0) }}
               </div>
               <div class="message-content">
                 <div class="message-header">
-                  <span class="message-name">{{ msg.userName }}</span>
+                  <span class="message-name">{{ msg.senderName }}</span>
                   <span v-if="msg.isOwner" class="message-owner-tag">队长</span>
                   <span class="message-time">{{ msg.time }}</span>
                 </div>
@@ -220,7 +550,7 @@ function toggleTaskStatus(taskId: number) {
               </div>
             </div>
           </div>
-          
+
           <div class="chat-input">
             <input
               v-model="newMessage"
@@ -229,19 +559,18 @@ function toggleTaskStatus(taskId: number) {
               class="input-field"
               @keyup.enter="sendMessage"
             />
-            <button 
-              @click="sendMessage" 
+            <button
+              @click="sendMessage"
               class="send-btn"
               :class="frequencyStore.isFocus ? 'btn-focus' : 'btn-vibe'"
+              :disabled="!newMessage.trim()"
             >
               <Send :size="18" />
             </button>
           </div>
         </div>
 
-        <!-- 任务板 -->
         <div v-if="activeTab === 'tasks'" class="tasks-panel">
-          <!-- 任务统计 -->
           <div class="task-stats">
             <div class="stat-card">
               <span class="stat-value">{{ taskStats.total }}</span>
@@ -261,8 +590,7 @@ function toggleTaskStatus(taskId: number) {
             </div>
           </div>
 
-          <!-- 添加任务 -->
-          <div v-if="isOwner" class="add-task-section">
+          <div v-if="canManageTasks" class="add-task-section">
             <div v-if="showNewTaskInput" class="new-task-input">
               <input
                 v-model="newTaskTitle"
@@ -278,100 +606,315 @@ function toggleTaskStatus(taskId: number) {
               <Plus :size="18" />
               添加新任务
             </button>
+            <div v-if="showNewTaskInput" class="assignee-select">
+              <p class="assignee-select-title">分配给成员：</p>
+              <div class="assignee-grid">
+                <label
+                  v-for="member in (team?.members || [])"
+                  :key="member.id"
+                  class="assignee-option"
+                >
+                  <input
+                    type="checkbox"
+                    :value="member.id"
+                    :checked="newTaskAssignees.includes(member.id)"
+                    @change="toggleNewTaskAssignee(member.id)"
+                  />
+                  <span>{{ member.name }}</span>
+                </label>
+              </div>
+            </div>
           </div>
 
-          <!-- 任务列表 -->
-          <div class="task-list">
-            <div
-              v-for="task in tasks"
-              :key="task.id"
-              class="task-item"
-              :class="`task-${task.status}`"
-            >
-              <button 
-                class="task-status-btn"
-                @click="toggleTaskStatus(task.id)"
-              >
-                <Check v-if="task.status === 'done'" :size="16" />
-                <Circle v-else :size="16" :class="{ 'half-fill': task.status === 'in-progress' }" />
-              </button>
-              <div class="task-content">
+          <div v-if="tasksLoading" class="task-list text-slate">加载中...</div>
+          <div v-else class="task-list">
+            <template v-for="task in tasks" :key="task.id">
+              <div class="task-item" :class="`task-${task.status}`">
+                <button class="task-status-btn" @click="toggleTaskStatus(task.id)" :disabled="!canManageTasks">
+                  <Check v-if="task.status === 'done'" :size="16" />
+                  <Circle v-else :size="16" :class="{ 'half-fill': task.status === 'in-progress' }" />
+                </button>
+                <div class="task-content">
                 <p class="task-title" :class="{ 'task-done-title': task.status === 'done' }">
                   {{ task.title }}
                 </p>
                 <div class="task-meta">
-                  <span>{{ task.assignee }}</span>
-                  <span>截止: {{ task.dueDate }}</span>
+                  <span>截止：{{ formatDate(task.dueDate) }}</span>
+                </div>
+                <div class="assignee-chips">
+                  <span v-if="!task.assignees.length" class="chip muted">暂未分配</span>
+                  <span
+                    v-for="assignee in task.assignees"
+                    :key="assignee.memberId"
+                    class="chip"
+                    :class="{
+                      'chip-pending': assignee.status === 'pending',
+                      'chip-progress': assignee.status === 'in-progress',
+                      'chip-submitted': assignee.status === 'submitted',
+                      'chip-done': assignee.status === 'done',
+                    }"
+                  >
+                    {{ assignee.name }} ·
+                    {{ assignee.status === 'pending'
+                      ? '未开始'
+                      : assignee.status === 'in-progress'
+                        ? '进行中'
+                        : assignee.status === 'submitted'
+                          ? '待确认'
+                          : '已完成' }}
+                  </span>
+                </div>
+                <div class="assignee-actions" v-if="task.assignees.length">
+                  <button
+                    v-if="task.assignees.some((assignee) => assignee.memberId === userId)
+                      && task.assignees.find((a) => a.memberId === userId)?.status !== 'done'
+                      && task.assignees.find((a) => a.memberId === userId)?.status !== 'submitted'
+                    "
+                    class="assignee-btn"
+                    :disabled="assignmentActionLoading[`${task.id}-${userId}`]"
+                    @click="submitAssignment(task.id)"
+                  >
+                    {{ assignmentActionLoading[`${task.id}-${userId}`] ? '提交中...' : '提交完成' }}
+                  </button>
+                  <button
+                    v-if="canManageTasks && task.assignees.some((assignee) => assignee.status === 'submitted')"
+                    class="assignee-btn"
+                    @click="openAssignmentEditor(task)"
+                  >
+                    管理分配
+                  </button>
                 </div>
               </div>
-              <button class="task-more-btn">
-                <MoreHorizontal :size="16" />
-              </button>
-            </div>
+                <div class="task-actions">
+                  <button
+                    v-if="canManageTasks"
+                    class="task-more-btn"
+                    @click="openAssignmentEditor(task)"
+                  >
+                    <MoreHorizontal :size="16" />
+                  </button>
+                </div>
+              </div>
+              <div
+                v-if="assignmentEditor && assignmentEditor.taskId === task.id"
+                class="assignment-editor"
+              >
+                <p class="text-xs text-slate mb-2">勾选需要参与本任务的成员</p>
+                <div class="assignee-grid">
+                  <label
+                  v-for="member in (team?.members || [])"
+                    :key="member.id"
+                    class="assignee-option"
+                  >
+                    <input
+                      type="checkbox"
+                    :checked="assignmentEditor && assignmentEditor.selected.has(member.id)"
+                    @change="toggleAssignmentSelection(member.id)"
+                  />
+                  <span>{{ member.name }}</span>
+                </label>
+                </div>
+                <div class="assignment-editor-actions">
+                  <button class="add-btn" :disabled="assignmentSaving" @click="saveAssignmentEditor">
+                    {{ assignmentSaving ? '保存中...' : '保存分配' }}
+                  </button>
+                  <button class="cancel-btn" @click="assignmentEditor = null">取消</button>
+                </div>
+                <div class="assignment-review" v-if="canManageTasks">
+                  <p class="text-xs text-slate">提交的成员：</p>
+                  <div class="assignment-review-list">
+                    <div
+                      v-for="assignee in task.assignees.filter((assignee) => assignee.status === 'submitted')"
+                      :key="assignee.memberId"
+                      class="assignment-review-item"
+                    >
+                      <span>{{ assignee.name }} 请求完成</span>
+                      <button
+                      class="assignee-btn"
+                      :disabled="assignmentActionLoading[`${task.id}-${assignee.memberId}`]"
+                      @click="confirmAssignment(task.id, assignee.memberId)"
+                    >
+                      {{ assignmentActionLoading[`${task.id}-${assignee.memberId}`] ? '确认中...' : '确认完成' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p v-if="!tasks.length" class="text-sm text-slate text-center py-6">暂无任务记录</p>
           </div>
         </div>
 
-        <!-- 文件库 -->
         <div v-if="activeTab === 'files'" class="files-panel">
           <div class="files-header">
-            <p class="font-mono text-xs text-slate">共 {{ files.length }} 个文件</p>
-            <button v-if="isOwner" class="upload-btn">
-              <Plus :size="16" />
-              上传文件
-            </button>
+            <div>
+              <p class="font-mono text-xs text-slate tracking-wider">FILE ARCHIVE</p>
+              <h3 class="text-h3 font-sans font-semibold text-charcoal">团队文件</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate">共 {{ files.length }} 个</span>
+              <button
+                v-if="canUploadFiles"
+                class="upload-btn"
+                :class="frequencyStore.isFocus ? 'btn-focus' : 'btn-vibe'"
+                @click="triggerFileSelect"
+                :disabled="uploadingFile"
+              >
+                <Plus :size="16" />
+                {{ uploadingFile ? '上传中...' : '上传文件' }}
+              </button>
+              <input ref="fileInputRef" type="file" class="hidden" @change="handleFileChange" />
+            </div>
           </div>
-          
-          <div class="file-list">
+
+          <div v-if="uploadError" class="text-red-500 text-sm mb-2">{{ uploadError }}</div>
+          <div v-if="filesLoading" class="text-sm text-slate py-6">加载中...</div>
+          <div v-else class="file-list">
             <div v-for="file in files" :key="file.id" class="file-item">
               <div class="file-icon">
                 <FileText :size="24" />
               </div>
               <div class="file-info">
-                <p class="file-name">{{ file.name }}</p>
-                <p class="file-meta">{{ file.size }} · {{ file.uploadedBy }} · {{ file.date }}</p>
+                <p class="file-name">
+                  <a :href="file.fileUrl" target="_blank" rel="noreferrer" class="hover:underline">
+                    {{ file.fileName }}
+                  </a>
+                </p>
+                <p class="file-meta">
+                  {{ formatFileSize(file.fileSize) }} · 上传者：{{ file.uploaderName || file.uploadedBy }} ·
+                  {{ new Date(file.createdAt).toLocaleDateString() }}
+                </p>
               </div>
-              <button class="file-download-btn">下载</button>
+              <button class="file-download-btn" @click="openFile(file.fileUrl)">查看</button>
             </div>
+            <p v-if="!files.length" class="text-sm text-slate text-center py-6">暂无文件</p>
           </div>
         </div>
 
-        <!-- 设置（仅创建者可见） -->
-        <div v-if="activeTab === 'settings' && isOwner" class="settings-panel">
-          <div class="settings-section">
-            <h3 class="section-title">小组信息</h3>
-            <div class="settings-form">
-              <div class="form-group">
-                <label>小组名称</label>
-                <input type="text" :value="team.name" class="input-field" />
-              </div>
-              <div class="form-group">
-                <label>小组描述</label>
-                <textarea :value="team.description" class="input-field" rows="3"></textarea>
-              </div>
-              <div class="form-group">
-                <label>最大人数</label>
-                <input type="number" :value="team.maxMembers" class="input-field" />
-              </div>
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <h3 class="section-title">成员管理</h3>
-            <div class="member-list">
-              <div v-for="member in team.members" :key="member.id" class="member-item">
-                <div class="member-avatar">{{ member.name.charAt(0) }}</div>
-                <div class="member-info">
-                  <p class="member-name">{{ member.name }}</p>
-                  <p class="member-role">{{ member.id === team.ownerId ? '创建者' : '成员' }}</p>
+        <div v-if="activeTab === 'settings'" class="settings-panel">
+          <div class="settings-grid">
+            <section class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h3 class="section-title">基础信息</h3>
+                  <p class="section-desc">更新小组名称、简介、人数与标签</p>
                 </div>
-                <button v-if="member.id !== team.ownerId" class="remove-btn">移除</button>
+                <span v-if="!canManageTeam" class="readonly-chip">仅管理员可编辑</span>
               </div>
-            </div>
-          </div>
+              <div class="settings-form">
+                <div class="form-group">
+                  <label>小组名称</label>
+                  <input v-model="editForm.name" type="text" class="input-field" :disabled="!canManageTeam" />
+                </div>
+                <div class="form-group">
+                  <label>小组描述</label>
+                  <textarea
+                    v-model="editForm.description"
+                    class="input-field"
+                    rows="3"
+                    :disabled="!canManageTeam"
+                  ></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>最大人数</label>
+                    <input
+                      v-model.number="editForm.maxMembers"
+                      type="number"
+                      min="1"
+                      class="input-field"
+                      :disabled="!canManageTeam"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>所属学院</label>
+                    <input v-model="editForm.college" type="text" class="input-field" :disabled="!canManageTeam" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>标签（逗号分隔）</label>
+                  <input v-model="editForm.tagsText" type="text" class="input-field" :disabled="!canManageTeam" />
+                </div>
+              </div>
+              <div class="settings-actions">
+                <div class="settings-feedback">
+                  <p v-if="settingsMessage" class="success-text">{{ settingsMessage }}</p>
+                  <p v-if="settingsError" class="error-text">{{ settingsError }}</p>
+                </div>
+                <button class="save-btn" :disabled="!canManageTeam || savingSettings" @click="handleSaveSettings">
+                  {{ savingSettings ? '保存中...' : '保存更改' }}
+                </button>
+              </div>
+            </section>
 
-          <div class="settings-section danger-zone">
-            <h3 class="section-title">危险操作</h3>
-            <button class="danger-btn">解散小组</button>
+            <section class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h3 class="section-title">成员权限</h3>
+                  <p class="section-desc">查看成员身份，队长可授予管理员</p>
+                </div>
+                <span v-if="canAssignAdmin" class="hint-chip">点击切换管理员</span>
+              </div>
+              <div class="member-list">
+                <div v-for="member in team.members" :key="member.id" class="member-item">
+                  <div class="member-avatar">{{ member.name.charAt(0) }}</div>
+                  <div class="member-info">
+                    <p class="member-name">{{ member.name }}</p>
+                    <p class="member-role">{{ member.id === team.ownerId ? '队长' : '成员' }}</p>
+                  </div>
+                  <div class="member-tags">
+                    <span v-if="member.id === team.ownerId" class="role-chip">队长</span>
+                    <span v-else-if="member.isAdmin" class="role-chip">管理员</span>
+                  </div>
+                  <label
+                    v-if="canAssignAdmin && member.id !== team.ownerId"
+                    class="admin-toggle"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="member.isAdmin"
+                      :disabled="memberRoleLoading[member.id]"
+                      @change="onAdminToggle(member.id, $event)"
+                    />
+                    <span>{{ member.isAdmin ? '取消管理员' : '设为管理员' }}</span>
+                  </label>
+                </div>
+                <p v-if="!team.members.length" class="text-sm text-slate text-center py-4">尚无成员</p>
+              </div>
+            </section>
+
+            <section class="settings-card danger-card">
+              <div class="settings-card-header">
+                <div>
+                  <h3 class="section-title">危险操作</h3>
+                  <p class="section-desc">解散后所有协作数据将被删除</p>
+                </div>
+              </div>
+              <p v-if="disbandError" class="error-text mb-2">{{ disbandError }}</p>
+              <div v-if="isOwner" class="danger-actions">
+                <button
+                  v-if="!disbandConfirm"
+                  class="danger-btn"
+                  @click="disbandConfirm = true"
+                >
+                  解散小组
+                </button>
+                <div v-else class="confirm-row">
+                  <span class="text-sm text-slate">确认解散？该操作不可恢复。</span>
+                  <div class="flex gap-2">
+                    <button
+                      class="danger-btn"
+                      @click="handleDisbandTeam"
+                      :disabled="disbandLoading"
+                    >
+                      {{ disbandLoading ? '执行中...' : '确认解散' }}
+                    </button>
+                    <button class="cancel-btn" @click="disbandConfirm = false">取消</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-xs text-slate">仅队长可以解散小组。</p>
+            </section>
           </div>
         </div>
       </main>
@@ -389,15 +932,12 @@ function toggleTaskStatus(taskId: number) {
   @apply flex flex-col items-center justify-center py-20;
 }
 
-/* 页面头部 */
 .page-header {
   @apply flex items-center gap-6 mb-6;
 }
 
 .back-btn {
-  @apply flex items-center gap-2 px-3 py-2 rounded-lg;
-  @apply text-slate hover:text-charcoal hover:bg-slate/5;
-  @apply transition-all duration-200;
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg text-slate hover:text-charcoal hover:bg-slate/5 transition-all duration-200;
 }
 
 .header-info {
@@ -405,8 +945,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .team-avatar {
-  @apply w-12 h-12 rounded-xl flex items-center justify-center;
-  @apply font-sans font-bold text-white text-lg;
+  @apply w-12 h-12 rounded-xl flex items-center justify-center font-sans font-bold text-white text-lg;
 }
 
 .avatar-focus {
@@ -418,20 +957,15 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .owner-badge {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full;
-  @apply bg-gradient-to-r from-amber-400 to-orange-400;
-  @apply text-white text-xs font-medium;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white text-xs font-medium;
 }
 
-/* 标签页导航 */
 .tab-nav {
   @apply flex gap-1 p-1 rounded-xl bg-slate/5 mb-6;
 }
 
 .tab-btn {
-  @apply flex items-center gap-2 px-4 py-2.5 rounded-lg;
-  @apply font-sans text-sm text-slate;
-  @apply transition-all duration-200;
+  @apply flex items-center gap-2 px-4 py-2.5 rounded-lg font-sans text-sm text-slate transition-all duration-200;
 }
 
 .tab-btn:hover {
@@ -442,15 +976,17 @@ function toggleTaskStatus(taskId: number) {
   @apply bg-white text-charcoal shadow-sm;
 }
 
-/* 内容区域 */
 .content-area {
-  @apply rounded-2xl bg-white border border-slate/10 overflow-hidden;
-  min-height: 500px;
+  @apply rounded-2xl bg-white border border-slate/10 overflow-hidden min-h-[500px];
 }
 
-/* 交流室 */
 .chat-panel {
   @apply flex flex-col h-[600px];
+}
+
+.chat-loading,
+.chat-empty {
+  @apply text-sm text-slate text-center py-6;
 }
 
 .chat-messages {
@@ -466,8 +1002,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .message-avatar {
-  @apply w-8 h-8 rounded-full bg-slate/10 flex items-center justify-center;
-  @apply font-sans text-sm font-medium text-slate;
+  @apply w-8 h-8 rounded-full bg-slate/10 flex items-center justify-center font-sans text-sm font-medium text-slate;
 }
 
 .message-content {
@@ -491,8 +1026,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .message-text {
-  @apply px-4 py-2.5 rounded-2xl bg-slate/5;
-  @apply font-sans text-sm text-charcoal;
+  @apply px-4 py-2.5 rounded-2xl bg-slate/5 font-sans text-sm text-charcoal;
 }
 
 .message-mine .message-text {
@@ -504,14 +1038,11 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .input-field {
-  @apply flex-1 px-4 py-2.5 rounded-xl border border-slate/20;
-  @apply font-sans text-sm text-charcoal;
-  @apply focus:outline-none focus:border-focus-primary;
+  @apply flex-1 px-4 py-2.5 rounded-xl border border-slate/20 font-sans text-sm text-charcoal focus:outline-none focus:border-focus-primary;
 }
 
 .send-btn {
-  @apply p-3 rounded-xl text-white;
-  @apply transition-all duration-200 hover:scale-105;
+  @apply p-3 rounded-xl text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100;
 }
 
 .btn-focus {
@@ -522,7 +1053,6 @@ function toggleTaskStatus(taskId: number) {
   @apply bg-vibe-accent;
 }
 
-/* 任务板 */
 .tasks-panel {
   @apply p-6;
 }
@@ -543,27 +1073,52 @@ function toggleTaskStatus(taskId: number) {
   @apply font-sans text-xs text-slate;
 }
 
-.stat-done { @apply bg-emerald-50; }
-.stat-done .stat-value { @apply text-emerald-600; }
+.stat-done {
+  @apply bg-emerald-50;
+}
 
-.stat-progress { @apply bg-amber-50; }
-.stat-progress .stat-value { @apply text-amber-600; }
+.stat-done .stat-value {
+  @apply text-emerald-600;
+}
 
-.stat-todo { @apply bg-slate/5; }
+.stat-progress {
+  @apply bg-amber-50;
+}
+
+.stat-progress .stat-value {
+  @apply text-amber-600;
+}
+
+.stat-todo {
+  @apply bg-slate/5;
+}
 
 .add-task-section {
   @apply mb-6;
 }
 
 .new-task-btn {
-  @apply flex items-center gap-2 px-4 py-2 rounded-lg;
-  @apply border border-dashed border-slate/30 text-slate;
-  @apply hover:border-focus-primary hover:text-focus-accent;
-  @apply transition-all duration-200;
+  @apply flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate/30 text-slate hover:border-focus-primary hover:text-focus-accent transition-all duration-200;
 }
 
 .new-task-input {
   @apply flex gap-2;
+}
+
+.assignee-select {
+  @apply mt-4 space-y-2;
+}
+
+.assignee-select-title {
+  @apply text-xs text-slate;
+}
+
+.assignee-grid {
+  @apply grid gap-2 grid-cols-2 md:grid-cols-3;
+}
+
+.assignee-option {
+  @apply flex items-center gap-2 text-sm text-slate;
 }
 
 .add-btn {
@@ -579,9 +1134,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .task-item {
-  @apply flex items-center gap-3 p-4 rounded-xl;
-  @apply border border-slate/10 bg-white;
-  @apply transition-all duration-200 hover:shadow-sm;
+  @apply flex items-center gap-3 p-4 rounded-xl border border-slate/10 bg-white transition-all duration-200 hover:shadow-sm;
 }
 
 .task-done {
@@ -593,9 +1146,11 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .task-status-btn {
-  @apply w-6 h-6 rounded-full flex items-center justify-center;
-  @apply text-slate hover:text-focus-accent;
-  @apply transition-colors duration-200;
+  @apply w-6 h-6 rounded-full flex items-center justify-center text-slate hover:text-focus-accent transition-colors duration-200;
+}
+
+.task-status-btn:disabled {
+  @apply opacity-40 cursor-not-allowed hover:text-slate;
 }
 
 .task-done .task-status-btn {
@@ -622,11 +1177,62 @@ function toggleTaskStatus(taskId: number) {
   @apply flex gap-3 mt-1 font-mono text-xs text-slate;
 }
 
+.assignee-chips {
+  @apply flex flex-wrap gap-2 mt-2;
+}
+
+.chip {
+  @apply px-2 py-0.5 rounded-full text-xs font-mono bg-slate/10 text-slate;
+}
+
+.chip.muted {
+  @apply bg-slate/5 text-slate;
+}
+
+.chip-pending {
+  @apply bg-slate/10 text-slate;
+}
+
+.chip-progress {
+  @apply bg-amber-50 text-amber-600;
+}
+
+.chip-submitted {
+  @apply bg-morandi-lavender/20 text-morandi-lavender;
+}
+
+.chip-done {
+  @apply bg-emerald-50 text-emerald-600;
+}
+
+.assignee-actions {
+  @apply flex flex-wrap gap-2 mt-2;
+}
+
+.assignee-btn {
+  @apply px-3 py-1 rounded-lg text-xs bg-focus-primary/10 text-focus-accent hover:bg-focus-primary/20;
+}
+
+.assignment-editor {
+  @apply mt-3 rounded-xl border border-dashed border-slate/20 bg-slate/5 p-4 space-y-3;
+}
+
+.assignment-editor-actions {
+  @apply flex items-center gap-2;
+}
+
+.assignment-review-list {
+  @apply space-y-2;
+}
+
+.assignment-review-item {
+  @apply flex items-center justify-between text-xs text-slate;
+}
+
 .task-more-btn {
   @apply p-1 rounded text-slate/40 hover:text-slate;
 }
 
-/* 文件库 */
 .files-panel {
   @apply p-6;
 }
@@ -636,8 +1242,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .upload-btn {
-  @apply flex items-center gap-1 px-3 py-1.5 rounded-lg;
-  @apply bg-focus-accent text-white text-sm;
+  @apply flex items-center gap-1 px-3 py-1.5 rounded-lg bg-focus-accent text-white text-sm;
 }
 
 .file-list {
@@ -645,9 +1250,7 @@ function toggleTaskStatus(taskId: number) {
 }
 
 .file-item {
-  @apply flex items-center gap-4 p-4 rounded-xl;
-  @apply border border-slate/10 hover:bg-slate/5;
-  @apply transition-all duration-200;
+  @apply flex items-center gap-4 p-4 rounded-xl border border-slate/10 hover:bg-slate/5 transition-all duration-200;
 }
 
 .file-icon {
@@ -670,21 +1273,48 @@ function toggleTaskStatus(taskId: number) {
   @apply px-3 py-1 rounded-lg text-sm text-focus-accent hover:bg-focus-primary/10;
 }
 
-/* 设置 */
 .settings-panel {
-  @apply p-6 space-y-8;
+  @apply p-6;
 }
 
-.settings-section {
-  @apply pb-6 border-b border-slate/10;
+.settings-grid {
+  @apply grid gap-6 xl:grid-cols-2;
+}
+
+.settings-card {
+  @apply rounded-2xl border border-slate/10 bg-white p-6 flex flex-col gap-4 shadow-sm;
+}
+
+.danger-card {
+  @apply border-red-100 bg-red-50/40;
+}
+
+.settings-card-header {
+  @apply flex items-start justify-between gap-4;
 }
 
 .section-title {
-  @apply font-sans font-semibold text-charcoal mb-4;
+  @apply font-sans font-semibold text-charcoal text-lg;
+}
+
+.section-desc {
+  @apply text-sm text-slate mt-1;
+}
+
+.readonly-chip {
+  @apply px-2 py-0.5 rounded-full text-xs bg-slate/10 text-slate;
+}
+
+.hint-chip {
+  @apply px-2 py-0.5 rounded-full text-xs bg-focus-primary/10 text-focus-accent;
 }
 
 .settings-form {
   @apply space-y-4;
+}
+
+.form-row {
+  @apply grid gap-4 md:grid-cols-2;
 }
 
 .form-group {
@@ -699,21 +1329,44 @@ function toggleTaskStatus(taskId: number) {
   @apply resize-none;
 }
 
+.settings-actions {
+  @apply flex flex-col md:flex-row md:items-center md:justify-between gap-3;
+}
+
+.settings-feedback {
+  @apply flex flex-col gap-1 text-sm;
+}
+
+.success-text {
+  @apply text-emerald-600;
+}
+
+.error-text {
+  @apply text-red-500;
+}
+
+.save-btn {
+  @apply px-4 py-2 rounded-lg text-white font-medium shadow-sm transition-colors duration-200 bg-focus-accent;
+}
+
+.save-btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
 .member-list {
-  @apply space-y-2;
+  @apply space-y-3;
 }
 
 .member-item {
-  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-slate/5;
+  @apply flex flex-wrap items-center gap-3 p-3 rounded-xl border border-slate/10 bg-slate/5;
 }
 
 .member-avatar {
-  @apply w-8 h-8 rounded-full bg-focus-primary/20 flex items-center justify-center;
-  @apply font-sans text-sm font-medium text-focus-accent;
+  @apply w-9 h-9 rounded-full bg-focus-primary/20 flex items-center justify-center font-sans text-sm font-semibold text-focus-accent;
 }
 
 .member-info {
-  @apply flex-1;
+  @apply flex-1 min-w-[140px];
 }
 
 .member-name {
@@ -724,16 +1377,31 @@ function toggleTaskStatus(taskId: number) {
   @apply font-mono text-xs text-slate;
 }
 
-.remove-btn {
-  @apply px-2 py-1 rounded text-xs text-red-500 hover:bg-red-50;
+.member-tags {
+  @apply flex items-center gap-2 text-xs;
 }
 
-.danger-zone {
-  @apply border-red-100;
+.role-chip {
+  @apply px-2 py-0.5 rounded-full bg-slate/10 text-slate;
+}
+
+.admin-toggle {
+  @apply inline-flex items-center gap-2 text-xs text-slate;
+}
+
+.admin-toggle input {
+  @apply h-4 w-4 accent-focus-primary;
+}
+
+.danger-actions {
+  @apply flex flex-col gap-3;
 }
 
 .danger-btn {
-  @apply px-4 py-2 rounded-lg bg-red-500 text-white text-sm;
-  @apply hover:bg-red-600 transition-colors;
+  @apply px-4 py-2 rounded-lg bg-red-500 text-white text-sm shadow-sm hover:bg-red-600 transition-colors;
+}
+
+.confirm-row {
+  @apply flex flex-col gap-3;
 }
 </style>

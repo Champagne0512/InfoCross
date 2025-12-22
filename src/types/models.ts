@@ -136,6 +136,7 @@ export interface TeamMember {
   avatar?: string
   skills?: string[]
   role?: string
+  isAdmin?: boolean
 }
 
 export interface Team {
@@ -154,6 +155,67 @@ export interface Team {
   status: 'recruiting' | 'full' | 'completed'
   isVibe?: boolean
   ownerId?: string
+}
+
+export type TeamApplicationStatus = 'pending' | 'approved' | 'rejected'
+
+export interface TeamApplication {
+  id: number
+  teamId: number
+  teamName: string
+  applicantId: string
+  applicantName?: string
+  applicantCollege?: string
+  status: TeamApplicationStatus
+  mode: 'focus' | 'vibe'
+  message?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TeamChatMessage {
+  id: number
+  teamId: number
+  senderId: string
+  senderName: string
+  senderAvatar?: string
+  content: string
+  createdAt: string
+  isOwner?: boolean
+  attachments?: Array<{ name: string; url: string }>
+}
+
+export type TeamTaskStatus = 'todo' | 'in-progress' | 'done'
+
+export interface TeamTask {
+  id: number
+  teamId: number
+  title: string
+  status: TeamTaskStatus
+  assignees: TeamTaskAssignee[]
+  dueDate?: string
+  orderIndex: number
+  createdAt: string
+}
+
+export type TeamTaskAssigneeStatus = 'pending' | 'in-progress' | 'submitted' | 'done'
+
+export interface TeamTaskAssignee {
+  memberId: string
+  name: string
+  status: TeamTaskAssigneeStatus
+}
+
+export interface TeamFile {
+  id: number
+  teamId: number
+  fileName: string
+  fileUrl: string
+  fileSize?: number
+  mimeType?: string
+  uploadedBy: string
+  uploaderName?: string
+  createdAt: string
 }
 
 export type ForumThreadType = 'signal' | 'depth'

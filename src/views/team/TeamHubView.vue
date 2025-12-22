@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { Crown, Users, Clock, ChevronRight } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { fetchTeams } from '@/api/team'
-import type { Team } from '@/types/models'
+import { fetchTeamApplications } from '@/api/teamWorkspace'
+import type { Team, TeamApplication, TeamApplicationStatus } from '@/types/models'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
 const router = useRouter()
@@ -46,29 +47,51 @@ const sortedTeams = computed(() =>
   })
 )
 
-const applications = ref([
-  { teamName: 'RAG 推荐引擎 Demo 团队', status: '已通过', message: '等待队长安排第一次群聊', mode: 'focus' },
-  { teamName: '社区公益黑客松筹备组', status: '待回复', message: '队长通常 24h 内确认', mode: 'focus' },
-  { teamName: '夜跑呼吸 Vibe 队', status: '已发送', message: '动态有效期内可随时撤回', mode: 'vibe' },
-])
+const applications = ref<TeamApplication[]>([])
+const applicationsLoading = ref(true)
+const applicationStatusText: Record<TeamApplicationStatus, string> = {
+  pending: '待回复',
+  approved: '已通过',
+  rejected: '已拒绝',
+}
 
-onMounted(async () => {
+async function loadTeams() {
   loading.value = true
   try {
     teams.value = await fetchTeams()
   } finally {
     loading.value = false
   }
+}
+
+async function loadApplications() {
+  applicationsLoading.value = true
+  try {
+    applications.value = await fetchTeamApplications()
+  } catch (error) {
+    console.error('加载申请记录失败', error)
+    applications.value = []
+  } finally {
+    applicationsLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadTeams(), loadApplications()])
 })
 
 const filteredApplications = computed(() =>
   applications.value.filter((app) => (frequencyStore.isFocus ? app.mode === 'focus' : app.mode === 'vibe')),
 )
 
+function getApplicationStatusLabel(status: TeamApplicationStatus) {
+  return applicationStatusText[status]
+}
+
 const stats = computed(() => ({
   owned: sortedTeams.value.filter(t => t.isOwner).length,
   joined: sortedTeams.value.filter(t => !t.isOwner).length,
-  pending: filteredApplications.value.filter((app) => app.status !== '已通过').length,
+  pending: filteredApplications.value.filter((app) => app.status !== 'approved').length,
 }))
 </script>
 
@@ -238,17 +261,17 @@ const stats = computed(() => ({
         >
           <div class="flex-1">
             <p class="font-sans font-medium text-charcoal">{{ app.teamName }}</p>
-            <p class="font-sans text-sm text-slate">{{ app.message }}</p>
+            <p class="font-sans text-sm text-slate">{{ app.message || '未填写备注' }}</p>
           </div>
           <span 
             class="status-badge"
             :class="{
-              'status-success': app.status === '已通过',
-              'status-pending': app.status === '待回复',
-              'status-sent': app.status === '已发送'
+              'status-success': app.status === 'approved',
+              'status-pending': app.status === 'pending',
+              'status-danger': app.status === 'rejected'
             }"
           >
-            {{ app.status }}
+            {{ getApplicationStatusLabel(app.status) }}
           </span>
         </div>
       </div>
@@ -429,8 +452,8 @@ const stats = computed(() => ({
   @apply bg-amber-50 text-amber-600;
 }
 
-.status-sent {
-  @apply bg-slate/10 text-slate;
+.status-danger {
+  @apply bg-red-50 text-red-500;
 }
 
 /* 动画 */

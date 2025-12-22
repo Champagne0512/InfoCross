@@ -14,6 +14,7 @@ function mapTeamMember(row: TeamMemberRow): TeamMember {
     avatar: row.profiles?.avatar_url ?? undefined,
     skills: row.skills ?? undefined,
     role: row.role ?? undefined,
+    isAdmin: Boolean(row.is_admin),
   }
 }
 
@@ -123,6 +124,45 @@ export async function fetchTeamById(id: number): Promise<Team | null> {
   const row = data as unknown as TeamRow
   const members = await fetchTeamMembers([row.id])
   return mapTeam(row, members[row.id] ?? [])
+}
+
+export async function updateTeamInfo(
+  teamId: number,
+  payload: Partial<Pick<Team, 'name' | 'description' | 'maxMembers' | 'tags' | 'status' | 'college'>>,
+): Promise<Team> {
+  const updatePayload: Database['public']['Tables']['teams']['Update'] = { updated_at: new Date().toISOString() }
+
+  if (payload.name !== undefined) updatePayload.name = payload.name
+  if (payload.description !== undefined) updatePayload.description = payload.description
+  if (payload.maxMembers !== undefined) updatePayload.max_members = payload.maxMembers
+  if (payload.tags !== undefined) updatePayload.tags = payload.tags
+  if (payload.status !== undefined) updatePayload.status = payload.status
+  if (payload.college !== undefined) updatePayload.college = payload.college
+
+  const { data, error } = await supabase
+    .from('teams')
+    .update(updatePayload)
+    .eq('id', teamId)
+    .select('*')
+    .single()
+  if (error) throw error
+  const row = data as unknown as TeamRow
+  const members = await fetchTeamMembers([teamId])
+  return mapTeam(row, members[teamId] ?? [])
+}
+
+export async function deleteTeam(teamId: number): Promise<void> {
+  const { error } = await supabase.from('teams').delete().eq('id', teamId)
+  if (error) throw error
+}
+
+export async function setTeamMemberAdmin(teamId: number, memberId: string, isAdmin: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('team_members')
+    .update({ is_admin: isAdmin })
+    .eq('team_id', teamId)
+    .eq('member_id', memberId)
+  if (error) throw error
 }
 
 async function requireUserId(): Promise<string> {
