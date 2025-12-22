@@ -16,8 +16,8 @@ const emit = defineEmits<{
 const frequencyStore = useFrequencyStore()
 
 const avatarKind = computed(() => {
-  if (props.item.category === 'chats' && props.item.avatarUrl) {
-    return { type: 'avatar', value: props.item.avatarUrl }
+  if (props.item.category === 'chats') {
+    return { type: 'initial', value: props.item.title.charAt(0).toUpperCase() }
   }
   if (props.item.category === 'applications') {
     return { type: 'icon', value: 'file' }
@@ -57,8 +57,8 @@ function handleClick() {
     <div class="item-content">
       <!-- 头像/图标 -->
       <div class="item-avatar">
-        <div v-if="avatarKind.type === 'avatar'" class="avatar-img">
-          <img :src="avatarKind.value" :alt="item.title" />
+        <div v-if="avatarKind.type === 'initial'" class="avatar-initial">
+          {{ avatarKind.value }}
         </div>
         <div 
           v-else 
@@ -120,12 +120,9 @@ function handleClick() {
   @apply flex-shrink-0;
 }
 
-.avatar-img {
-  @apply w-12 h-12 rounded-full overflow-hidden;
-}
-
-.avatar-img img {
-  @apply w-full h-full object-cover;
+.avatar-initial {
+  @apply w-12 h-12 rounded-full flex items-center justify-center font-sans font-semibold text-white text-lg;
+  @apply bg-charcoal/80;
 }
 
 .avatar-icon {

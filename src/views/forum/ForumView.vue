@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Eye,
   Heart,
+  Bookmark,
   Maximize2,
   Minimize2,
   Share2,
@@ -458,10 +459,25 @@ async function handleBookmark() {
   if (!selectedDepth.value) return
   try {
     const result = await bookmarkThread(selectedDepth.value.id)
+    const threadId = selectedDepth.value.id
+
+    selectedDepth.value = {
+      ...selectedDepth.value,
+      bookmarkCount: result.bookmarkCount,
+    }
+
+    const idx = depthThreads.value.findIndex((t) => t.id === threadId)
+    if (idx !== -1) {
+      const existing = depthThreads.value[idx]
+      if (existing) {
+        depthThreads.value[idx] = { ...existing, bookmarkCount: result.bookmarkCount }
+      }
+    }
+
     if (result.bookmarked) {
-      userBookmarkedThreads.value.add(selectedDepth.value.id)
+      userBookmarkedThreads.value.add(threadId)
     } else {
-      userBookmarkedThreads.value.delete(selectedDepth.value.id)
+      userBookmarkedThreads.value.delete(threadId)
     }
   } catch (error) {
     console.error('收藏失败', error)
@@ -744,12 +760,6 @@ function scrollToComments() {
                     {{ new Date(selectedDepth.createdAt).toLocaleDateString() }}
                   </p>
                 </div>
-                <AppButton
-                  :variant="isThreadBookmarked(selectedDepth.id) ? 'primary' : 'ghost'"
-                  @click="handleBookmark"
-                >
-                  {{ isThreadBookmarked(selectedDepth.id) ? t('forum.bookmarked') : t('forum.saveToBookmark') }}
-                </AppButton>
               </div>
 
               <p class="detail-summary font-sans">
@@ -785,6 +795,17 @@ function scrollToComments() {
                   </button>
                   <button class="stat-btn font-mono" @click="scrollToComments">
                     <MessageCircle :size="14" /> {{ selectedDepth.commentCount }}
+                  </button>
+                  <button
+                    class="stat-btn font-mono"
+                    :class="{ 'stat-active': isThreadBookmarked(selectedDepth.id) }"
+                    @click="handleBookmark"
+                  >
+                    <Bookmark
+                      :size="14"
+                      :fill="isThreadBookmarked(selectedDepth.id) ? 'currentColor' : 'none'"
+                    />
+                    {{ selectedDepth.bookmarkCount }}
                   </button>
                   <button class="stat-btn font-mono" @click="handleDepthShare">
                     <Share2 :size="14" /> {{ selectedDepth.shareCount }}

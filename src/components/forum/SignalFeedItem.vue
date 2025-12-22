@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Heart, MessageCircle, Share2, Globe } from 'lucide-vue-next'
+import { Heart, MessageCircle, Share2, Globe, Bookmark } from 'lucide-vue-next'
 import type { ForumThread } from '@/types/models'
 
 const props = defineProps<{
@@ -8,12 +8,14 @@ const props = defineProps<{
   userCollege?: string
   isLast?: boolean
   liked?: boolean
+  bookmarked?: boolean
 }>()
 
 const emit = defineEmits<{
   like: [ForumThread]
   comment: [ForumThread]
   share: [ForumThread]
+  bookmark: [ForumThread]
 }>()
 
 // 是否是跨界情报
@@ -127,6 +129,14 @@ const sentimentColor = computed(() => {
         <button class="action-btn comment-btn" @click="emit('comment', thread)">
           <MessageCircle :size="16" />
           <span v-if="thread.commentCount">{{ thread.commentCount }}</span>
+        </button>
+        <button 
+          class="action-btn bookmark-btn"
+          :class="{ 'bookmarked-active': props.bookmarked }"
+          @click="emit('bookmark', thread)"
+        >
+          <Bookmark :size="16" :fill="props.bookmarked ? 'currentColor' : 'none'" />
+          <span v-if="thread.bookmarkCount">{{ thread.bookmarkCount }}</span>
         </button>
         <button class="action-btn share-btn" @click="emit('share', thread)">
           <Share2 :size="16" />
@@ -280,5 +290,13 @@ const sentimentColor = computed(() => {
 
 .share-btn:hover {
   @apply text-morandi-green bg-morandi-green/10;
+}
+
+.bookmark-btn:hover {
+  @apply text-amber-500 bg-amber-50;
+}
+
+.bookmark-btn.bookmarked-active {
+  @apply text-amber-500;
 }
 </style>

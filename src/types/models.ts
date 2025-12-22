@@ -72,6 +72,7 @@ export interface InboxChatThread {
   name: string
   onlineCount: number
   messages: InboxChatMessage[]
+  redirectRoute?: string
 }
 
 export interface InboxApplicationDetail {
@@ -182,6 +183,7 @@ export interface ForumThread {
   likeCount: number
   commentCount: number
   shareCount: number
+  bookmarkCount: number
   sourceCollege?: string
 }
 

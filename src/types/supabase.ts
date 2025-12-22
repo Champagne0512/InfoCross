@@ -86,6 +86,7 @@ type ForumThreadRow = {
   like_count: number
   comment_count: number
   share_count: number
+  bookmark_count: number
   source_college: string | null
 }
 
@@ -187,7 +188,7 @@ export type Database = {
       }
       toggle_thread_bookmark: {
         Args: { p_thread_id: number; p_user_id: string }
-        Returns: { bookmarked: boolean }
+        Returns: { bookmarked: boolean; bookmarkCount: number }
       }
       increment_share_count: {
         Args: { p_thread_id: number; p_user_id: string }

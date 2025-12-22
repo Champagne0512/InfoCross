@@ -120,6 +120,7 @@ CREATE OR REPLACE FUNCTION toggle_thread_bookmark(p_thread_id BIGINT, p_user_id 
 RETURNS JSONB AS $$
 DECLARE
   v_exists BOOLEAN;
+  v_new_count INT;
 BEGIN
   SELECT EXISTS(
     SELECT 1 FROM forum_interactions
@@ -129,12 +130,24 @@ BEGIN
   IF v_exists THEN
     DELETE FROM forum_interactions
     WHERE thread_id = p_thread_id AND user_id = p_user_id AND type = 'bookmark';
-    RETURN jsonb_build_object('bookmarked', false);
+
+    UPDATE forum_threads
+    SET bookmark_count = GREATEST(bookmark_count - 1, 0)
+    WHERE id = p_thread_id
+    RETURNING bookmark_count INTO v_new_count;
+
+    RETURN jsonb_build_object('bookmarked', false, 'bookmarkCount', v_new_count);
   ELSE
     INSERT INTO forum_interactions (user_id, thread_id, type)
     VALUES (p_user_id, p_thread_id, 'bookmark')
     ON CONFLICT (user_id, thread_id, type) DO NOTHING;
-    RETURN jsonb_build_object('bookmarked', true);
+
+    UPDATE forum_threads
+    SET bookmark_count = bookmark_count + 1
+    WHERE id = p_thread_id
+    RETURNING bookmark_count INTO v_new_count;
+
+    RETURN jsonb_build_object('bookmarked', true, 'bookmarkCount', v_new_count);
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

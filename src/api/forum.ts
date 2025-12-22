@@ -27,6 +27,7 @@ const mockSignalThreads: ForumThread[] = [
     likeCount: 45,
     commentCount: 12,
     shareCount: 3,
+    bookmarkCount: 18,
     sourceCollege: '计算机学院',
   },
   {
@@ -46,6 +47,7 @@ const mockSignalThreads: ForumThread[] = [
     likeCount: 89,
     commentCount: 23,
     shareCount: 15,
+    bookmarkCount: 42,
     sourceCollege: '建筑学院',
   },
   {
@@ -65,6 +67,7 @@ const mockSignalThreads: ForumThread[] = [
     likeCount: 256,
     commentCount: 78,
     shareCount: 45,
+    bookmarkCount: 67,
     sourceCollege: '商学院',
   },
   {
@@ -84,6 +87,7 @@ const mockSignalThreads: ForumThread[] = [
     likeCount: 67,
     commentCount: 8,
     shareCount: 12,
+    bookmarkCount: 25,
     sourceCollege: '艺术学院',
   },
 ]
@@ -113,6 +117,7 @@ const mockDepthThreads: ForumThread[] = [
     likeCount: 456,
     commentCount: 89,
     shareCount: 123,
+    bookmarkCount: 210,
     sourceCollege: '计算机学院',
   },
   {
@@ -136,6 +141,7 @@ const mockDepthThreads: ForumThread[] = [
     likeCount: 234,
     commentCount: 56,
     shareCount: 78,
+    bookmarkCount: 156,
     sourceCollege: '文学院',
   },
   {
@@ -160,6 +166,7 @@ const mockDepthThreads: ForumThread[] = [
     likeCount: 567,
     commentCount: 123,
     shareCount: 234,
+    bookmarkCount: 320,
     sourceCollege: '商学院',
   },
   {
@@ -183,6 +190,7 @@ const mockDepthThreads: ForumThread[] = [
     likeCount: 123,
     commentCount: 67,
     shareCount: 45,
+    bookmarkCount: 94,
     sourceCollege: '法学院',
   },
 ]
@@ -251,6 +259,7 @@ function mapThread(row: ThreadRow): ForumThread {
     likeCount: row.like_count,
     commentCount: row.comment_count,
     shareCount: row.share_count,
+    bookmarkCount: row.bookmark_count ?? 0,
     sourceCollege: row.source_college ?? undefined,
   }
 }
@@ -495,7 +504,9 @@ export async function createComment(
   return mapComment(data as unknown as CommentRow)
 }
 
-export async function bookmarkThread(threadId: number): Promise<{ bookmarked: boolean }> {
+export async function bookmarkThread(
+  threadId: number,
+): Promise<{ bookmarked: boolean; bookmarkCount: number }> {
   const userId = await getUserId()
   if (!userId) throw new Error('请先登录')
   
@@ -505,7 +516,7 @@ export async function bookmarkThread(threadId: number): Promise<{ bookmarked: bo
   })
   
   if (error) throw error
-  return data as { bookmarked: boolean }
+  return data as { bookmarked: boolean; bookmarkCount: number }
 }
 
 export async function shareThread(threadId: number): Promise<number> {

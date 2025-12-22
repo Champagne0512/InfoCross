@@ -54,6 +54,7 @@ export const useInboxStore = defineStore('inbox', () => {
       id: 'chat-001',
       name: 'RAG Demo 小组',
       onlineCount: 5,
+      redirectRoute: '/team/hub?team=18',
       messages: [
         { id: 'm1', author: '李四', isMine: false, content: '今晚 9 点同步，记得准备 Demo', timestamp: '20:10' },
         { id: 'm2', author: '我', isMine: true, content: '收到，我负责展示推荐排序部分', timestamp: '20:12' },
