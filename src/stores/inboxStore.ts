@@ -8,54 +8,16 @@ import type {
   InboxActivityDetail,
   InboxSystemDetail,
 } from '@/types/models'
+import { fetchUserTeams } from '@/api/team'
+import { fetchTeamChatMessages } from '@/api/teamWorkspace'
+import { supabase } from '@/api/client'
 
 export const useInboxStore = defineStore('inbox', () => {
+  // 是否已加载
+  const isLoaded = ref(false)
+  const isLoading = ref(false)
+
   const previews = ref<InboxPreview[]>([
-    {
-      id: 'chat-001',
-      category: 'chats',
-      title: 'RAG Demo 小组',
-      preview: '李四：今晚 9 点同步，记得准备 Demo',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      unread: true,
-      avatarUrl: '/avatars/team-rag.png',
-    },
-    {
-      id: 'chat-002',
-      category: 'chats',
-      title: '毕业设计讨论组',
-      preview: '导师：下周一提交初稿',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      unread: true,
-      avatarUrl: '/avatars/team-thesis.png',
-    },
-    {
-      id: 'chat-003',
-      category: 'chats',
-      title: '篮球约战群',
-      preview: '周末有人打球吗？',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      unread: false,
-      avatarUrl: '/avatars/team-basketball.png',
-    },
-    {
-      id: 'chat-004',
-      category: 'chats',
-      title: '算法学习小组',
-      preview: '今天的 LeetCode 每日一题有点难',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-      unread: false,
-      avatarUrl: '/avatars/team-algo.png',
-    },
-    {
-      id: 'chat-005',
-      category: 'chats',
-      title: '创业项目组',
-      preview: '融资 PPT 已更新，请查收',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-      unread: false,
-      avatarUrl: '/avatars/team-startup.png',
-    },
     {
       id: 'application-001',
       category: 'applications',
@@ -193,58 +155,83 @@ export const useInboxStore = defineStore('inbox', () => {
     },
   ])
 
-  const chatThreads: Record<string, InboxChatThread> = {
-    'chat-001': {
-      id: 'chat-001',
-      name: 'RAG Demo 小组',
-      onlineCount: 5,
-      redirectRoute: '/team/hub?team=18',
-      messages: [
-        { id: 'm1', author: '李四', isMine: false, content: '今晚 9 点同步，记得准备 Demo', timestamp: '20:10' },
-        { id: 'm2', author: '我', isMine: true, content: '收到，我负责展示推荐排序部分', timestamp: '20:12' },
-        { id: 'm3', author: '陈可', isMine: false, content: '我刚更新了 UI，见 Figma 第三页', timestamp: '20:13' },
-      ],
-    },
-    'chat-002': {
-      id: 'chat-002',
-      name: '毕业设计讨论组',
-      onlineCount: 3,
-      redirectRoute: '/team/hub?team=19',
-      messages: [
-        { id: 'm1', author: '导师', isMine: false, content: '下周一提交初稿', timestamp: '14:30' },
-        { id: 'm2', author: '我', isMine: true, content: '好的老师，我会按时提交', timestamp: '14:35' },
-      ],
-    },
-    'chat-003': {
-      id: 'chat-003',
-      name: '篮球约战群',
-      onlineCount: 8,
-      redirectRoute: '/team/hub?team=20',
-      messages: [
-        { id: 'm1', author: '小明', isMine: false, content: '周末有人打球吗？', timestamp: '18:00' },
-        { id: 'm2', author: '阿杰', isMine: false, content: '我可以，周六下午怎么样？', timestamp: '18:05' },
-      ],
-    },
-    'chat-004': {
-      id: 'chat-004',
-      name: '算法学习小组',
-      onlineCount: 12,
-      redirectRoute: '/team/hub?team=21',
-      messages: [
-        { id: 'm1', author: '学霸', isMine: false, content: '今天的 LeetCode 每日一题有点难', timestamp: '10:00' },
-        { id: 'm2', author: '我', isMine: true, content: '是动态规划那道吗？', timestamp: '10:05' },
-      ],
-    },
-    'chat-005': {
-      id: 'chat-005',
-      name: '创业项目组',
-      onlineCount: 4,
-      redirectRoute: '/team/hub?team=22',
-      messages: [
-        { id: 'm1', author: 'CEO', isMine: false, content: '融资 PPT 已更新，请查收', timestamp: '09:00' },
-        { id: 'm2', author: '我', isMine: true, content: '收到，我来审核一下', timestamp: '09:10' },
-      ],
-    },
+  // 动态加载的聊天线程
+  const chatThreads = ref<Record<string, InboxChatThread>>({})
+
+  // 从数据库加载用户的小组聊天
+  async function loadUserChats() {
+    if (isLoading.value) return
+    isLoading.value = true
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        isLoading.value = false
+        return
+      }
+      
+      const teams = await fetchUserTeams()
+      
+      // 移除旧的聊天预览
+      previews.value = previews.value.filter(p => p.category !== 'chats')
+      
+      // 为每个小组创建聊天预览和线程
+      for (const team of teams) {
+        const chatId = `chat-team-${team.id}`
+        
+        // 获取最新消息作为预览
+        let previewText = '暂无消息'
+        let lastTimestamp = team.createdAt
+        const messages = await fetchTeamChatMessages(team.id, 10, user.id)
+        
+        if (messages.length > 0) {
+          const lastMsg = messages[messages.length - 1]
+          if (lastMsg) {
+            previewText = `${lastMsg.senderName}：${lastMsg.content}`
+            lastTimestamp = lastMsg.createdAt
+          }
+        }
+        
+        // 添加预览
+        previews.value.push({
+          id: chatId,
+          category: 'chats',
+          title: team.name,
+          preview: previewText,
+          timestamp: lastTimestamp,
+          unread: false,
+          avatarUrl: undefined,
+        })
+        
+        // 添加聊天线程
+        chatThreads.value[chatId] = {
+          id: chatId,
+          teamId: team.id,
+          name: team.name,
+          onlineCount: team.currentMembers,
+          redirectRoute: `/team/hub?team=${team.id}`,
+          messages: messages.map(msg => ({
+            id: String(msg.id),
+            author: msg.senderId === user.id ? '我' : msg.senderName,
+            isMine: msg.senderId === user.id,
+            content: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          })),
+        }
+      }
+      
+      // 按时间排序预览
+      previews.value.sort((a, b) => {
+        if (a.category !== b.category) return 0
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
+      
+      isLoaded.value = true
+    } catch (error) {
+      console.error('加载用户聊天失败:', error)
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const applicationDetails: Record<string, InboxApplicationDetail> = {
@@ -429,7 +416,7 @@ export const useInboxStore = defineStore('inbox', () => {
     const preview = selectedPreview.value
     if (!preview) return null
     if (preview.category === 'chats') {
-      return chatThreads[preview.id]
+      return chatThreads.value[preview.id]
     }
     if (preview.category === 'applications') {
       return applicationDetails[preview.id]
@@ -447,6 +434,9 @@ export const useInboxStore = defineStore('inbox', () => {
     selectedId,
     selectedPreview,
     currentDetail,
+    isLoading,
+    isLoaded,
+    loadUserChats,
     unreadCount,
     selectCategory,
     selectItem,

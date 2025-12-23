@@ -69,6 +69,7 @@ export interface InboxChatMessage {
 
 export interface InboxChatThread {
   id: string
+  teamId: number
   name: string
   onlineCount: number
   messages: InboxChatMessage[]

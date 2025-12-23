@@ -23,45 +23,34 @@ const props = defineProps<{
 
 const frequencyStore = useFrequencyStore()
 
-// 翻页动画状态
-const isFlipping = ref(false)
-const flipPhase = ref<'idle' | 'lifting' | 'turning' | 'settling'>('idle')
+// 渐变过渡动画状态
+const isTransitioning = ref(false)
 const currentContent = ref<DetailType>(null)
-const previousContent = ref<DetailType>(null)
+const transitionKey = ref(0)
 
-// 监听 detail 变化触发翻页动画
+// 监听 detail 变化触发渐变过渡
 watch(() => props.detail, (newDetail, oldDetail) => {
   if (newDetail !== oldDetail && newDetail !== null) {
-    previousContent.value = currentContent.value
-    triggerFlip(() => {
+    triggerFadeTransition(() => {
       currentContent.value = newDetail
+      transitionKey.value++
     })
   } else if (newDetail === null) {
     currentContent.value = null
   }
 }, { immediate: true })
 
-function triggerFlip(onMidpoint: () => void) {
-  if (isFlipping.value) return
-  isFlipping.value = true
-  flipPhase.value = 'lifting'
+function triggerFadeTransition(onMidpoint: () => void) {
+  if (isTransitioning.value) return
+  isTransitioning.value = true
   
-  // 阶段1: 页面抬起 (200ms)
-  setTimeout(() => {
-    flipPhase.value = 'turning'
-  }, 200)
-  
-  // 阶段2: 翻转中点，切换内容 (500ms)
+  // 淡出后切换内容，然后淡入
   setTimeout(() => {
     onMidpoint()
-    flipPhase.value = 'settling'
-  }, 500)
-  
-  // 阶段3: 落下完成 (800ms)
-  setTimeout(() => {
-    isFlipping.value = false
-    flipPhase.value = 'idle'
-  }, 900)
+    setTimeout(() => {
+      isTransitioning.value = false
+    }, 300)
+  }, 200)
 }
 
 const detailType = computed(() => props.preview?.category ?? null)
@@ -96,7 +85,7 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
       <span class="empty-hint">点击左侧信封卡片</span>
     </div>
     
-    <!-- 翻页书本容器 -->
+    <!-- 渐变过渡书本容器 -->
     <div v-else class="book-container">
       <!-- 书脊装饰 -->
       <div class="book-spine">
@@ -109,40 +98,24 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
         <div v-for="i in 5" :key="i" class="edge-line" :style="{ '--index': i }" />
       </div>
       
-      <!-- 翻页动画层 -->
-      <div class="page-wrapper" :class="[
-        isFlipping && 'is-flipping',
-        `phase-${flipPhase}`
-      ]">
-        <!-- 当前页面（底层） -->
-        <div class="page page-current">
-          <div class="page-inner">
-            <!-- 页面纹理 -->
-            <div class="page-texture" />
-            <!-- 页面内容 -->
-            <div class="page-content">
-              <InboxChatRoom v-if="chatDetail" :thread="chatDetail" />
-              <InboxApplicationDetailCard v-else-if="applicationDetail" :detail="applicationDetail" />
-              <InboxActivityDetailCard v-else-if="activityDetail" :detail="activityDetail" />
-              <InboxSystemDetailCard v-else-if="systemDetail" :detail="systemDetail" />
+      <!-- 渐变过渡动画层 -->
+      <div class="page-wrapper">
+        <!-- 当前页面 -->
+        <Transition name="fade-slide" mode="out-in">
+          <div :key="transitionKey" class="page page-current" :class="{ 'is-transitioning': isTransitioning }">
+            <div class="page-inner">
+              <!-- 页面纹理 -->
+              <div class="page-texture" />
+              <!-- 页面内容 -->
+              <div class="page-content">
+                <InboxChatRoom v-if="chatDetail" :thread="chatDetail" />
+                <InboxApplicationDetailCard v-else-if="applicationDetail" :detail="applicationDetail" />
+                <InboxActivityDetailCard v-else-if="activityDetail" :detail="activityDetail" />
+                <InboxSystemDetailCard v-else-if="systemDetail" :detail="systemDetail" />
+              </div>
             </div>
           </div>
-        </div>
-        
-        <!-- 翻页效果层 -->
-        <div v-if="isFlipping" class="page page-flip">
-          <div class="flip-page-front">
-            <div class="flip-texture" />
-            <div class="flip-shadow" />
-          </div>
-          <div class="flip-page-back">
-            <div class="flip-texture" />
-            <div class="flip-content-preview" />
-          </div>
-        </div>
-        
-        <!-- 翻页阴影 -->
-        <div v-if="isFlipping" class="flip-shadow-overlay" />
+        </Transition>
       </div>
       
       <!-- 书签装饰 -->
@@ -256,13 +229,11 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
 /* 页面包装器 */
 .page-wrapper {
   @apply relative h-full ml-4 mr-3;
-  transform-style: preserve-3d;
 }
 
 /* 页面基础样式 */
 .page {
   @apply absolute inset-0 rounded-r-xl overflow-hidden;
-  backface-visibility: hidden;
 }
 
 .page-current {
@@ -292,126 +263,24 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
   @apply h-full overflow-hidden relative z-10;
 }
 
-/* 翻页动画层 */
-.page-flip {
-  @apply pointer-events-none;
-  transform-origin: left center;
-  transform-style: preserve-3d;
+/* 渐变过渡动画 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.phase-lifting .page-flip {
-  animation: pageLift 0.3s ease-out forwards;
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
 }
 
-.phase-turning .page-flip {
-  animation: pageTurn 0.3s ease-in-out forwards;
-  animation-delay: 0s;
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 
-.phase-settling .page-flip {
-  animation: pageSettle 0.4s ease-out forwards;
-}
-
-@keyframes pageLift {
-  0% {
-    transform: rotateY(0deg) translateZ(0);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.05);
-  }
-  100% {
-    transform: rotateY(-15deg) translateZ(20px);
-    box-shadow: -8px 0 25px rgba(0,0,0,0.12);
-  }
-}
-
-@keyframes pageTurn {
-  0% {
-    transform: rotateY(-15deg) translateZ(20px);
-    box-shadow: -8px 0 25px rgba(0,0,0,0.12);
-  }
-  100% {
-    transform: rotateY(-165deg) translateZ(20px);
-    box-shadow: 8px 0 25px rgba(0,0,0,0.12);
-  }
-}
-
-@keyframes pageSettle {
-  0% {
-    transform: rotateY(-165deg) translateZ(20px);
-    box-shadow: 8px 0 25px rgba(0,0,0,0.12);
-  }
-  100% {
-    transform: rotateY(-180deg) translateZ(0);
-    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-  }
-}
-
-.flip-page-front,
-.flip-page-back {
-  @apply absolute inset-0 rounded-r-xl;
-  backface-visibility: hidden;
-}
-
-.flip-page-front {
-  background: linear-gradient(90deg, #FDFCF8 0%, #FFFFFF 100%);
-  box-shadow: 
-    inset -20px 0 40px rgba(0,0,0,0.03),
-    inset 0 0 60px rgba(0,0,0,0.01);
-}
-
-.flip-page-back {
-  background: linear-gradient(270deg, #F8F6F3 0%, #FDFCF8 100%);
-  transform: rotateY(180deg);
-  box-shadow: 
-    inset 20px 0 40px rgba(0,0,0,0.04),
-    inset 0 0 60px rgba(0,0,0,0.02);
-}
-
-.flip-texture {
-  @apply absolute inset-0 opacity-30;
-  background-image: 
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 27px,
-      rgba(0,0,0,0.02) 27px,
-      rgba(0,0,0,0.02) 28px
-    );
-}
-
-.flip-shadow {
-  @apply absolute inset-y-0 right-0 w-16;
-  background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.08) 100%);
-}
-
-.flip-content-preview {
-  @apply absolute inset-4;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0,0,0,0.03) 0px,
-    rgba(0,0,0,0.03) 8px,
-    transparent 8px,
-    transparent 20px
-  );
-  border-radius: 4px;
-}
-
-/* 翻页阴影覆盖层 */
-.flip-shadow-overlay {
-  @apply absolute inset-0 pointer-events-none rounded-r-xl;
-  background: linear-gradient(90deg, 
-    rgba(0,0,0,0.08) 0%, 
-    transparent 30%,
-    transparent 70%,
-    rgba(0,0,0,0.04) 100%
-  );
-  animation: shadowMove 0.9s ease-in-out;
-}
-
-@keyframes shadowMove {
-  0% { opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  100% { opacity: 0; }
+.is-transitioning {
+  pointer-events: none;
 }
 
 /* 书签装饰 */
@@ -431,18 +300,5 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
 
 .bookmark-vibe .bookmark-ribbon {
   background: linear-gradient(180deg, #D9A69F 0%, #C4887E 100%);
-}
-
-/* 翻页时的页面抖动效果 */
-.is-flipping .page-current {
-  animation: pageShake 0.9s ease-in-out;
-}
-
-@keyframes pageShake {
-  0%, 100% { transform: translateX(0); }
-  10% { transform: translateX(-2px); }
-  30% { transform: translateX(1px); }
-  50% { transform: translateX(-1px); }
-  70% { transform: translateX(0.5px); }
 }
 </style>

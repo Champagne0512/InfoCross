@@ -231,3 +231,39 @@ export async function joinTeam(teamId: number): Promise<boolean> {
 
   return true
 }
+
+export async function fetchUserTeams(): Promise<Team[]> {
+  const userId = await requireUserId()
+  
+  // 获取用户作为成员加入的小组
+  const { data: memberData, error: memberError } = await supabase
+    .from('team_members')
+    .select('team_id')
+    .eq('member_id', userId)
+  if (memberError) throw memberError
+  
+  // 获取用户作为创建者的小组
+  const { data: ownerData, error: ownerError } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('owner_id', userId)
+  if (ownerError) throw ownerError
+  
+  const memberTeamIds = (memberData ?? []).map(row => row.team_id)
+  const ownerTeamIds = (ownerData ?? []).map(row => row.id)
+  const allTeamIds = [...new Set([...memberTeamIds, ...ownerTeamIds])]
+  
+  if (allTeamIds.length === 0) return []
+  
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .in('id', allTeamIds)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  
+  const teamRows = (data as unknown as TeamRow[] | null) ?? []
+  const membersByTeam = await fetchTeamMembers(teamRows.map(team => team.id))
+  
+  return teamRows.map(row => mapTeam(row, membersByTeam[row.id] ?? []))
+}
