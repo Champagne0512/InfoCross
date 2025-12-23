@@ -23,49 +23,32 @@ const props = defineProps<{
 
 const frequencyStore = useFrequencyStore()
 
-// 渐变过渡动画状态
-const isTransitioning = ref(false)
-const currentContent = ref<DetailType>(null)
+const displayedDetail = ref<DetailType>(props.detail ?? null)
 const transitionKey = ref(0)
 
-// 监听 detail 变化触发渐变过渡
-watch(() => props.detail, (newDetail, oldDetail) => {
-  if (newDetail !== oldDetail && newDetail !== null) {
-    triggerFadeTransition(() => {
-      currentContent.value = newDetail
-      transitionKey.value++
-    })
-  } else if (newDetail === null) {
-    currentContent.value = null
-  }
-}, { immediate: true })
-
-function triggerFadeTransition(onMidpoint: () => void) {
-  if (isTransitioning.value) return
-  isTransitioning.value = true
-  
-  // 淡出后切换内容，然后淡入
-  setTimeout(() => {
-    onMidpoint()
-    setTimeout(() => {
-      isTransitioning.value = false
-    }, 300)
-  }, 200)
-}
+// detail 每次更新时立即切换内容，同时递增 key 触发渐变
+watch(
+  () => props.detail,
+  (newDetail) => {
+    displayedDetail.value = newDetail ?? null
+    transitionKey.value++
+  },
+  { immediate: true },
+)
 
 const detailType = computed(() => props.preview?.category ?? null)
 
 const chatDetail = computed<InboxChatThread | null>(() =>
-  detailType.value === 'chats' ? (currentContent.value as InboxChatThread) : null,
+  detailType.value === 'chats' ? (displayedDetail.value as InboxChatThread) : null,
 )
 const applicationDetail = computed<InboxApplicationDetail | null>(() =>
-  detailType.value === 'applications' ? (currentContent.value as InboxApplicationDetail) : null,
+  detailType.value === 'applications' ? (displayedDetail.value as InboxApplicationDetail) : null,
 )
 const activityDetail = computed<InboxActivityDetail | null>(() =>
-  detailType.value === 'activity' ? (currentContent.value as InboxActivityDetail) : null,
+  detailType.value === 'activity' ? (displayedDetail.value as InboxActivityDetail) : null,
 )
 const systemDetail = computed<InboxSystemDetail | null>(() =>
-  detailType.value === 'system' ? (currentContent.value as InboxSystemDetail) : null,
+  detailType.value === 'system' ? (displayedDetail.value as InboxSystemDetail) : null,
 )
 </script>
 
@@ -102,7 +85,7 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
       <div class="page-wrapper">
         <!-- 当前页面 -->
         <Transition name="fade-slide" mode="out-in">
-          <div :key="transitionKey" class="page page-current" :class="{ 'is-transitioning': isTransitioning }">
+          <div :key="transitionKey" class="page page-current">
             <div class="page-inner">
               <!-- 页面纹理 -->
               <div class="page-texture" />
@@ -277,10 +260,6 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateX(-20px);
-}
-
-.is-transitioning {
-  pointer-events: none;
 }
 
 /* 书签装饰 */

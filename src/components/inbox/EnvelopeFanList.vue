@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import type { InboxPreview } from '@/types/models'
 import EnvelopeCard from './EnvelopeCard.vue'
@@ -14,7 +13,6 @@ const emit = defineEmits<{
 }>()
 
 const frequencyStore = useFrequencyStore()
-const containerRef = ref<HTMLElement | null>(null)
 
 function handleSelect(item: InboxPreview) {
   emit('select', item)
@@ -23,7 +21,6 @@ function handleSelect(item: InboxPreview) {
 
 <template>
   <div 
-    ref="containerRef"
     class="list-container"
     :class="frequencyStore.isFocus ? 'list-focus' : 'list-vibe'"
   >
