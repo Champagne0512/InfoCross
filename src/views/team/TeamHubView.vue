@@ -237,7 +237,7 @@ const stats = computed(() => ({
     </section>
 
     <!-- 申请状态 -->
-    <section v-if="filteredApplications.length" class="mt-10">
+    <section class="mt-10">
       <header class="flex items-center justify-between mb-6">
         <div>
           <p class="font-mono text-mono text-xs text-slate tracking-wider mb-1">APPLICATIONS</p>
@@ -252,7 +252,15 @@ const stats = computed(() => ({
         </RouterLink>
       </header>
 
-      <div class="space-y-3">
+      <div v-if="applicationsLoading" class="space-y-3">
+        <div
+          v-for="index in 3"
+          :key="index"
+          class="application-skeleton"
+        ></div>
+      </div>
+
+      <div v-else-if="filteredApplications.length" class="space-y-3">
         <div
           v-for="(app, index) in filteredApplications"
           :key="app.teamName"
@@ -261,6 +269,7 @@ const stats = computed(() => ({
         >
           <div class="flex-1">
             <p class="font-sans font-medium text-charcoal">{{ app.teamName }}</p>
+            <p v-if="app.preferredRole" class="text-xs text-slate/70 mt-0.5">意向角色：{{ app.preferredRole }}</p>
             <p class="font-sans text-sm text-slate">{{ app.message || '未填写备注' }}</p>
           </div>
           <span 
@@ -274,6 +283,17 @@ const stats = computed(() => ({
             {{ getApplicationStatusLabel(app.status) }}
           </span>
         </div>
+      </div>
+
+      <div v-else class="application-empty" :class="frequencyStore.isFocus ? 'empty-focus' : 'empty-vibe'">
+        <p class="font-sans text-slate mb-2">暂无申请记录</p>
+        <RouterLink
+          to="/team"
+          class="font-sans text-sm"
+          :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
+        >
+          去组队大厅探索 →
+        </RouterLink>
       </div>
     </section>
   </div>
@@ -439,6 +459,30 @@ const stats = computed(() => ({
   @apply animate-slide-up;
 }
 
+.application-skeleton {
+  @apply h-16 rounded-xl bg-white border border-slate/10 relative overflow-hidden;
+}
+
+.application-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(147,168,172,0.08), rgba(255,255,255,0));
+  animation: shimmer 1.5s infinite;
+}
+
+.application-empty {
+  @apply flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate/20 py-10 bg-white/60 text-center;
+}
+
+.empty-focus {
+  @apply border-focus-primary/40;
+}
+
+.empty-vibe {
+  @apply border-vibe-primary/40;
+}
+
 /* 状态标签 */
 .status-badge {
   @apply px-3 py-1 rounded-full font-mono text-xs;
@@ -470,5 +514,14 @@ const stats = computed(() => ({
 
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>

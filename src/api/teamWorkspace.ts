@@ -1,5 +1,6 @@
 import type {
   TeamApplication,
+  TeamApplicationStatus,
   TeamChatMessage,
   TeamTask,
   TeamTaskStatus,
@@ -58,6 +59,7 @@ async function fetchTaskAssignees(taskIds: number[]): Promise<Record<number, Tea
 }
 
 function mapApplication(row: TeamApplicationRow): TeamApplication {
+  const extra = (row.extra as { preferred_role?: string } | null) ?? null
   return {
     id: row.id,
     teamId: row.team_id,
@@ -68,6 +70,7 @@ function mapApplication(row: TeamApplicationRow): TeamApplication {
     status: row.status,
     mode: row.mode ?? 'focus',
     message: row.message ?? undefined,
+    preferredRole: extra?.preferred_role ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -134,14 +137,20 @@ export async function fetchTeamApplications(): Promise<TeamApplication[]> {
   return rows.map(mapApplication)
 }
 
-export async function createTeamApplication(teamId: number, message?: string): Promise<TeamApplication> {
+export async function createTeamApplication(
+  teamId: number,
+  options?: { message?: string; preferredRole?: string; mode?: 'focus' | 'vibe' },
+): Promise<TeamApplication> {
   const userId = await requireUserId()
   const payload: Database['public']['Tables']['team_applications']['Insert'] = {
     team_id: teamId,
     applicant_id: userId,
-    message: message ?? null,
+    message: options?.message ?? null,
     status: 'pending',
-    mode: 'focus',
+    mode: options?.mode ?? 'focus',
+    extra: {
+      preferred_role: options?.preferredRole ?? null,
+    },
   }
 
   const { data, error } = await supabase
@@ -154,6 +163,67 @@ export async function createTeamApplication(teamId: number, message?: string): P
     )
     .single()
   if (error) throw error
+  return mapApplication(data as unknown as TeamApplicationRow)
+}
+
+export async function fetchTeamApplicationQueue(teamId: number): Promise<TeamApplication[]> {
+  const { data, error } = await supabase
+    .from('team_applications')
+    .select(
+      '*,' +
+        'team:teams(id,name,is_vibe),' +
+        'applicant:profiles!team_applications_applicant_id_fkey(id,username,college)',
+    )
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const rows = (data as unknown as TeamApplicationRow[] | null) ?? []
+  return rows.map(mapApplication)
+}
+
+export async function respondTeamApplication(
+  applicationId: number,
+  status: Extract<TeamApplicationStatus, 'approved' | 'rejected'>,
+): Promise<TeamApplication> {
+  const { data: existing, error: fetchError } = await supabase
+    .from('team_applications')
+    .select(
+      '*,' +
+        'team:teams(id,name,is_vibe),' +
+        'applicant:profiles!team_applications_applicant_id_fkey(id,username,college)',
+    )
+    .eq('id', applicationId)
+    .maybeSingle()
+  if (fetchError) throw fetchError
+  const existingRow = (existing as unknown as TeamApplicationRow | null)
+  if (!existingRow) throw new Error('申请不存在')
+  if (existingRow.status !== 'pending') {
+    throw new Error('该申请已处理')
+  }
+
+  const { data, error } = await supabase
+    .from('team_applications')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', applicationId)
+    .select(
+      '*,' +
+        'team:teams(id,name,is_vibe),' +
+        'applicant:profiles!team_applications_applicant_id_fkey(id,username,college)',
+    )
+    .single()
+  if (error) throw error
+
+  if (status === 'approved') {
+    const { error: memberError } = await supabase.from('team_members').insert({
+      team_id: existingRow.team_id,
+      member_id: existingRow.applicant_id,
+      status: 'approved',
+    })
+    if (memberError && memberError.code !== '23505') {
+      throw memberError
+    }
+  }
+
   return mapApplication(data as unknown as TeamApplicationRow)
 }
 

@@ -19,7 +19,7 @@ import {
 } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
-import { fetchTeamById, updateTeamInfo, deleteTeam, setTeamMemberAdmin } from '@/api/team'
+import { fetchTeamById, updateTeamInfo, deleteTeam, setTeamMemberAdmin, leaveTeam } from '@/api/team'
 import {
   fetchTeamChatMessages,
   sendTeamChatMessage,
@@ -31,8 +31,10 @@ import {
   uploadTeamFile,
   assignMembersToTask,
   updateTaskAssignmentStatus,
+  fetchTeamApplicationQueue,
+  respondTeamApplication,
 } from '@/api/teamWorkspace'
-import type { Team, TeamChatMessage, TeamTask, TeamFile } from '@/types/models'
+import type { Team, TeamApplication, TeamChatMessage, TeamTask, TeamFile } from '@/types/models'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 type TabType = 'chat' | 'tasks' | 'files' | 'settings'
@@ -65,10 +67,15 @@ const canManageTeam = computed(() => isOwner.value || isAdmin.value)
 const canManageTasks = computed(() => canManageTeam.value)
 const canUploadFiles = computed(() => canManageTeam.value)
 const canAssignAdmin = computed(() => isOwner.value)
+const canLeaveTeam = computed(() => Boolean(currentMember.value) && !isOwner.value)
 
 const messages = ref<TeamChatMessage[]>([])
 const tasks = ref<TeamTask[]>([])
 const files = ref<TeamFile[]>([])
+const applicationQueue = ref<TeamApplication[]>([])
+const applicationQueueLoading = ref(false)
+const applicationQueueError = ref('')
+const applicationActionLoading = ref<Record<number, boolean>>({})
 const editForm = reactive({
   name: '',
   description: '',
@@ -82,6 +89,8 @@ const settingsError = ref('')
 const disbandConfirm = ref(false)
 const disbandLoading = ref(false)
 const disbandError = ref('')
+const leavingTeam = ref(false)
+const leaveError = ref('')
 const memberRoleLoading = ref<Record<string, boolean>>({})
 const assignmentEditor = ref<{ taskId: number; selected: Set<string> } | null>(null)
 const assignmentSaving = ref(false)
@@ -205,6 +214,25 @@ async function loadFiles(teamId: number) {
     files.value = []
   } finally {
     filesLoading.value = false
+  }
+}
+
+async function loadApplicationQueue(targetTeamId?: number) {
+  const teamId = targetTeamId ?? team.value?.id
+  if (!teamId || !canManageTeam.value) {
+    applicationQueue.value = []
+    return
+  }
+  applicationQueueLoading.value = true
+  applicationQueueError.value = ''
+  try {
+    const applications = await fetchTeamApplicationQueue(teamId)
+    applicationQueue.value = applications.filter((app) => app.status === 'pending')
+  } catch (error) {
+    applicationQueueError.value = (error as Error).message || '加载申请失败'
+    applicationQueue.value = []
+  } finally {
+    applicationQueueLoading.value = false
   }
 }
 
@@ -438,6 +466,38 @@ async function handleDisbandTeam() {
   }
 }
 
+async function handleLeaveTeam() {
+  if (!team.value || !canLeaveTeam.value) return
+  const confirmed = window.confirm('确认退出该小组吗？退出后需重新申请才能加入。')
+  if (!confirmed) return
+  leavingTeam.value = true
+  leaveError.value = ''
+  try {
+    await leaveTeam(team.value.id)
+    router.push('/team/hub')
+  } catch (error) {
+    leaveError.value = (error as Error).message || '退出失败，请稍后再试'
+  } finally {
+    leavingTeam.value = false
+  }
+}
+
+async function handleApplicationDecision(applicationId: number, decision: 'approved' | 'rejected') {
+  applicationActionLoading.value = { ...applicationActionLoading.value, [applicationId]: true }
+  applicationQueueError.value = ''
+  try {
+    await respondTeamApplication(applicationId, decision)
+    await loadApplicationQueue()
+    if (decision === 'approved') {
+      await loadTeamDetail()
+    }
+  } catch (error) {
+    applicationQueueError.value = (error as Error).message || '处理申请失败'
+  } finally {
+    applicationActionLoading.value = { ...applicationActionLoading.value, [applicationId]: false }
+  }
+}
+
 function onAdminToggle(memberId: string, event: Event) {
   const target = event.target as HTMLInputElement | null
   if (!target) return
@@ -451,6 +511,19 @@ watch(
   () => {
     loadTeamDetail()
   },
+)
+
+watch(
+  () => [team.value?.id, canManageTeam.value],
+  async ([teamId, canManage]) => {
+    if (!teamId || !canManage) {
+      applicationQueue.value = []
+      applicationQueueError.value = ''
+      return
+    }
+    await loadApplicationQueue(Number(teamId))
+  },
+  { immediate: true },
 )
 
 onUnmounted(() => {
@@ -511,6 +584,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
       </header>
 
       <nav class="tab-nav">
@@ -883,14 +957,69 @@ onUnmounted(() => {
               </div>
             </section>
 
+            <section v-if="canManageTeam" class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h3 class="section-title">加入申请</h3>
+                  <p class="section-desc">审批待加入成员，确保团队质量</p>
+                </div>
+                <span class="hint-chip">审核</span>
+              </div>
+              <p v-if="applicationQueueError" class="error-text mb-2">{{ applicationQueueError }}</p>
+              <div v-if="applicationQueueLoading" class="space-y-3">
+                <div v-for="index in 3" :key="index" class="approval-skeleton"></div>
+              </div>
+              <div v-else>
+                <p v-if="!applicationQueue.length" class="text-sm text-slate text-center py-6">
+                  暂无待审核申请，新申请会出现在这里，也会同步到消息中心。
+                </p>
+                <div v-else class="space-y-3">
+                  <div v-for="application in applicationQueue" :key="application.id" class="application-approval-card">
+                    <div class="approval-info">
+                      <p class="font-sans font-medium text-charcoal">
+                        {{ application.applicantName || '未命名成员' }}
+                        <span class="text-xs text-slate ml-2">
+                          {{ application.applicantCollege || '未填写学院' }}
+                        </span>
+                      </p>
+                      <p v-if="application.preferredRole" class="text-xs text-slate mt-1">
+                        意向角色：{{ application.preferredRole }}
+                      </p>
+                      <p class="text-sm text-slate mt-1">
+                        {{ application.message || '对方未附加额外说明' }}
+                      </p>
+                      <p class="text-xs text-slate/70 mt-1">提交于 {{ application.createdAt.slice(0, 16).replace('T', ' ') }}</p>
+                    </div>
+                    <div class="approval-actions">
+                      <button
+                        class="cancel-btn"
+                        :disabled="applicationActionLoading[application.id]"
+                        @click="handleApplicationDecision(application.id, 'rejected')"
+                      >
+                        {{ applicationActionLoading[application.id] ? '处理中...' : '拒绝' }}
+                      </button>
+                      <button
+                        class="add-btn"
+                        :disabled="applicationActionLoading[application.id]"
+                        @click="handleApplicationDecision(application.id, 'approved')"
+                      >
+                        {{ applicationActionLoading[application.id] ? '处理中...' : '同意' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section class="settings-card danger-card">
               <div class="settings-card-header">
                 <div>
                   <h3 class="section-title">危险操作</h3>
-                  <p class="section-desc">解散后所有协作数据将被删除</p>
+                  <p class="section-desc">退出或解散后，协作数据可能被清除</p>
                 </div>
               </div>
               <p v-if="disbandError" class="error-text mb-2">{{ disbandError }}</p>
+              <p v-if="leaveError" class="error-text mb-2">{{ leaveError }}</p>
               <div v-if="isOwner" class="danger-actions">
                 <button
                   v-if="!disbandConfirm"
@@ -912,6 +1041,16 @@ onUnmounted(() => {
                     <button class="cancel-btn" @click="disbandConfirm = false">取消</button>
                   </div>
                 </div>
+              </div>
+              <div v-else-if="canLeaveTeam" class="danger-actions">
+                <span class="text-sm text-slate">不想继续参与？你可以自行退出小组。</span>
+                <button
+                  class="danger-btn"
+                  @click="handleLeaveTeam"
+                  :disabled="leavingTeam"
+                >
+                  {{ leavingTeam ? '退出中...' : '退出小组' }}
+                </button>
               </div>
               <p v-else class="text-xs text-slate">仅队长可以解散小组。</p>
             </section>
@@ -1359,6 +1498,22 @@ onUnmounted(() => {
 
 .member-item {
   @apply flex flex-wrap items-center gap-3 p-3 rounded-xl border border-slate/10 bg-slate/5;
+}
+
+.approval-skeleton {
+  @apply h-20 rounded-2xl bg-slate/10 animate-pulse;
+}
+
+.application-approval-card {
+  @apply flex flex-wrap gap-4 p-4 rounded-2xl border border-slate/10 bg-white shadow-sm items-start;
+}
+
+.approval-info {
+  @apply flex-1 min-w-[200px];
+}
+
+.approval-actions {
+  @apply flex flex-col gap-2 min-w-[120px];
 }
 
 .member-avatar {

@@ -71,6 +71,8 @@ export default {
     actions: {
       team: 'My Teams',
       progress: 'Progress',
+      history: 'History',
+      bookmarks: 'My Bookmarks',
       forum: 'My Posts',
       security: 'Settings',
     },

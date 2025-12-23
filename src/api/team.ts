@@ -165,6 +165,16 @@ export async function setTeamMemberAdmin(teamId: number, memberId: string, isAdm
   if (error) throw error
 }
 
+export async function leaveTeam(teamId: number): Promise<void> {
+  const userId = await requireUserId()
+  const { error } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('team_id', teamId)
+    .eq('member_id', userId)
+  if (error) throw error
+}
+
 async function requireUserId(): Promise<string> {
   const {
     data: { user },
@@ -201,33 +211,4 @@ export async function createTeam(team: Partial<Team>): Promise<Team> {
   const row = data as unknown as TeamRow
   const members = await fetchTeamMembers([row.id])
   return mapTeam(row, members[row.id] ?? [])
-}
-
-export async function joinTeam(teamId: number): Promise<boolean> {
-  const userId = await requireUserId()
-  const { data, error: teamError } = await supabase
-    .from('teams')
-    .select('id,current_members,max_members,status')
-    .eq('id', teamId)
-    .maybeSingle()
-  if (teamError) throw teamError
-  const team = data as unknown as { id: number; current_members: number | null; max_members: number; status: string } | null
-  if (!team) throw new Error('团队不存在')
-
-  if (team.status === 'full' || (team.current_members ?? 0) >= team.max_members) {
-    throw new Error('团队已满员')
-  }
-
-  const { error } = await supabase
-    .from('team_members')
-    .insert({
-      team_id: teamId,
-      member_id: userId,
-      status: 'approved',
-    })
-  if (error && error.code !== '23505') {
-    throw error
-  }
-
-  return true
 }

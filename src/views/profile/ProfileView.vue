@@ -2,9 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from '@/i18n'
 import ProfileHeader from '@/components/profile/ProfileHeader.vue'
-import UserStats from '@/components/profile/UserStats.vue'
 import ActionGrid from '@/components/profile/ActionGrid.vue'
-import TabSwitcher from '@/components/profile/TabSwitcher.vue'
 import ProfileEditForm from '@/components/profile/ProfileEditForm.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
@@ -24,45 +22,21 @@ function closeEditModal() {
   isEditModalOpen.value = false
 }
 
-function handleStatNavigate(id: string) {
-  // 根据统计项导航到对应页面
-  switch (id) {
+function handleAction(action: string) {
+  switch (action) {
+    case 'history':
+      router.push('/profile/history')
+      break
     case 'bookmarks':
       router.push('/bookmarks')
       break
-    case 'activities':
-      router.push('/activities')
-      break
-    case 'teams':
-      router.push('/team')
-      break
-    case 'credit':
-      router.push('/credit')
-      break
-  }
-}
-
-function handleAction(action: string) {
-  // 处理功能磁贴点击
-  switch (action) {
-    case 'team':
-      router.push('/team')
-      break
-    case 'progress':
-      router.push('/progress')
-      break
     case 'forum':
-      router.push('/forum')
+      router.push('/profile/posts')
       break
     case 'security':
       router.push('/settings')
       break
   }
-}
-
-function handleTabNavigate(tab: string, itemId: number) {
-  // 处理列表项点击
-  console.log('Navigate to:', tab, itemId)
 }
 
 async function handleLogout() {
@@ -79,21 +53,12 @@ async function handleLogout() {
       @edit="openEditModal"
     />
     
-    <!-- 中部：状态数据栏 -->
-    <UserStats @navigate="handleStatNavigate" />
-    
     <!-- 主体：功能磁贴区 -->
     <ActionGrid @action="handleAction" />
-    
-    <!-- 底部：内容列表切换 -->
-    <TabSwitcher @navigate="handleTabNavigate" />
 
     <!-- 退出登录按钮 -->
-    <div class="px-6 py-8">
-      <button 
-        @click="handleLogout"
-        class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-soft border border-red-200 text-red-500 font-sans text-sm font-medium transition-all duration-200 hover:bg-red-50 hover:border-red-300"
-      >
+    <div class="max-w-6xl mx-auto px-6 py-8">
+      <button class="logout-btn" @click="handleLogout">
         <LogOut :size="18" />
         <span>{{ t('common.logout') }}</span>
       </button>
@@ -139,6 +104,12 @@ async function handleLogout() {
 </template>
 
 <style scoped>
+.logout-btn {
+  @apply w-full flex items-center justify-center gap-2 px-4 py-3 rounded-soft;
+  @apply border border-red-200 text-red-500 font-sans text-sm font-medium;
+  @apply transition-all duration-200 hover:bg-red-50 hover:border-red-300;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;

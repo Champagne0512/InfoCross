@@ -1,28 +1,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from '@/i18n'
-import { Users, FileText, MessageSquare, Settings, ChevronRight } from 'lucide-vue-next'
+import { Clock, Bookmark, MessageSquare, Settings, ChevronRight } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
 const actions = computed(() => [
   {
-    id: 'team',
-    title: t('profile.actions.team'),
-    description: '管理你的组队项目，查看队友动态',
-    icon: Users,
+    id: 'history',
+    title: t('profile.actions.history'),
+    description: '快速回顾最近浏览的活动与帖子',
+    icon: Clock,
     color: 'text-morandi-green',
     bgColor: 'bg-morandi-green/15',
     borderColor: 'border-morandi-green/20',
   },
   {
-    id: 'progress',
-    title: t('profile.actions.progress'),
-    description: '追踪项目进展，管理任务清单',
-    icon: FileText,
-    color: 'text-morandi-blue',
-    bgColor: 'bg-morandi-blue/15',
-    borderColor: 'border-morandi-blue/20',
+    id: 'bookmarks',
+    title: t('profile.actions.bookmarks'),
+    description: '沉淀灵感，随时复盘喜欢的文章',
+    icon: Bookmark,
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-100/40',
+    borderColor: 'border-amber-200',
   },
   {
     id: 'forum',

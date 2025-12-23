@@ -97,4 +97,16 @@ export const routes: RouteRecordRaw[] = [
     component: lazyView(() => import('@/views/bookmarks/BookmarksView.vue')),
     meta: { title: '我的收藏', requiresAuth: true },
   },
+  {
+    path: '/profile/history',
+    name: 'profile-history',
+    component: lazyView(() => import('@/views/profile/HistoryView.vue')),
+    meta: { title: '浏览历史', requiresAuth: true },
+  },
+  {
+    path: '/profile/posts',
+    name: 'profile-posts',
+    component: lazyView(() => import('@/views/profile/PostsView.vue')),
+    meta: { title: '我的帖子', requiresAuth: true },
+  },
 ]

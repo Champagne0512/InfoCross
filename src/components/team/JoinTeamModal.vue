@@ -175,6 +175,9 @@ const modeClass = computed(() =>
         >
           发送破壁申请
         </button>
+        <p class="text-xs text-slate text-center mt-3">
+          申请提交后需等待队长或管理员审核，结果可在协作空间申请记录和消息中心查看。
+        </p>
       </div>
     </div>
   </transition>

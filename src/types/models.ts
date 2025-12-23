@@ -169,6 +169,7 @@ export interface TeamApplication {
   status: TeamApplicationStatus
   mode: 'focus' | 'vibe'
   message?: string
+  preferredRole?: string
   createdAt: string
   updatedAt: string
 }

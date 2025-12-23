@@ -71,6 +71,8 @@ export default {
     actions: {
       team: '我的小组',
       progress: '进度追踪',
+      history: '浏览历史',
+      bookmarks: '我的收藏',
       forum: '我的帖子',
       security: '设置',
     },

@@ -2,12 +2,15 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import TeamCard from '@/components/team/TeamCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
-import { fetchTeams, joinTeam } from '@/api/team'
+import { fetchTeams } from '@/api/team'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import JoinTeamModal from '@/components/team/JoinTeamModal.vue'
 import type { Team } from '@/types/models'
+import { useAuth } from '@/composables/useAuth'
+import { createTeamApplication } from '@/api/teamWorkspace'
 
 const frequencyStore = useFrequencyStore()
+const { profile } = useAuth()
 
 const teams = ref<Team[]>([])
 const loading = ref(true)
@@ -15,6 +18,7 @@ const filterExpanded = ref(false)
 const showDrawer = ref(false)
 const selectedTeam = ref<Team | null>(null)
 const toastMessage = ref('')
+const feedbackDialog = ref<{ teamName: string; mode: 'focus' | 'vibe' } | null>(null)
 
 // 筛选状态
 const searchQuery = ref('')
@@ -79,10 +83,17 @@ const statuses = [
 ]
 
 // 计算筛选结果
+const userId = computed(() => profile.value?.id ?? '')
+
 const visibleTeams = computed(() =>
-  teams.value.filter((team) =>
-    frequencyStore.isFocus ? !team.isVibe : Boolean(team.isVibe),
-  )
+  teams.value.filter((team) => {
+    const matchesMode = frequencyStore.isFocus ? !team.isVibe : Boolean(team.isVibe)
+    if (!matchesMode) return false
+    if (!userId.value) return true
+    const isOwner = team.ownerId === userId.value
+    const isMember = team.members.some((member) => member.id === userId.value)
+    return !isOwner && !isMember
+  })
 )
 
 const filteredTeams = computed(() => {
@@ -192,16 +203,33 @@ function resetFilters() {
 
 async function handleDrawerSubmit(payload: { teamId: number; role: string; message: string }) {
   try {
-    await joinTeam(payload.teamId)
-    toastMessage.value = '申请已发送，队长将看到你的破壁摘要。'
+    const messageParts: string[] = []
+    if (payload.role) {
+      messageParts.push(`意向角色：${payload.role}`)
+    }
+    if (payload.message) {
+      messageParts.push(payload.message)
+    }
+    await createTeamApplication(payload.teamId, {
+      preferredRole: payload.role || undefined,
+      message: messageParts.join(' | ') || undefined,
+      mode: frequencyStore.isFocus ? 'focus' : 'vibe',
+    })
+    toastMessage.value = ''
     showDrawer.value = false
-    setTimeout(() => {
-      toastMessage.value = ''
-    }, 4000)
+    const targetTeam = teams.value.find((team) => team.id === payload.teamId) || selectedTeam.value
+    feedbackDialog.value = {
+      teamName: targetTeam?.name ?? '该小组',
+      mode: frequencyStore.mode,
+    }
   } catch (error) {
     toastMessage.value = '申请提交失败，请稍后再试。'
     console.error(error)
   }
+}
+
+function closeFeedbackDialog() {
+  feedbackDialog.value = null
 }
 </script>
 
@@ -454,10 +482,92 @@ async function handleDrawerSubmit(payload: { teamId: number; role: string; messa
     @close="showDrawer = false"
     @submit="handleDrawerSubmit"
   />
+
+  <transition name="feedback-fade">
+    <div v-if="feedbackDialog" class="feedback-overlay">
+      <div
+        class="feedback-card"
+        :class="feedbackDialog.mode === 'focus' ? 'border-focus-primary/30' : 'border-vibe-primary/30'"
+      >
+        <div
+          class="feedback-icon"
+          :class="feedbackDialog.mode === 'focus' ? 'text-focus-accent bg-focus-primary/15' : 'text-vibe-accent bg-vibe-primary/15'"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="w-6 h-6">
+            <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3 class="feedback-title">申请已发送</h3>
+        <p class="feedback-desc">
+          你对「{{ feedbackDialog.teamName }}」的小组申请已提交，需要队长或管理员通过后才能加入。
+          可前往协作空间的申请记录或消息中心查看审批进度。
+        </p>
+        <div class="feedback-actions">
+          <RouterLink
+            to="/team/hub"
+            class="feedback-link"
+            :class="feedbackDialog.mode === 'focus' ? 'text-focus-accent' : 'text-vibe-accent'"
+            @click="closeFeedbackDialog"
+          >
+            查看申请记录
+          </RouterLink>
+          <button
+            class="feedback-button"
+            :class="feedbackDialog.mode === 'focus' ? 'bg-focus-accent' : 'bg-vibe-accent'"
+            @click="closeFeedbackDialog"
+          >
+            好的
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <style scoped>
 .vibe-button {
   @apply bg-vibe-accent hover:bg-vibe-accent/90;
+}
+
+.feedback-overlay {
+  @apply fixed inset-0 z-40 flex items-center justify-center bg-charcoal/50 backdrop-blur;
+}
+
+.feedback-card {
+  @apply w-full max-w-md rounded-3xl bg-white p-8 text-center border shadow-2xl;
+}
+
+.feedback-icon {
+  @apply w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4;
+}
+
+.feedback-title {
+  @apply text-2xl font-semibold text-charcoal mb-2;
+}
+
+.feedback-desc {
+  @apply text-sm text-slate leading-relaxed;
+}
+
+.feedback-actions {
+  @apply mt-6 flex flex-col gap-3;
+}
+
+.feedback-link {
+  @apply text-sm underline underline-offset-4;
+}
+
+.feedback-button {
+  @apply w-full py-3 rounded-2xl text-white font-semibold shadow-lg;
+}
+
+.feedback-fade-enter-active,
+.feedback-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.feedback-fade-enter-from,
+.feedback-fade-leave-to {
+  opacity: 0;
 }
 </style>
