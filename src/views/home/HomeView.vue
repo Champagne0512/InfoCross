@@ -3,7 +3,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from '@/i18n'
 import { useRouter } from 'vue-router'
 import { 
-  Calendar, Users, MessageCircle, 
+  Users, MessageCircle, 
   ArrowRight, Clock, MapPin, Sparkles
 } from 'lucide-vue-next'
 import ArticleCard from '@/components/business/ArticleCard.vue'
@@ -36,11 +36,6 @@ const pageConfig = computed(() => {
       greeting: `${t('home.greeting.focus')}, ${displayName.value}`,
       desc: t('home.desc.focus'),
       searchPlaceholder: t('home.searchPlaceholder.focus'),
-      quickActions: [
-        { label: t('home.publishActivity'), path: '/publish', icon: Calendar },
-        { label: t('nav.collaboration'), path: '/team', icon: Users },
-        { label: t('forum.title'), path: '/forum', icon: MessageCircle },
-      ],
       sectionTitles: {
         recommended: t('home.aiRecommend.focus'),
         teams: t('team.recruiting'),
@@ -52,11 +47,6 @@ const pageConfig = computed(() => {
     greeting: `${t('home.greeting.vibe')}, ${displayName.value}`,
     desc: t('home.desc.vibe'),
     searchPlaceholder: t('home.searchPlaceholder.vibe'),
-    quickActions: [
-      { label: t('home.startMeetup'), path: '/publish', icon: Users },
-      { label: t('home.aiRecommend.vibe'), path: '/team', icon: Sparkles },
-      { label: t('nav.forum'), path: '/forum', icon: MessageCircle },
-    ],
     sectionTitles: {
       recommended: t('home.aiRecommend.vibe'),
       teams: t('team.types.meal'),
@@ -156,19 +146,6 @@ function navigateTo(path: string) {
           </button>
         </div>
 
-        <!-- 快捷入口 -->
-        <div class="quick-actions">
-          <button
-            v-for="action in pageConfig.quickActions"
-            :key="action.path"
-            class="quick-action-btn"
-            :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'"
-            @click="navigateTo(action.path)"
-          >
-            <component :is="action.icon" :size="18" />
-            <span>{{ action.label }}</span>
-          </button>
-        </div>
       </div>
     </section>
 
@@ -380,25 +357,6 @@ function navigateTo(path: string) {
 
 .search-clear {
   @apply absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors;
-}
-
-/* 快捷入口 */
-.quick-actions {
-  @apply flex justify-center gap-3;
-}
-
-.quick-action-btn {
-  @apply flex items-center gap-2 px-4 py-2 rounded-full;
-  @apply font-sans text-sm font-medium;
-  @apply transition-all duration-200 hover:scale-105;
-}
-
-.action-focus {
-  @apply bg-focus-primary/10 text-focus-accent hover:bg-focus-primary/20;
-}
-
-.action-vibe {
-  @apply bg-vibe-primary/10 text-vibe-accent hover:bg-vibe-primary/20;
 }
 
 /* 主内容区域 */

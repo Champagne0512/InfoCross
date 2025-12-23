@@ -98,6 +98,20 @@ const missingSkills = computed(() => {
   const needs = props.team.requiredSkills || []
   return needs.filter(s => !has.includes(s))
 })
+
+function formatTimestamp(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${month}月${day}日 · ${hours}:${minutes}`
+}
+
+const createdAtLabel = computed(() => formatTimestamp(props.team.createdAt))
+const deadlineLabel = computed(() => formatTimestamp(props.team.deadline))
 </script>
 
 <template>
@@ -116,9 +130,9 @@ const missingSkills = computed(() => {
         </div>
         <!-- Vibe 模式显示倒计时 -->
         <span v-if="mode === 'vibe'" class="px-3 py-1 rounded-full bg-vibe-secondary/30 text-vibe-accent font-mono text-mono text-xs">
-          2h 后过期
+          {{ deadlineLabel ? `${deadlineLabel} 截止` : '限时动态' }}
         </span>
-        <span v-else class="font-mono text-mono text-slate text-xs tracking-wider">{{ team.createdAt }}</span>
+        <span v-else class="font-mono text-mono text-slate text-xs tracking-wider">{{ createdAtLabel }}</span>
       </div>
 
       <!-- 主体：图标 + 内容 -->
