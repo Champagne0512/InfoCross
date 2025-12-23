@@ -7,10 +7,6 @@ import type { InboxPreview } from '@/types/models'
 const props = defineProps<{
   item: InboxPreview
   active?: boolean
-  rotation: number
-  zIndex: number
-  translateX: number
-  translateY: number
 }>()
 
 const emit = defineEmits<{
@@ -44,12 +40,6 @@ const timestamp = computed(() => {
   return `${days}天前`
 })
 
-// 旋转轴心在卡片下方 400px 处
-const cardStyle = computed(() => ({
-  transform: `translateX(${props.translateX}px) translateY(${props.translateY}px) rotate(${props.rotation}deg)`,
-  zIndex: props.zIndex,
-}))
-
 function handleClick() {
   emit('select', props.item)
 }
@@ -59,12 +49,10 @@ function handleClick() {
   <button
     class="envelope-card"
     :class="[
-      active 
-        ? (frequencyStore.isFocus ? 'envelope-active-focus' : 'envelope-active-vibe')
-        : 'envelope-inactive',
+      frequencyStore.isFocus ? 'envelope-focus' : 'envelope-vibe',
+      active && 'envelope-active',
       item.unread && 'envelope-unread'
     ]"
-    :style="cardStyle"
     @click="handleClick"
   >
     <!-- 信封主体 -->
@@ -118,48 +106,43 @@ function handleClick() {
 
 <style scoped>
 .envelope-card {
-  @apply absolute w-96 cursor-pointer;
-  /* 旋转轴心在卡片左侧外部 250px 处 */
-  transform-origin: -250px center;
-  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+  @apply w-full cursor-pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .envelope-card:hover {
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
-  z-index: 100 !important;
+  transform: translateX(4px);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.06));
 }
 
 .envelope-body {
   @apply relative rounded-xl overflow-hidden;
   background: linear-gradient(145deg, #FDFCF8 0%, #F5F3EF 100%);
-  box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.08), 
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 }
 
-.envelope-inactive .envelope-body {
-  background: linear-gradient(145deg, #FFFFFF 0%, #F8F7F5 100%);
+/* Focus 模式 */
+.envelope-focus .envelope-body {
+  background: linear-gradient(145deg, #F5F8F9 0%, #EDF2F3 100%);
 }
 
-.envelope-active-focus .envelope-body {
-  @apply ring-2 ring-focus-accent/50;
-  box-shadow: 
-    0 8px 30px rgba(122, 154, 158, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+.envelope-focus.envelope-active .envelope-body {
+  background: linear-gradient(145deg, #E8F0F2 0%, #DCE8EA 100%);
 }
 
-.envelope-active-vibe .envelope-body {
-  @apply ring-2 ring-vibe-accent/50;
-  box-shadow: 
-    0 8px 30px rgba(196, 136, 126, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+/* Vibe 模式 */
+.envelope-vibe .envelope-body {
+  background: linear-gradient(145deg, #FBF8F7 0%, #F5EFED 100%);
+}
+
+.envelope-vibe.envelope-active .envelope-body {
+  background: linear-gradient(145deg, #F5EBE8 0%, #EDDDD9 100%);
 }
 
 /* 信封封口 */
 .envelope-flap {
-  @apply absolute top-0 left-0 right-0 h-12;
+  @apply absolute top-0 left-0 right-0 h-10;
   background: linear-gradient(180deg, #E8E4DF 0%, #DDD9D4 100%);
   clip-path: polygon(0 0, 50% 100%, 100% 0);
   transform-origin: top center;
@@ -174,10 +157,6 @@ function handleClick() {
 
 .flap-open {
   transform: rotateX(180deg) translateY(-2px);
-}
-
-.flap-closed {
-  transform: rotateX(0deg);
 }
 
 /* 信封纹理 */
@@ -195,11 +174,7 @@ function handleClick() {
 
 /* 蜡封装饰 */
 .wax-seal {
-  @apply absolute -top-2 right-4 w-7 h-7 rounded-full flex items-center justify-center;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  @apply absolute -top-2 right-4 w-6 h-6 rounded-full flex items-center justify-center;
   z-index: 10;
 }
 
@@ -220,20 +195,19 @@ function handleClick() {
 }
 
 .seal-icon {
-  @apply text-white text-xs font-bold;
+  @apply text-white text-[10px] font-bold;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* 信封内容 */
 .envelope-content {
-  @apply flex gap-4 p-6 flex-row-reverse justify-start;
+  @apply flex gap-3 p-4;
   position: relative;
   z-index: 1;
-  min-height: 140px;
 }
 
 .envelope-icon {
-  @apply w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0;
+  @apply w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0;
   backdrop-filter: blur(4px);
 }
 
@@ -254,15 +228,15 @@ function handleClick() {
 }
 
 .envelope-info {
-  @apply flex-1 min-w-0 text-right;
+  @apply flex-1 min-w-0 text-left;
 }
 
 .info-header {
-  @apply flex items-center gap-2 flex-row-reverse;
+  @apply flex items-center gap-2;
 }
 
 .envelope-title {
-  @apply font-sans text-lg font-semibold text-charcoal truncate;
+  @apply font-sans text-base font-semibold text-charcoal truncate;
 }
 
 .unread-badge {
@@ -278,16 +252,16 @@ function handleClick() {
 }
 
 .envelope-preview {
-  @apply font-sans text-base text-slate/70 truncate mt-2;
+  @apply font-sans text-sm text-slate/70 truncate mt-1;
 }
 
 .envelope-time {
-  @apply font-mono text-sm text-slate/50 mt-2;
+  @apply font-mono text-xs text-slate/50 mt-1;
 }
 
 /* 底部装饰条 */
 .envelope-stripe {
-  @apply h-1;
+  @apply h-1 rounded-b-xl;
 }
 
 .stripe-blue {

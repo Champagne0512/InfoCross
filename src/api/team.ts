@@ -212,3 +212,68 @@ export async function createTeam(team: Partial<Team>): Promise<Team> {
   const members = await fetchTeamMembers([row.id])
   return mapTeam(row, members[row.id] ?? [])
 }
+
+export async function joinTeam(teamId: number): Promise<boolean> {
+  const userId = await requireUserId()
+  const { data, error: teamError } = await supabase
+    .from('teams')
+    .select('id,current_members,max_members,status')
+    .eq('id', teamId)
+    .maybeSingle()
+  if (teamError) throw teamError
+  const team = data as unknown as { id: number; current_members: number | null; max_members: number; status: string } | null
+  if (!team) throw new Error('团队不存在')
+
+  if (team.status === 'full' || (team.current_members ?? 0) >= team.max_members) {
+    throw new Error('团队已满员')
+  }
+
+  const { error } = await supabase
+    .from('team_members')
+    .insert({
+      team_id: teamId,
+      member_id: userId,
+      status: 'approved',
+    })
+  if (error && error.code !== '23505') {
+    throw error
+  }
+
+  return true
+}
+
+export async function fetchUserTeams(): Promise<Team[]> {
+  const userId = await requireUserId()
+  
+  // 获取用户作为成员加入的小组
+  const { data: memberData, error: memberError } = await supabase
+    .from('team_members')
+    .select('team_id')
+    .eq('member_id', userId)
+  if (memberError) throw memberError
+  
+  // 获取用户作为创建者的小组
+  const { data: ownerData, error: ownerError } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('owner_id', userId)
+  if (ownerError) throw ownerError
+  
+  const memberTeamIds = (memberData ?? []).map(row => row.team_id)
+  const ownerTeamIds = (ownerData ?? []).map(row => row.id)
+  const allTeamIds = [...new Set([...memberTeamIds, ...ownerTeamIds])]
+  
+  if (allTeamIds.length === 0) return []
+  
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .in('id', allTeamIds)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  
+  const teamRows = (data as unknown as TeamRow[] | null) ?? []
+  const membersByTeam = await fetchTeamMembers(teamRows.map(team => team.id))
+  
+  return teamRows.map(row => mapTeam(row, membersByTeam[row.id] ?? []))
+}

@@ -19,7 +19,9 @@ const categories: Array<{ label: string; value: InboxCategory; icon: typeof Mess
   { label: '系统', value: 'system', icon: Bell },
 ]
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载用户的小组聊天
+  await inboxStore.loadUserChats()
   inboxStore.selectCategory(activeCategory.value)
 })
 </script>
