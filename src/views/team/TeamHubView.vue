@@ -136,158 +136,165 @@ async function revokeApplication(applicationId: number) {
 
     <!-- 主要内容区域 -->
     <section class="content-area">
-      <!-- 我创建的团队 -->
-      <div class="team-section owned-section">
-        <div class="section-header">
-          <div class="header-icon" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
-            <Crown :size="24" />
+      <!-- 团队区域 - 两列布局 -->
+      <div class="teams-container">
+        <!-- 我创建的团队 -->
+        <div class="team-section owned-section">
+          <div class="section-header">
+            <div class="header-icon" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
+              <Crown :size="24" />
+            </div>
+            <div class="header-text">
+              <h2 class="section-title">我创建的团队</h2>
+              <p class="section-subtitle">{{ ownedTeams.length }} 个团队正在运行</p>
+            </div>
           </div>
-          <div class="header-text">
-            <h2 class="section-title">我创建的团队</h2>
-            <p class="section-subtitle">{{ ownedTeams.length }} 个团队正在运行</p>
+
+          <div v-if="loading" class="teams-skeleton">
+            <div v-for="i in 2" :key="i" class="skeleton-card"></div>
           </div>
-        </div>
 
-        <div v-if="loading" class="teams-skeleton">
-          <div v-for="i in 2" :key="i" class="skeleton-card"></div>
-        </div>
-
-        <div v-else-if="ownedTeams.length" class="teams-grid">
-          <div
-            v-for="(team, index) in ownedTeams"
-            :key="team.id"
-            class="team-card premium-card"
-            :style="{ animationDelay: `${index * 150}ms` }"
-            @mouseenter="hoveredTeamId = team.id"
-            @mouseleave="hoveredTeamId = null"
-            @click="router.push(`/team/${team.id}`)"
-          >
-            <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
-            <div class="card-content">
-              <div class="team-header">
-                <div 
-                  class="team-avatar large-avatar"
-                  :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-                >
-                  {{ team.name.charAt(0).toUpperCase() }}
-                  <div class="avatar-pulse"></div>
-                </div>
-                <div class="crown-badge">
-                  <Crown :size="14" />
-                </div>
-              </div>
-              
-              <div class="team-info">
-                <h3 class="team-name">{{ team.name }}</h3>
-                <p class="team-desc">{{ team.description }}</p>
-                
-                <div class="team-metrics">
-                  <div class="metric">
-                    <Users :size="16" />
-                    <span>{{ team.currentMembers }}/{{ team.maxMembers }} 成员</span>
+          <div v-else-if="ownedTeams.length" class="teams-scroll-container">
+            <div class="teams-grid-column">
+              <div
+                v-for="(team, index) in ownedTeams"
+                :key="team.id"
+                class="team-card premium-card"
+                :style="{ animationDelay: `${index * 150}ms` }"
+                @mouseenter="hoveredTeamId = team.id"
+                @mouseleave="hoveredTeamId = null"
+                @click="router.push(`/team/${team.id}`)"
+              >
+                <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
+                <div class="card-content">
+                  <div class="team-header">
+                    <div 
+                      class="team-avatar large-avatar"
+                      :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
+                    >
+                      {{ team.name.charAt(0).toUpperCase() }}
+                      <div class="avatar-pulse"></div>
+                    </div>
+                    <div class="crown-badge">
+                      <Crown :size="14" />
+                    </div>
                   </div>
-                  <div class="metric">
-                    <Clock :size="16" />
-                    <span>{{ team.createdAt.slice(5, 10) }}</span>
+                  
+                  <div class="team-info">
+                    <h3 class="team-name">{{ team.name }}</h3>
+                    <p class="team-desc">{{ team.description }}</p>
+                    
+                    <div class="team-metrics">
+                      <div class="metric">
+                        <Users :size="16" />
+                        <span>{{ team.currentMembers }}/{{ team.maxMembers }} 成员</span>
+                      </div>
+                      <div class="metric">
+                        <Clock :size="16" />
+                        <span>{{ team.createdAt.slice(5, 10) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card-action">
+                    <ChevronRight 
+                      :size="20" 
+                      class="action-arrow"
+                      :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
+                    />
                   </div>
                 </div>
-              </div>
-
-              <div class="card-action">
-                <ChevronRight 
-                  :size="20" 
-                  class="action-arrow"
-                  :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
-                />
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-else class="empty-state">
-          <div class="empty-icon">
-            <Zap :size="48" class="text-slate/30" />
-          </div>
-          <h3 class="empty-title">还没有创建团队</h3>
-          <p class="empty-desc">发起一个项目，开始你的协作之旅</p>
-          <RouterLink to="/team" class="empty-action" :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'">
-            立即创建
-          </RouterLink>
-        </div>
-      </div>
-
-      <!-- 我加入的团队 -->
-      <div class="team-section joined-section">
-        <div class="section-header">
-          <div class="header-icon" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
-            <Users :size="24" />
-          </div>
-          <div class="header-text">
-            <h2 class="section-title">我加入的团队</h2>
-            <p class="section-subtitle">{{ joinedTeams.length }} 个协作正在进行</p>
+          <div v-else class="empty-state">
+            <div class="empty-icon">
+              <Zap :size="48" class="text-slate/30" />
+            </div>
+            <h3 class="empty-title">还没有创建团队</h3>
+            <p class="empty-desc">发起一个项目，开始你的协作之旅</p>
+            <RouterLink to="/team" class="empty-action" :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'">
+              立即创建
+            </RouterLink>
           </div>
         </div>
 
-        <div v-if="loading" class="teams-skeleton">
-          <div v-for="i in 3" :key="i" class="skeleton-card"></div>
-        </div>
+        <!-- 我加入的团队 -->
+        <div class="team-section joined-section">
+          <div class="section-header">
+            <div class="header-icon" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
+              <Users :size="24" />
+            </div>
+            <div class="header-text">
+              <h2 class="section-title">我加入的团队</h2>
+              <p class="section-subtitle">{{ joinedTeams.length }} 个协作正在进行</p>
+            </div>
+          </div>
 
-        <div v-else-if="joinedTeams.length" class="teams-grid">
-          <div
-            v-for="(team, index) in joinedTeams"
-            :key="team.id"
-            class="team-card member-card"
-            :style="{ animationDelay: `${index * 150}ms` }"
-            @mouseenter="hoveredTeamId = team.id"
-            @mouseleave="hoveredTeamId = null"
-            @click="router.push(`/team/${team.id}`)"
-          >
-            <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
-            <div class="card-content">
-              <div class="team-header">
-                <div 
-                  class="team-avatar"
-                  :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-                >
-                  {{ team.name.charAt(0).toUpperCase() }}
-                </div>
-              </div>
-              
-              <div class="team-info">
-                <h3 class="team-name">{{ team.name }}</h3>
-                <p class="team-desc">{{ team.description }}</p>
-                
-                <div class="team-metrics">
-                  <div class="metric">
-                    <Users :size="16" />
-                    <span>{{ team.currentMembers }}/{{ team.maxMembers }}</span>
+          <div v-if="loading" class="teams-skeleton">
+            <div v-for="i in 3" :key="i" class="skeleton-card"></div>
+          </div>
+
+          <div v-else-if="joinedTeams.length" class="teams-scroll-container">
+            <div class="teams-grid-column">
+              <div
+                v-for="(team, index) in joinedTeams"
+                :key="team.id"
+                class="team-card member-card"
+                :style="{ animationDelay: `${index * 150}ms` }"
+                @mouseenter="hoveredTeamId = team.id"
+                @mouseleave="hoveredTeamId = null"
+                @click="router.push(`/team/${team.id}`)"
+              >
+                <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
+                <div class="card-content">
+                  <div class="team-header">
+                    <div 
+                      class="team-avatar"
+                      :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
+                    >
+                      {{ team.name.charAt(0).toUpperCase() }}
+                    </div>
                   </div>
-                  <div class="metric">
-                    <span class="college-tag">{{ team.college }}</span>
+                  
+                  <div class="team-info">
+                    <h3 class="team-name">{{ team.name }}</h3>
+                    <p class="team-desc">{{ team.description }}</p>
+                    
+                    <div class="team-metrics">
+                      <div class="metric">
+                        <Users :size="16" />
+                        <span>{{ team.currentMembers }}/{{ team.maxMembers }}</span>
+                      </div>
+                      <div class="metric">
+                        <span class="college-tag">{{ team.college }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card-action">
+                    <ChevronRight 
+                      :size="20" 
+                      class="action-arrow"
+                      :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
+                    />
                   </div>
                 </div>
-              </div>
-
-              <div class="card-action">
-                <ChevronRight 
-                  :size="20" 
-                  class="action-arrow"
-                  :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
-                />
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-else class="empty-state">
-          <div class="empty-icon">
-            <Users :size="48" class="text-slate/30" />
+          <div v-else class="empty-state">
+            <div class="empty-icon">
+              <Users :size="48" class="text-slate/30" />
+            </div>
+            <h3 class="empty-title">还没有加入团队</h3>
+            <p class="empty-desc">探索有趣的项目，找到志同道合的伙伴</p>
+            <RouterLink to="/team" class="empty-action" :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'">
+              去探索
+            </RouterLink>
           </div>
-          <h3 class="empty-title">还没有加入团队</h3>
-          <p class="empty-desc">探索有趣的项目，找到志同道合的伙伴</p>
-          <RouterLink to="/team" class="empty-action" :class="frequencyStore.isFocus ? 'action-focus' : 'action-vibe'">
-            去探索
-          </RouterLink>
         </div>
       </div>
 
@@ -474,6 +481,11 @@ async function revokeApplication(applicationId: number) {
   @apply space-y-12 pb-16;
 }
 
+/* 团队容器 - 两列布局 */
+.teams-container {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12;
+}
+
 /* 区块样式 */
 .team-section,
 .applications-section {
@@ -527,6 +539,34 @@ async function revokeApplication(applicationId: number) {
   @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3 max-w-[1100px];
 }
 
+/* 列布局的团队网格 */
+.teams-grid-column {
+  @apply space-y-4;
+}
+
+/* 滚动容器 */
+.teams-scroll-container {
+  @apply h-80 overflow-y-auto pr-2;
+}
+
+/* 自定义滚动条样式 */
+.teams-scroll-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.teams-scroll-container::-webkit-scrollbar-track {
+  @apply bg-slate/10 rounded-full;
+}
+
+.teams-scroll-container::-webkit-scrollbar-thumb {
+  @apply bg-slate/30 rounded-full;
+}
+
+.teams-scroll-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate/50;
+}
+
+/* 两列网格布局 */
 .team-card {
   @apply relative rounded-2xl bg-white border border-slate/10 p-5;
   @apply cursor-pointer transition-all duration-300;
@@ -731,7 +771,7 @@ async function revokeApplication(applicationId: number) {
 /* 骨架屏 */
 .teams-skeleton,
 .applications-skeleton {
-  @apply grid gap-4 md:grid-cols-2 lg:grid-cols-3;
+  @apply h-80 overflow-hidden space-y-4 pr-2;
 }
 
 .skeleton-card {

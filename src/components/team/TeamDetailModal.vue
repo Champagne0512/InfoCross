@@ -129,7 +129,7 @@ watch(
               <div class="chat-messages">
                 <div v-if="loadingMessages" class="chat-loading">加载消息中...</div>
                 <div v-else>
-                  <p v-if="filteredMessages.length === 0" class="chat-empty">开始第一条对话吧 ✉️</p>
+                  <p v-if="filteredMessages.length === 0" class="chat-empty">还没有历史对话，根据上方提示发出你的第一条沟通，队长会尽快回复。</p>
                   <div v-else class="chat-thread">
                     <div
                       v-for="message in filteredMessages"
@@ -251,6 +251,7 @@ watch(
 .chat-hint {
   @apply text-xs text-slate;
 }
+
 
 .chat-messages {
   @apply flex-1 overflow-y-auto pr-1;
