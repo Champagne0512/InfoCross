@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Crown, Users, Clock, ChevronRight } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { fetchTeams } from '@/api/team'
-import { fetchTeamApplications } from '@/api/teamWorkspace'
+import { fetchTeamApplications, cancelTeamApplication } from '@/api/teamWorkspace'
 import type { Team, TeamApplication, TeamApplicationStatus } from '@/types/models'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
@@ -49,6 +49,7 @@ const sortedTeams = computed(() =>
 
 const applications = ref<TeamApplication[]>([])
 const applicationsLoading = ref(true)
+const cancelingApplications = ref<Record<number, boolean>>({})
 const applicationStatusText: Record<TeamApplicationStatus, string> = {
   pending: '待回复',
   approved: '已通过',
@@ -88,6 +89,18 @@ function getApplicationStatusLabel(status: TeamApplicationStatus) {
   return applicationStatusText[status]
 }
 
+async function revokeApplication(applicationId: number) {
+  cancelingApplications.value = { ...cancelingApplications.value, [applicationId]: true }
+  try {
+    await cancelTeamApplication(applicationId)
+    applications.value = applications.value.filter((app) => app.id !== applicationId)
+  } catch (error) {
+    console.error('撤销申请失败', error)
+  } finally {
+    cancelingApplications.value = { ...cancelingApplications.value, [applicationId]: false }
+  }
+}
+
 const stats = computed(() => ({
   owned: sortedTeams.value.filter(t => t.isOwner).length,
   joined: sortedTeams.value.filter(t => !t.isOwner).length,
@@ -100,8 +113,8 @@ const stats = computed(() => ({
     <!-- 页面头部 -->
     <section class="header-section">
       <div class="header-left">
-        <p class="font-mono text-mono text-slate mb-2 tracking-wider">INFOCROSS CREW</p>
-        <h1 class="text-hero font-sans font-bold text-charcoal mb-3 leading-tight">协作空间</h1>
+        <p class="font-mono text-mono text-slate tracking-wider">INFOCROSS CREW</p>
+        <h1 class="text-display font-sans font-bold text-charcoal leading-tight">协作空间</h1>
         <p class="text-body font-sans text-slate leading-relaxed max-w-md">
           统一管理你加入与发起的队伍，查看申请状态，与队员保持沟通
         </p>
@@ -258,7 +271,7 @@ const stats = computed(() => ({
       <div v-else-if="filteredApplications.length" class="space-y-3">
         <div
           v-for="(app, index) in filteredApplications"
-          :key="app.teamName"
+          :key="app.id"
           class="application-card"
           :style="{ animationDelay: `${index * 80}ms` }"
         >
@@ -267,16 +280,27 @@ const stats = computed(() => ({
             <p v-if="app.preferredRole" class="text-xs text-slate/70 mt-0.5">意向角色：{{ app.preferredRole }}</p>
             <p class="font-sans text-sm text-slate">{{ app.message || '未填写备注' }}</p>
           </div>
-          <span 
-            class="status-badge"
-            :class="{
-              'status-success': app.status === 'approved',
-              'status-pending': app.status === 'pending',
-              'status-danger': app.status === 'rejected'
-            }"
-          >
-            {{ getApplicationStatusLabel(app.status) }}
-          </span>
+          <div class="application-side">
+            <span 
+              class="status-badge"
+              :class="{
+                'status-success': app.status === 'approved',
+                'status-pending': app.status === 'pending',
+                'status-danger': app.status === 'rejected'
+              }"
+            >
+              {{ getApplicationStatusLabel(app.status) }}
+            </span>
+            <button
+              v-if="app.status === 'pending'"
+              type="button"
+              class="application-cancel-btn"
+              :disabled="cancelingApplications[app.id]"
+              @click="revokeApplication(app.id)"
+            >
+              {{ cancelingApplications[app.id] ? '撤销中…' : '撤销申请' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -296,21 +320,22 @@ const stats = computed(() => ({
 
 <style scoped>
 /* 头部区域 */
+
 .header-section {
-  @apply flex items-start justify-between py-8 lg:py-10 gap-8;
+  @apply flex flex-col lg:flex-row items-start justify-between gap-6 py-4;
 }
 
 .header-left {
-  @apply flex-1;
+  @apply flex-1 space-y-2;
 }
 
 /* 统计卡片 */
 .stats-cards {
-  @apply flex gap-4;
+  @apply grid grid-cols-3 gap-3 w-full lg:max-w-md;
 }
 
 .stat-card {
-  @apply px-6 py-5 rounded-2xl bg-white border border-slate/10 text-center min-w-[100px];
+  @apply px-4 py-4 rounded-xl bg-white border border-slate/10 text-center;
   @apply transition-all duration-300 hover:shadow-morandi hover:-translate-y-0.5;
 }
 
@@ -459,6 +484,23 @@ const stats = computed(() => ({
   @apply transition-all duration-300;
   @apply hover:shadow-morandi-sm;
   @apply animate-slide-up;
+}
+
+.application-side {
+  @apply flex flex-col items-end gap-2 min-w-[110px];
+}
+
+.application-cancel-btn {
+  @apply text-xs font-sans text-slate underline decoration-dotted decoration-1 underline-offset-4;
+  @apply transition-colors duration-200;
+}
+
+.application-cancel-btn:hover {
+  @apply text-charcoal;
+}
+
+.application-cancel-btn:disabled {
+  @apply text-slate/50 cursor-not-allowed;
 }
 
 .application-skeleton {

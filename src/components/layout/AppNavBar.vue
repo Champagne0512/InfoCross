@@ -6,7 +6,18 @@ import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import FrequencySwitch from '@/components/common/FrequencySwitch.vue'
 import BinaryOrbitAnimation from '@/components/common/BinaryOrbitAnimation.vue'
-import { LogOut, User, Settings, ChevronUp } from 'lucide-vue-next'
+import { 
+  LogOut, 
+  User, 
+  Settings, 
+  ChevronUp,
+  Home,
+  Compass,
+  Users,
+  MessageCircle,
+  LayoutGrid,
+  Zap
+} from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -27,21 +38,21 @@ function closeUserMenu() {
 const navItems = computed(() => {
   if (frequencyStore.isFocus) {
     return [
-      { label: '首页', path: '/' },
-      { label: '发现', path: '/team' },
-      { label: '协作', path: '/team/hub' },
-      { label: '消息', path: '/inbox' },
-      { label: '论坛', path: '/forum' },
-      { label: '个人', path: '/profile' },
+      { label: '首页', path: '/', icon: Home },
+      { label: '发现', path: '/team', icon: Compass },
+      { label: '协作', path: '/team/hub', icon: Users },
+      { label: '论坛', path: '/forum', icon: LayoutGrid },
+      { label: '消息', path: '/inbox', icon: MessageCircle },
+      { label: '个人', path: '/profile', icon: User },
     ]
   }
   return [
-    { label: '动态', path: '/' },
-    { label: '发现', path: '/team' },
-    { label: '协作', path: '/team/hub' },
-    { label: '消息', path: '/inbox' },
-    { label: '论坛', path: '/forum' },
-    { label: '我的', path: '/profile' },
+    { label: '动态', path: '/', icon: Zap },
+    { label: '发现', path: '/team', icon: Compass },
+    { label: '协作', path: '/team/hub', icon: Users },
+    { label: '论坛', path: '/forum', icon: LayoutGrid },
+    { label: '消息', path: '/inbox', icon: MessageCircle },
+    { label: '我的', path: '/profile', icon: User },
   ]
 })
 
@@ -96,7 +107,7 @@ function goAuth() {
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
-        class="flex items-center px-4 py-3 rounded-soft font-sans text-body transition-all duration-300"
+        class="flex items-center gap-3 px-4 py-3 rounded-soft font-sans text-body transition-all duration-300"
         :class="[
           activePath === item.path 
             ? (frequencyStore.isFocus 
@@ -105,6 +116,12 @@ function goAuth() {
             : 'text-slate hover:bg-slate/5 hover:text-charcoal'
         ]"
       >
+        <component 
+          :is="item.icon" 
+          :size="18" 
+          :stroke-width="activePath === item.path ? 2.2 : 1.8"
+          class="flex-shrink-0"
+        />
         <span>{{ item.label }}</span>
       </RouterLink>
     </div>

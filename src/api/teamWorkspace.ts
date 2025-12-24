@@ -227,6 +227,18 @@ export async function respondTeamApplication(
   return mapApplication(data as unknown as TeamApplicationRow)
 }
 
+export async function cancelTeamApplication(applicationId: number): Promise<void> {
+  const userId = await requireUserId()
+  const { error } = await supabase
+    .from('team_applications')
+    .delete()
+    .eq('id', applicationId)
+    .eq('applicant_id', userId)
+    .eq('status', 'pending')
+
+  if (error) throw error
+}
+
 export async function fetchTeamChatMessages(teamId: number, limit = 100, ownerId?: string): Promise<TeamChatMessage[]> {
   const { data, error } = await supabase
     .from('team_chat_messages')
