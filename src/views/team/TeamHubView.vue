@@ -131,15 +131,6 @@ const stats = computed(() => ({
           <p class="font-mono text-mono text-xs text-slate tracking-wider mb-1">MY TEAMS</p>
           <h2 class="text-h2 font-sans font-semibold text-charcoal">我的小组</h2>
         </div>
-        <RouterLink 
-          to="/publish" 
-          class="px-4 py-2 rounded-full font-sans text-sm font-medium transition-all duration-300"
-          :class="frequencyStore.isFocus 
-            ? 'bg-focus-accent text-white hover:bg-focus-accent/90' 
-            : 'bg-vibe-accent text-white hover:bg-vibe-accent/90'"
-        >
-          发起新项目
-        </RouterLink>
       </header>
 
       <!-- 加载状态 -->
@@ -178,19 +169,23 @@ const stats = computed(() => ({
           @mouseleave="hoveredTeamId = null"
           @click="router.push(`/team/${team.id}`)"
         >
-          <!-- 创建者标志 -->
-          <div v-if="team.isOwner" class="owner-badge">
-            <Crown :size="12" />
-            <span>创建者</span>
-          </div>
-
           <!-- 卡片头部 -->
           <div class="card-header">
-            <div 
-              class="team-avatar"
-              :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-            >
-              {{ team.name.charAt(0).toUpperCase() }}
+            <div class="avatar-wrapper">
+              <div 
+                class="team-avatar"
+                :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
+              >
+                {{ team.name.charAt(0).toUpperCase() }}
+              </div>
+              <div
+                v-if="team.isOwner"
+                class="owner-mark"
+                :class="frequencyStore.isFocus ? 'owner-mark-focus' : 'owner-mark-vibe'"
+                aria-label="创建者身份标记"
+              >
+                <Crown :size="10" stroke-width="1.8" />
+              </div>
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-sans font-semibold text-charcoal truncate">{{ team.name }}</h3>
@@ -355,19 +350,26 @@ const stats = computed(() => ({
   border-color: var(--owner-border-color, rgba(147, 168, 172, 0.3));
 }
 
-/* 创建者标志 */
-.owner-badge {
-  @apply absolute top-3 right-3 flex items-center gap-1;
-  @apply px-2 py-1 rounded-full;
-  @apply bg-gradient-to-r from-amber-400 to-orange-400;
-  @apply text-white text-xs font-medium;
-  @apply shadow-sm;
-  animation: badge-pulse 2s ease-in-out infinite;
+/* 头像与创建者标记 */
+.avatar-wrapper {
+  @apply relative;
 }
 
-@keyframes badge-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+.owner-mark {
+  @apply absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center;
+  @apply text-[10px] border backdrop-blur-xl bg-white/90;
+}
+
+.owner-mark-focus {
+  border-color: rgba(147, 168, 172, 0.6);
+  color: #62838a;
+  box-shadow: 0 4px 12px rgba(147, 168, 172, 0.35);
+}
+
+.owner-mark-vibe {
+  border-color: rgba(196, 136, 126, 0.6);
+  color: #a55f54;
+  box-shadow: 0 4px 12px rgba(196, 136, 126, 0.35);
 }
 
 /* 卡片头部 */

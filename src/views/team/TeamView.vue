@@ -5,18 +5,22 @@ import AppButton from '@/components/common/AppButton.vue'
 import { fetchTeams } from '@/api/team'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import JoinTeamModal from '@/components/team/JoinTeamModal.vue'
+import TeamDetailModal from '@/components/team/TeamDetailModal.vue'
 import type { Team } from '@/types/models'
 import { useAuth } from '@/composables/useAuth'
 import { createTeamApplication } from '@/api/teamWorkspace'
 
 const frequencyStore = useFrequencyStore()
 const { profile } = useAuth()
+const currentUserId = computed(() => profile.value?.id || '')
 
 const teams = ref<Team[]>([])
 const loading = ref(true)
 const filterExpanded = ref(false)
 const showDrawer = ref(false)
 const selectedTeam = ref<Team | null>(null)
+const detailTeam = ref<Team | null>(null)
+const showDetailModal = ref(false)
 const toastMessage = ref('')
 const feedbackDialog = ref<{ teamName: string; mode: 'focus' | 'vibe' } | null>(null)
 
@@ -190,7 +194,13 @@ async function handleJoinTeam(team: Team) {
 }
 
 function handleViewTeam(team: Team) {
-  console.log('查看团队详情:', team.name)
+  detailTeam.value = team
+  showDetailModal.value = true
+}
+
+function closeDetailModal() {
+  showDetailModal.value = false
+  detailTeam.value = null
 }
 
 function resetFilters() {
@@ -475,13 +485,21 @@ function closeFeedbackDialog() {
     </section>
   </div>
 
-  <JoinTeamModal
-    :open="showDrawer"
-    :team="selectedTeam"
-    :mode="frequencyStore.mode"
-    @close="showDrawer = false"
-    @submit="handleDrawerSubmit"
-  />
+<JoinTeamModal
+  :open="showDrawer"
+  :team="selectedTeam"
+  :mode="frequencyStore.mode"
+  @close="showDrawer = false"
+  @submit="handleDrawerSubmit"
+/>
+
+<TeamDetailModal
+  :open="showDetailModal"
+  :team="detailTeam"
+  :mode="frequencyStore.mode"
+  :current-user-id="currentUserId"
+  @close="closeDetailModal"
+/>
 
   <transition name="feedback-fade">
     <div v-if="feedbackDialog" class="feedback-overlay">

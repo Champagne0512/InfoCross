@@ -64,7 +64,7 @@ const form = reactive({
   college: '',
   maxMembers: '5',
   skills: '',
-  deadline: '',
+  deadline: getDefaultDateTime(),
 })
 
 const creating = ref(false)
@@ -293,7 +293,7 @@ function resetForm() {
   form.college = ''
   form.maxMembers = '5'
   form.skills = ''
-  form.deadline = ''
+  form.deadline = getDefaultDateTime()
 }
 
 function openSuccessDialog(payload: {
@@ -409,7 +409,8 @@ function confirmSuccessAction() {
               v-if="isTeamMode"
               label="截止日期"
               v-model="form.deadline"
-              type="date"
+              type="datetime-local"
+              :mono="true"
             />
           </div>
           
