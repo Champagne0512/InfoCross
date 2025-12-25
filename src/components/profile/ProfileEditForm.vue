@@ -43,6 +43,57 @@ const avatarUrl = computed(() => {
   return null
 })
 
+// 计算字符长度：汉字算1，3个英文/数字算1，不连续的空格和标点不算
+function calcBioLength(str: string): number {
+  let len = 0
+  let asciiCount = 0
+  let spaceOrPunctCount = 0
+  
+  // 空格和常见标点
+  const isSpaceOrPunct = (char: string) => /^[\s\p{P}]$/u.test(char)
+  
+  for (const char of str) {
+    if (isSpaceOrPunct(char)) {
+      spaceOrPunctCount++
+    } else {
+      // 遇到非空格/标点，检查之前累积的空格/标点
+      if (spaceOrPunctCount > 0) {
+        if (spaceOrPunctCount >= 3) {
+          // 连续3个及以上才计入长度
+          len += Math.ceil(spaceOrPunctCount / 3)
+        }
+        spaceOrPunctCount = 0
+      }
+      
+      // 处理当前字符
+      if (char.charCodeAt(0) <= 127) {
+        asciiCount++
+        if (asciiCount === 3) {
+          len++
+          asciiCount = 0
+        }
+      } else {
+        len++
+      }
+    }
+  }
+  
+  // 处理末尾的空格/标点
+  if (spaceOrPunctCount >= 3) {
+    len += Math.ceil(spaceOrPunctCount / 3)
+  }
+  
+  // 处理剩余的ASCII字符
+  if (asciiCount > 0) {
+    len += Math.ceil(asciiCount / 3)
+  }
+  
+  return len
+}
+
+const bioLength = computed(() => calcBioLength(form.value.bio))
+const bioExceeded = computed(() => bioLength.value > 20)
+
 function handleAvatarSelect(event: Event) {
   const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
@@ -100,6 +151,12 @@ function removeBanner() {
 
 async function handleSubmit() {
   error.value = null
+  
+  if (bioExceeded.value) {
+    error.value = '个性签名超出长度限制'
+    return
+  }
+  
   isSaving.value = true
 
   try {
@@ -310,11 +367,14 @@ function handleCancel() {
           type="text"
           id="bio"
           v-model="form.bio"
-          maxlength="20"
           placeholder="写一句话介绍自己..."
-          class="w-full px-4 py-3 rounded-lg border border-slate/20 bg-white font-sans text-charcoal focus:outline-none focus:ring-2 focus:ring-morandi-lavender/20 focus:border-morandi-lavender transition-colors"
+          class="w-full px-4 py-3 rounded-lg border bg-white font-sans text-charcoal focus:outline-none focus:ring-2 focus:ring-morandi-lavender/20 transition-colors"
+          :class="bioExceeded ? 'border-red-300 focus:border-red-400' : 'border-slate/20 focus:border-morandi-lavender'"
         />
-        <p class="text-xs text-slate mt-1 text-right">{{ form.bio.length }}/20</p>
+        <p class="text-xs mt-1 text-right" :class="bioExceeded ? 'text-red-500' : 'text-slate'">
+          {{ bioLength }}/20
+          <span class="text-slate/60 ml-1">(3英文=1中文)</span>
+        </p>
       </div>
 
       <!-- 按钮组 -->
