@@ -20,7 +20,6 @@ import {
   Maximize2,
   Minimize2,
   Share2,
-  X,
 } from 'lucide-vue-next'
 import {
   fetchForumThreads,
@@ -255,20 +254,16 @@ async function handleSignalLike(thread: ForumThread) {
   }
 }
 
-// Signal 评论弹窗相关
-const showSignalCommentModal = ref(false)
-const signalCommentTarget = ref<ForumThread | null>(null)
-const signalComments = ref<ForumComment[]>([])
-const signalNewComment = ref('')
-const signalCommentAnonymous = ref(false)
-const signalCommentsLoading = ref(false)
-const signalSubmittingComment = ref(false)
+// Signal 评论相关 - 改为展开式
+const expandedThreadComments = ref<Map<number, ForumComment[]>>(new Map())
+const expandedThreadLoading = ref<Set<number>>(new Set())
 
-async function handleSignalComment(thread: ForumThread) {
-  signalCommentTarget.value = thread
-  showSignalCommentModal.value = true
-  signalCommentsLoading.value = true
-
+async function handleSignalToggleComments(thread: ForumThread) {
+  // 如果已经加载过，不重复加载
+  if (expandedThreadComments.value.has(thread.id)) return
+  
+  expandedThreadLoading.value.add(thread.id)
+  
   // 增加浏览量
   incrementViewCount(thread.id)
 
@@ -277,7 +272,7 @@ async function handleSignalComment(thread: ForumThread) {
       fetchComments(thread.id),
       checkUserInteractions(thread.id),
     ])
-    signalComments.value = threadComments
+    expandedThreadComments.value.set(thread.id, threadComments)
     if (interactions.liked) {
       userLikedThreads.value.add(thread.id)
     }
@@ -291,34 +286,23 @@ async function handleSignalComment(thread: ForumThread) {
   } catch (error) {
     console.error('加载评论失败', error)
   } finally {
-    signalCommentsLoading.value = false
+    expandedThreadLoading.value.delete(thread.id)
   }
 }
 
-function closeSignalCommentModal() {
-  showSignalCommentModal.value = false
-  signalCommentTarget.value = null
-  signalComments.value = []
-  signalNewComment.value = ''
-  signalCommentAnonymous.value = false
-}
-
-async function submitSignalComment() {
-  if (!signalNewComment.value.trim() || !signalCommentTarget.value) return
+async function handleSignalSubmitComment(payload: { thread: ForumThread; content: string; anonymous: boolean }) {
+  const { thread, content, anonymous } = payload
+  if (!content.trim()) return
   
-  signalSubmittingComment.value = true
   try {
-    const comment = await createComment(
-      signalCommentTarget.value.id,
-      signalNewComment.value,
-      signalCommentAnonymous.value,
-    )
-    signalComments.value.push(comment)
-    signalNewComment.value = ''
-    signalCommentAnonymous.value = false
+    const comment = await createComment(thread.id, content, anonymous)
+    
+    // 更新评论列表
+    const existingComments = expandedThreadComments.value.get(thread.id) || []
+    expandedThreadComments.value.set(thread.id, [...existingComments, comment])
     
     // 更新帖子评论数
-    const idx = signalThreads.value.findIndex((t) => t.id === signalCommentTarget.value?.id)
+    const idx = signalThreads.value.findIndex((t) => t.id === thread.id)
     if (idx !== -1) {
       const current = signalThreads.value[idx]
       if (current) {
@@ -330,8 +314,6 @@ async function submitSignalComment() {
     }
   } catch (error) {
     console.error('评论失败', error)
-  } finally {
-    signalSubmittingComment.value = false
   }
 }
 
@@ -367,14 +349,17 @@ async function handleCommentLike(comment: ForumComment) {
         comments.value[idx] = { ...existing, likeCount: result.likeCount }
       }
     }
-    // 同时更新 signal 评论列表
-    const signalIdx = signalComments.value.findIndex((c) => c.id === comment.id)
-    if (signalIdx !== -1) {
-      const existing = signalComments.value[signalIdx]
-      if (existing) {
-        signalComments.value[signalIdx] = { ...existing, likeCount: result.likeCount }
+    // 同时更新展开式评论列表
+    expandedThreadComments.value.forEach((commentList, threadId) => {
+      const commentIdx = commentList.findIndex((c) => c.id === comment.id)
+      if (commentIdx !== -1) {
+        const existing = commentList[commentIdx]
+        if (existing) {
+          commentList[commentIdx] = { ...existing, likeCount: result.likeCount }
+          expandedThreadComments.value.set(threadId, [...commentList])
+        }
       }
-    }
+    })
     // 更新用户点赞状态
     if (result.liked) {
       userLikedComments.value.add(comment.id)
@@ -625,8 +610,13 @@ function scrollToComments() {
                 :user-college="userCollege || undefined"
                 :is-last="index === signalThreads.length - 1"
                 :liked="isThreadLiked(thread.id)"
+                :comments="expandedThreadComments.get(thread.id)"
+                :comments-loading="expandedThreadLoading.has(thread.id)"
+                :liked-comments="userLikedComments"
                 @like="handleSignalLike"
-                @comment="handleSignalComment"
+                @toggle-comments="handleSignalToggleComments"
+                @submit-comment="handleSignalSubmitComment"
+                @like-comment="handleCommentLike"
                 @share="handleSignalShare"
               />
             </TransitionGroup>
@@ -1007,97 +997,6 @@ function scrollToComments() {
       </div>
     </Transition>
 
-    <!-- Signal 评论弹窗 -->
-    <Transition name="modal">
-      <div v-if="showSignalCommentModal" class="modal-overlay" @click.self="closeSignalCommentModal">
-        <div class="modal-content signal-comment-modal border-vibe-primary/30">
-          <div class="modal-header">
-            <h3 class="font-sans text-h2 text-charcoal">{{ t('forum.comments') }}</h3>
-            <button class="close-btn" @click="closeSignalCommentModal">
-              <X :size="18" />
-            </button>
-          </div>
-
-          <!-- 原帖内容 -->
-          <div v-if="signalCommentTarget" class="signal-original">
-            <p class="signal-original-text font-sans">{{ signalCommentTarget.contentText }}</p>
-            <div class="signal-original-meta font-mono">
-              <span>{{ signalCommentTarget.authorName || '匿名用户' }}</span>
-              <span>·</span>
-              <span>{{ signalCommentTarget.likeCount }} 赞</span>
-              <span>·</span>
-              <span>{{ signalCommentTarget.commentCount }} 评论</span>
-            </div>
-          </div>
-
-          <div class="modal-body signal-comment-body">
-            <!-- 评论输入 -->
-            <div class="comment-input-area">
-              <textarea
-                v-model="signalNewComment"
-                class="comment-input font-sans"
-                rows="2"
-                :placeholder="t('forum.writeComment')"
-              />
-              <div class="comment-input-actions">
-                <label class="anonymous-toggle">
-                  <input v-model="signalCommentAnonymous" type="checkbox" class="toggle-input" />
-                  <span class="toggle-label font-sans text-xs">{{ t('common.anonymous') }}</span>
-                </label>
-                <AppButton
-                  variant="primary"
-                  size="sm"
-                  class="vibe-button"
-                  :loading="signalSubmittingComment"
-                  :disabled="!signalNewComment.trim()"
-                  @click="submitSignalComment"
-                >
-                  发送
-                </AppButton>
-              </div>
-            </div>
-
-            <!-- 评论列表 -->
-            <div v-if="signalCommentsLoading" class="text-center py-4">
-              <span class="font-mono text-sm text-slate">{{ t('forum.loadingComments') }}</span>
-            </div>
-            <div v-else-if="signalComments.length === 0" class="text-center py-4">
-              <span class="font-sans text-sm text-slate">{{ t('forum.noComments') }}</span>
-            </div>
-            <div v-else class="comments-list">
-              <TransitionGroup name="list" tag="div">
-                <div
-                  v-for="comment in signalComments"
-                  :key="comment.id"
-                  class="comment-item"
-                >
-                  <div class="comment-avatar vibe-avatar">
-                    {{ (comment.authorName || '匿')[0] }}
-                  </div>
-                  <div class="comment-content">
-                    <div class="comment-meta font-mono">
-                      <span class="comment-author">{{ comment.authorName || t('forum.anonymousUser') }}</span>
-                      <span class="comment-time">
-                        {{ new Date(comment.createdAt).toLocaleDateString() }}
-                      </span>
-                    </div>
-                    <p class="comment-text font-sans">{{ comment.content }}</p>
-                    <button
-                      class="comment-like-btn font-mono"
-                      :class="{ 'comment-liked': isCommentLiked(comment.id) }"
-                      @click="handleCommentLike(comment)"
-                    >
-                      <Heart :size="12" :fill="isCommentLiked(comment.id) ? 'currentColor' : 'none'" />
-                      {{ comment.likeCount || 0 }}
-                    </button>
-                  </div>
-                </div>
-              </TransitionGroup>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -1584,31 +1483,6 @@ function scrollToComments() {
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
   transform: scale(0.95) translateY(20px);
-}
-
-/* Signal 评论弹窗样式 */
-.signal-comment-modal {
-  @apply max-w-md;
-}
-
-.signal-original {
-  @apply px-6 py-4 bg-vibe-primary/5 border-b border-vibe-primary/10;
-}
-
-.signal-original-text {
-  @apply text-sm text-charcoal leading-relaxed;
-}
-
-.signal-original-meta {
-  @apply flex items-center gap-2 text-xs text-slate mt-2;
-}
-
-.signal-comment-body {
-  @apply max-h-96 overflow-y-auto;
-}
-
-.vibe-avatar {
-  @apply bg-vibe-primary/20 text-vibe-accent;
 }
 
 /* 统计按钮样式 */
