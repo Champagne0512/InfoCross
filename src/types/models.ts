@@ -24,6 +24,7 @@ export interface UserProfile {
   tags: string[]
   avatarUrl?: string
   bio?: string
+  bannerUrl?: string
 }
 
 export type NotificationCategory = 'forum' | 'team' | 'task' | 'system'

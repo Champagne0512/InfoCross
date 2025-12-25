@@ -6,7 +6,7 @@ import ActionGrid from '@/components/profile/ActionGrid.vue'
 import ProfileEditForm from '@/components/profile/ProfileEditForm.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
-import { User, LogOut, Sparkles } from 'lucide-vue-next'
+import { User, Sparkles } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const { profile, logout } = useAuth()
@@ -76,6 +76,7 @@ async function handleLogout() {
         <ProfileHeader 
           :profile="profile" 
           @edit="openEditModal"
+          @logout="handleLogout"
         />
       </div>
       
@@ -85,20 +86,6 @@ async function handleLogout() {
         :class="{ 'loaded': isLoaded }"
       >
         <ActionGrid @action="handleAction" />
-      </div>
-
-      <!-- 退出登录按钮 -->
-      <div 
-        class="logout-container"
-        :class="{ 'loaded': isLoaded }"
-      >
-        <div class="max-w-6xl mx-auto px-6 py-8">
-          <button class="logout-btn" @click="handleLogout">
-            <div class="logout-btn-bg"></div>
-            <LogOut :size="18" />
-            <span>{{ t('common.logout') }}</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -157,7 +144,7 @@ async function handleLogout() {
 /* 页面基础样式 */
 .profile-page,
 .not-logged-in {
-  @apply min-h-screen bg-cream relative overflow-hidden;
+  @apply min-h-screen relative overflow-hidden;
 }
 
 /* 动态背景 */
@@ -216,7 +203,6 @@ async function handleLogout() {
 /* 渐进式加载动画 */
 .profile-header-container,
 .action-grid-container,
-.logout-container,
 .login-prompt {
   @apply opacity-0 translate-y-8;
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -232,34 +218,9 @@ async function handleLogout() {
   transition-delay: 0.4s;
 }
 
-.logout-container.loaded {
-  @apply opacity-100 translate-y-0;
-  transition-delay: 0.6s;
-}
-
 .login-prompt.loaded {
   @apply opacity-100 translate-y-0;
   transition-delay: 0.3s;
-}
-
-/* 退出登录按钮增强 */
-.logout-btn {
-  @apply relative w-full flex items-center justify-center gap-2 px-4 py-3 rounded-soft;
-  @apply border border-red-200 text-red-500 font-sans text-sm font-medium;
-  @apply transition-all duration-300 hover:border-red-300 hover:shadow-lg;
-  @apply overflow-hidden;
-}
-
-.logout-btn-bg {
-  @apply absolute inset-0 bg-red-50 opacity-0 transition-opacity duration-300;
-}
-
-.logout-btn:hover .logout-btn-bg {
-  @apply opacity-100;
-}
-
-.logout-btn:hover {
-  @apply -translate-y-0.5 scale-[1.02];
 }
 
 /* 未登录状态增强 */

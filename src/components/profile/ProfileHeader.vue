@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { UserProfile } from '@/types/models'
-import { User, MapPin, Calendar } from 'lucide-vue-next'
+import { User, MapPin, Calendar, LogOut } from 'lucide-vue-next'
 
 const props = defineProps<{
   profile: UserProfile
@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   edit: []
+  logout: []
 }>()
 
 const joinDate = computed(() => {
@@ -20,8 +21,34 @@ const joinDate = computed(() => {
 <template>
   <section class="py-6">
     <div class="max-w-6xl mx-auto px-6">
-      <div class="profile-card">
+      <div class="profile-card group">
+        <!-- 背景图 -->
+        <div 
+          v-if="profile.bannerUrl" 
+          class="card-banner"
+          :style="{ backgroundImage: `url(${profile.bannerUrl})` }"
+        ></div>
+        <div class="card-overlay"></div>
         <div class="card-glow"></div>
+        
+        <!-- 悬停时显示的操作按钮 -->
+        <div class="hover-actions">
+          <button 
+            @click="emit('edit')"
+            class="hover-btn edit-btn"
+          >
+            <User class="w-4 h-4" />
+            <span>编辑</span>
+          </button>
+          <button 
+            @click="emit('logout')"
+            class="hover-btn logout-btn"
+          >
+            <LogOut class="w-4 h-4" />
+            <span>退出</span>
+          </button>
+        </div>
+        
         <div class="flex flex-col lg:flex-row items-center lg:items-start gap-6 relative z-10">
           <!-- 左侧：头像 -->
           <div class="flex-shrink-0">
@@ -49,21 +76,11 @@ const joinDate = computed(() => {
           <!-- 右侧：个人信息 -->
           <div class="flex-1 text-center lg:text-left">
             <!-- 姓名行 -->
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+            <div class="mb-4">
               <h1 class="username-title">
                 {{ profile.username }}
                 <span class="title-underline"></span>
               </h1>
-              
-              <!-- 编辑按钮 -->
-              <button 
-                @click="emit('edit')"
-                class="edit-btn group"
-              >
-                <div class="btn-bg"></div>
-                <User class="w-4 h-4 text-slate relative z-10 transition-transform duration-300 group-hover:scale-110" />
-                <span class="font-sans text-sm font-medium text-slate relative z-10">编辑资料</span>
-              </button>
             </div>
             
             <!-- 基本信息 -->
@@ -109,10 +126,9 @@ const joinDate = computed(() => {
 <style scoped>
 /* 卡片样式 */
 .profile-card {
-  @apply relative p-8 rounded-morandi bg-white/80 backdrop-blur-sm;
+  @apply relative p-8 rounded-morandi;
   @apply border border-slate/10 shadow-morandi;
   @apply transition-all duration-500;
-  overflow: hidden;
 }
 
 .profile-card:hover {
@@ -120,13 +136,71 @@ const joinDate = computed(() => {
   transform: translateY(-2px);
 }
 
+/* 背景图 */
+.card-banner {
+  @apply absolute inset-0 rounded-morandi;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+/* 左侧渐变遮罩 */
+.card-overlay {
+  @apply absolute inset-0 rounded-morandi;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 40%, rgba(255, 255, 255, 0.4) 70%, transparent 100%);
+  z-index: 1;
+}
+
+.profile-card:not(:has(.card-banner)) .card-overlay {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+}
+
 .card-glow {
-  @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+  @apply absolute inset-0 rounded-morandi opacity-0 transition-opacity duration-500;
   background: radial-gradient(circle at 30% 30%, rgba(147, 168, 172, 0.1) 0%, transparent 50%);
+  z-index: 2;
 }
 
 .profile-card:hover .card-glow {
   @apply opacity-100;
+}
+
+/* 悬停操作按钮 */
+.hover-actions {
+  @apply absolute top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20;
+  right: -72px;
+  @apply opacity-0 translate-x-2 transition-all duration-300;
+}
+
+.profile-card:hover .hover-actions {
+  @apply opacity-100 translate-x-0;
+}
+
+.hover-btn {
+  @apply px-3 py-2 rounded-soft flex items-center gap-2;
+  @apply text-sm font-sans font-medium;
+  @apply transition-all duration-300 shadow-morandi-sm;
+}
+
+.hover-btn:hover {
+  @apply shadow-morandi;
+}
+
+.hover-btn.edit-btn {
+  @apply bg-white text-slate border border-slate/20;
+}
+
+.hover-btn.edit-btn:hover {
+  @apply bg-morandi-blue/10 text-morandi-blue border-morandi-blue/30;
+}
+
+.hover-btn.logout-btn {
+  @apply bg-white text-red-400 border border-red-200;
+}
+
+.hover-btn.logout-btn:hover {
+  @apply bg-red-50 text-red-500 border-red-300;
 }
 
 /* 头像样式 */
@@ -161,7 +235,7 @@ const joinDate = computed(() => {
 
 /* 用户名样式 */
 .username-title {
-  @apply relative text-h1 font-sans font-bold text-charcoal;
+  @apply relative text-h1 font-sans font-bold text-charcoal inline-block;
 }
 
 .title-underline {
@@ -171,26 +245,6 @@ const joinDate = computed(() => {
 
 .profile-card:hover .title-underline {
   @apply w-full;
-}
-
-/* 编辑按钮 */
-.edit-btn {
-  @apply relative flex items-center gap-2 px-4 py-2 rounded-soft;
-  @apply border border-slate/20 overflow-hidden;
-  @apply transition-all duration-300;
-}
-
-.btn-bg {
-  @apply absolute inset-0 bg-white opacity-80;
-  @apply transition-all duration-300;
-}
-
-.edit-btn:hover .btn-bg {
-  @apply opacity-100;
-}
-
-.edit-btn:hover {
-  @apply shadow-morandi-sm -translate-y-0.5;
 }
 
 /* 信息行 */

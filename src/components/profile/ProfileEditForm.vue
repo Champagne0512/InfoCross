@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { UserProfile } from '@/types/models'
-import { updateProfile, uploadAvatar } from '@/api/auth'
+import { updateProfile, uploadAvatar, uploadBanner } from '@/api/auth'
 import { useUserStore } from '@/stores/userStore'
+import ImageCropper from '@/components/common/ImageCropper.vue'
 
 const props = defineProps<{
   profile: UserProfile
@@ -25,9 +26,16 @@ const form = ref({
 
 const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(props.profile.avatarUrl || null)
+const bannerFile = ref<File | null>(null)
+const bannerPreview = ref<string | null>(props.profile.bannerUrl || null)
 const isUploading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
+
+// 裁剪相关
+const showAvatarCropper = ref(false)
+const showBannerCropper = ref(false)
+const tempImageForCrop = ref<string>('')
 
 const avatarUrl = computed(() => {
   if (avatarPreview.value) return avatarPreview.value
@@ -35,16 +43,59 @@ const avatarUrl = computed(() => {
   return null
 })
 
-function handleAvatarChange(event: Event) {
+function handleAvatarSelect(event: Event) {
   const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
-    avatarFile.value = input.files[0]
     const reader = new FileReader()
     reader.onload = (e) => {
-      avatarPreview.value = e.target?.result as string
+      tempImageForCrop.value = e.target?.result as string
+      showAvatarCropper.value = true
     }
-    reader.readAsDataURL(avatarFile.value)
+    reader.readAsDataURL(input.files[0])
   }
+  input.value = ''
+}
+
+function handleAvatarCropConfirm(blob: Blob) {
+  avatarFile.value = new File([blob], 'avatar.png', { type: 'image/png' })
+  avatarPreview.value = URL.createObjectURL(blob)
+  showAvatarCropper.value = false
+  tempImageForCrop.value = ''
+}
+
+function handleAvatarCropCancel() {
+  showAvatarCropper.value = false
+  tempImageForCrop.value = ''
+}
+
+function handleBannerSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      tempImageForCrop.value = e.target?.result as string
+      showBannerCropper.value = true
+    }
+    reader.readAsDataURL(input.files[0])
+  }
+  input.value = ''
+}
+
+function handleBannerCropConfirm(blob: Blob) {
+  bannerFile.value = new File([blob], 'banner.png', { type: 'image/png' })
+  bannerPreview.value = URL.createObjectURL(blob)
+  showBannerCropper.value = false
+  tempImageForCrop.value = ''
+}
+
+function handleBannerCropCancel() {
+  showBannerCropper.value = false
+  tempImageForCrop.value = ''
+}
+
+function removeBanner() {
+  bannerFile.value = null
+  bannerPreview.value = null
 }
 
 async function handleSubmit() {
@@ -53,12 +104,19 @@ async function handleSubmit() {
 
   try {
     let avatarUrl = props.profile.avatarUrl
+    let bannerUrl = bannerPreview.value || props.profile.bannerUrl
 
     if (avatarFile.value) {
       isUploading.value = true
       avatarUrl = await uploadAvatar(props.profile.id, avatarFile.value)
-      isUploading.value = false
     }
+
+    if (bannerFile.value) {
+      isUploading.value = true
+      bannerUrl = await uploadBanner(props.profile.id, bannerFile.value)
+    }
+
+    isUploading.value = false
 
     await updateProfile(props.profile.id, {
       username: form.value.username.trim(),
@@ -69,6 +127,7 @@ async function handleSubmit() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0),
       avatarUrl,
+      bannerUrl: bannerUrl || undefined,
       bio: form.value.bio.trimEnd() || undefined
     })
 
@@ -110,6 +169,43 @@ function handleCancel() {
 
     <!-- 表单 -->
     <form @submit.prevent="handleSubmit" class="space-y-6">
+      <!-- 背景图上传 -->
+      <div>
+        <label class="block text-sm font-sans font-medium text-charcoal mb-3">卡片背景</label>
+        <div class="relative rounded-xl overflow-hidden border border-slate/20">
+          <div 
+            class="h-32 bg-gradient-to-r from-morandi-blue/20 to-morandi-lavender/20"
+            :style="bannerPreview ? { backgroundImage: `url(${bannerPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}"
+          >
+            <div class="absolute inset-0 bg-gradient-to-r from-white/80 via-white/40 to-transparent"></div>
+          </div>
+          <div class="absolute bottom-3 right-3 flex gap-2">
+            <input 
+              type="file" 
+              id="banner" 
+              accept="image/*"
+              @change="handleBannerSelect"
+              class="hidden"
+            />
+            <label 
+              for="banner"
+              class="px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur border border-slate/20 text-xs font-sans text-slate hover:bg-white cursor-pointer transition-colors"
+            >
+              {{ bannerPreview ? '更换' : '上传背景' }}
+            </label>
+            <button 
+              v-if="bannerPreview"
+              type="button"
+              @click="removeBanner"
+              class="px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur border border-red-200 text-xs font-sans text-red-500 hover:bg-red-50 transition-colors"
+            >
+              移除
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-slate mt-2">推荐尺寸 1200×400，支持 JPG、PNG 格式</p>
+      </div>
+
       <!-- 头像上传 -->
       <div>
         <label class="block text-sm font-sans font-medium text-charcoal mb-3">头像</label>
@@ -139,7 +235,7 @@ function handleCancel() {
               type="file" 
               id="avatar" 
               accept="image/*"
-              @change="handleAvatarChange"
+              @change="handleAvatarSelect"
               class="hidden"
             />
             <label 
@@ -240,5 +336,29 @@ function handleCancel() {
         </button>
       </div>
     </form>
+
+    <!-- 头像裁剪弹窗 -->
+    <Teleport to="body">
+      <ImageCropper
+        v-if="showAvatarCropper"
+        :image="tempImageForCrop"
+        :aspect-ratio="1"
+        title="裁剪头像"
+        @confirm="handleAvatarCropConfirm"
+        @cancel="handleAvatarCropCancel"
+      />
+    </Teleport>
+
+    <!-- 背景裁剪弹窗 -->
+    <Teleport to="body">
+      <ImageCropper
+        v-if="showBannerCropper"
+        :image="tempImageForCrop"
+        :aspect-ratio="3"
+        title="裁剪背景图"
+        @confirm="handleBannerCropConfirm"
+        @cancel="handleBannerCropCancel"
+      />
+    </Teleport>
   </div>
 </template>

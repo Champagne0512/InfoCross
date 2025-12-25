@@ -17,6 +17,7 @@ export interface UpdateProfilePayload {
   major: string
   tags: string[]
   avatarUrl?: string
+  bannerUrl?: string
   bio?: string
 }
 
@@ -33,6 +34,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     tags: row.tags ?? [],
     avatarUrl: row.avatar_url ?? undefined,
     bio: row.bio ?? undefined,
+    bannerUrl: (row as any).banner_url ?? undefined,
   }
 }
 
@@ -131,6 +133,9 @@ export async function updateProfile(userId: string, payload: UpdateProfilePayloa
     bio: payload.bio,
   }
 
+  // 添加 banner_url
+  ;(updates as any).banner_url = payload.bannerUrl
+
   const { error: updateError } = await supabase
     .from('profiles')
     .update(updates)
@@ -145,6 +150,24 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
   const fileExt = file.name.split('.').pop()
   const fileName = `${Date.now()}.${fileExt}`
   const filePath = `${userId}/${fileName}` // 每位用户在 bucket 中一个独立文件夹，匹配 RLS 策略
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file)
+
+  if (uploadError) throw uploadError
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(filePath)
+
+  return publicUrl
+}
+
+export async function uploadBanner(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `banner_${Date.now()}.${fileExt}`
+  const filePath = `${userId}/${fileName}`
 
   const { error: uploadError } = await supabase.storage
     .from('avatars')
