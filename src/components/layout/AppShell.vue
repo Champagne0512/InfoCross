@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppNavBar from './AppNavBar.vue'
 import ThreeBodyAnimation from '../ThreeBodyAnimation.vue'
+import GlobalAiAssistant from '@/components/common/GlobalAiAssistant.vue'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
 const frequencyStore = useFrequencyStore()
@@ -23,5 +24,6 @@ const frequencyStore = useFrequencyStore()
         <slot />
       </div>
     </main>
+    <GlobalAiAssistant />
   </div>
 </template>
