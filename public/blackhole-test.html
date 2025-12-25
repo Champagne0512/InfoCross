@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑洞按钮测试</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: sans-serif;
+    }
+    
+    .info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 14px;
+    }
+
+    /* 按钮容器 */
+    .blackhole-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #0a0a0a;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      position: relative;
+      box-shadow: 
+        0 4px 30px rgba(0,0,0,0.6),
+        0 0 60px rgba(0,0,0,0.4);
+      transition: transform 0.3s ease;
+    }
+
+    .blackhole-btn:hover {
+      transform: scale(1.1);
+    }
+
+    /* 状态容器 */
+    .state-default,
+    .state-active {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .state-default {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .state-active {
+      opacity: 0;
+      transform: scale(0.6) rotate(180deg);
+    }
+
+    .blackhole-btn.is-active .state-default {
+      opacity: 0;
+      transform: scale(0.6) rotate(-180deg);
+    }
+
+    .blackhole-btn.is-active .state-active {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    /* ===== 默认状态：吸入黑洞 ===== */
+    .default-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .center-ring {
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      animation: ring-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes ring-pulse {
+      0%, 100% { 
+        stroke-opacity: 0.5;
+        stroke-width: 1.5;
+      }
+      50% { 
+        stroke-opacity: 1;
+        stroke-width: 2.5;
+      }
+    }
+
+    .particle {
+      fill: white;
+      opacity: 0;
+      animation: particle-suck 2.5s ease-in infinite;
+    }
+
+    .particle:nth-child(2) { animation-delay: 0s; }
+    .particle:nth-child(3) { animation-delay: 0.31s; }
+    .particle:nth-child(4) { animation-delay: 0.62s; }
+    .particle:nth-child(5) { animation-delay: 0.93s; }
+    .particle:nth-child(6) { animation-delay: 1.24s; }
+    .particle:nth-child(7) { animation-delay: 1.55s; }
+    .particle:nth-child(8) { animation-delay: 1.86s; }
+    .particle:nth-child(9) { animation-delay: 2.17s; }
+
+    @keyframes particle-suck {
+      0% { 
+        opacity: 0;
+        transform: scale(1);
+      }
+      15% { 
+        opacity: 1;
+      }
+      85% {
+        opacity: 0.6;
+      }
+      100% { 
+        opacity: 0;
+        transform: scale(0);
+      }
+    }
+
+    /* ===== 激活状态：吸积盘 ===== */
+    .active-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .outer-glow {
+      fill: none;
+      stroke: #ff9500;
+      stroke-width: 2;
+      opacity: 0.4;
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.2; stroke-width: 1; }
+      50% { opacity: 0.6; stroke-width: 3; }
+    }
+
+    .disk-outer {
+      fill: none;
+      stroke: url(#gradient1);
+      stroke-width: 6;
+      transform-origin: center;
+      animation: spin-cw 3s linear infinite;
+    }
+
+    .disk-inner {
+      fill: none;
+      stroke: url(#gradient1);
+      stroke-width: 3;
+      opacity: 0.8;
+      transform-origin: center;
+      animation: spin-ccw 2s linear infinite;
+    }
+
+    @keyframes spin-cw {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spin-ccw {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    .black-center {
+      fill: #000;
+    }
+
+    .event-horizon {
+      fill: none;
+      stroke: #ff6b35;
+      stroke-width: 2;
+      animation: horizon-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes horizon-pulse {
+      0%, 100% { stroke-opacity: 0.3; }
+      50% { stroke-opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="info">点击按钮切换状态</div>
+  
+  <button class="blackhole-btn" onclick="this.classList.toggle('is-active')">
+    <!-- 默认状态 -->
+    <div class="state-default">
+      <svg class="default-svg" viewBox="0 0 100 100">
+        <!-- 中心圆环 -->
+        <circle class="center-ring" cx="50" cy="50" r="15"/>
+        <!-- 8个粒子，从不同方向吸入 -->
+        <circle class="particle" cx="82" cy="50" r="3"/>
+        <circle class="particle" cx="72" cy="72" r="3"/>
+        <circle class="particle" cx="50" cy="82" r="3"/>
+        <circle class="particle" cx="28" cy="72" r="3"/>
+        <circle class="particle" cx="18" cy="50" r="3"/>
+        <circle class="particle" cx="28" cy="28" r="3"/>
+        <circle class="particle" cx="50" cy="18" r="3"/>
+        <circle class="particle" cx="72" cy="28" r="3"/>
+      </svg>
+    </div>
+    
+    <!-- 激活状态 -->
+    <div class="state-active">
+      <svg class="active-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#FFD700"/>
+            <stop offset="50%" stop-color="#FF6B35"/>
+            <stop offset="100%" stop-color="#FFD700"/>
+          </linearGradient>
+        </defs>
+        <!-- 外层光晕 -->
+        <circle class="outer-glow" cx="50" cy="50" r="42"/>
+        <!-- 吸积盘外环 -->
+        <ellipse class="disk-outer" cx="50" cy="50" rx="32" ry="10"/>
+        <!-- 吸积盘内环 -->
+        <ellipse class="disk-inner" cx="50" cy="50" rx="22" ry="7"/>
+        <!-- 中心黑洞 -->
+        <circle class="black-center" cx="50" cy="50" r="12"/>
+        <!-- 事件视界 -->
+        <circle class="event-horizon" cx="50" cy="50" r="13"/>
+      </svg>
+    </div>
+  </button>
+
+  <script>
+    // 点击按钮时打印状态
+    document.querySelector('.blackhole-btn').addEventListener('click', function() {
+      console.log('Button state:', this.classList.contains('is-active') ? 'active' : 'default');
+    });
+  </script>
+</body>
+</html>
