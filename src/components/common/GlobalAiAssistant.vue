@@ -63,7 +63,16 @@ watch(messages, (val) => {
   nextTick(() => { if (messageListRef.value) messageListRef.value.scrollTop = messageListRef.value.scrollHeight })
 }, { deep: true })
 
-function toggleAssistant() { isOpen.value = !isOpen.value }
+function toggleAssistant() {
+  isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    nextTick(() => {
+      if (messageListRef.value) {
+        messageListRef.value.scrollTop = messageListRef.value.scrollHeight
+      }
+    })
+  }
+}
 
 async function sendMessage() {
   const content = inputValue.value.trim()
@@ -155,15 +164,27 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
       <!-- 默认状态 -->
       <div class="bh-state bh-default">
         <svg viewBox="0 0 100 100">
-          <circle class="bh-ring" cx="50" cy="50" r="15"/>
-          <circle class="bh-p bh-p1" cx="82" cy="50" r="3"/>
-          <circle class="bh-p bh-p2" cx="72" cy="72" r="3"/>
-          <circle class="bh-p bh-p3" cx="50" cy="82" r="3"/>
-          <circle class="bh-p bh-p4" cx="28" cy="72" r="3"/>
-          <circle class="bh-p bh-p5" cx="18" cy="50" r="3"/>
-          <circle class="bh-p bh-p6" cx="28" cy="28" r="3"/>
-          <circle class="bh-p bh-p7" cx="50" cy="18" r="3"/>
-          <circle class="bh-p bh-p8" cx="72" cy="28" r="3"/>
+          <defs>
+            <radialGradient id="coreGrad">
+              <stop offset="0%" stop-color="white" stop-opacity="1"/>
+              <stop offset="70%" stop-color="white" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="white" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- 轨道1 -->
+          <ellipse class="orbit orbit-1" cx="50" cy="50" rx="30" ry="12" fill="none" stroke="white" stroke-width="0.5"/>
+          <!-- 轨道2 -->
+          <ellipse class="orbit orbit-2" cx="50" cy="50" rx="30" ry="12" fill="none" stroke="white" stroke-width="0.5"/>
+          <!-- 轨道3 -->
+          <ellipse class="orbit orbit-3" cx="50" cy="50" rx="30" ry="12" fill="none" stroke="white" stroke-width="0.5"/>
+          <!-- 轨道上的光点 -->
+          <circle class="orbit-dot dot-1" cx="80" cy="50" r="2.5" fill="white"/>
+          <circle class="orbit-dot dot-2" cx="20" cy="50" r="2.5" fill="white"/>
+          <circle class="orbit-dot dot-3" cx="50" cy="62" r="2.5" fill="white"/>
+          <!-- 中心光晕 -->
+          <circle cx="50" cy="50" r="18" fill="url(#coreGrad)"/>
+          <!-- 中心核心 -->
+          <circle class="core-center" cx="50" cy="50" r="8" fill="white"/>
         </svg>
       </div>
       <!-- 激活状态 -->
@@ -235,9 +256,12 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
   padding: 0;
   position: relative;
   box-shadow: 0 4px 30px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.3);
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-.bh-btn:hover { transform: scale(1.1); }
+.bh-btn:hover { 
+  transform: scale(1.1); 
+  box-shadow: 0 6px 40px rgba(0,0,0,0.8), 0 0 60px rgba(255,255,255,0.2);
+}
 
 .bh-state {
   position: absolute;
@@ -258,36 +282,105 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 .bh-active .bh-default { opacity: 0; transform: scale(0.6) rotate(-180deg); }
 .bh-active .bh-activated { opacity: 1; transform: scale(1) rotate(0deg); }
 
-.bh-ring {
-  fill: none;
-  stroke: white;
-  stroke-width: 2;
-  animation: bhRingPulse 2s ease-in-out infinite;
+/* 中心核心 - 明亮且有脉冲 */
+.core-center {
+  animation: corePulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px white);
+  transition: all 0.3s ease;
 }
-@keyframes bhRingPulse {
-  0%, 100% { stroke-opacity: 0.5; stroke-width: 1.5; }
-  50% { stroke-opacity: 1; stroke-width: 2.5; }
+.bh-btn:hover .core-center {
+  filter: drop-shadow(0 0 8px white) drop-shadow(0 0 12px rgba(255,255,255,0.6));
+  animation: corePulseHover 1s ease-in-out infinite;
+}
+@keyframes corePulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+@keyframes corePulseHover {
+  0%, 100% { opacity: 1; transform: scale(1.05); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
-.bh-p {
-  fill: white;
-  opacity: 0;
-  animation: bhSuck 2.5s ease-in infinite;
+/* 轨道 - 三个不同角度旋转 */
+.orbit {
+  stroke-opacity: 0.3;
+  transform-origin: 50px 50px;
+  transition: stroke-opacity 0.3s ease;
 }
-.bh-p1 { animation-delay: 0s; }
-.bh-p2 { animation-delay: 0.31s; }
-.bh-p3 { animation-delay: 0.62s; }
-.bh-p4 { animation-delay: 0.93s; }
-.bh-p5 { animation-delay: 1.24s; }
-.bh-p6 { animation-delay: 1.55s; }
-.bh-p7 { animation-delay: 1.86s; }
-.bh-p8 { animation-delay: 2.17s; }
+.bh-btn:hover .orbit {
+  stroke-opacity: 0.6;
+}
+.orbit-1 {
+  animation: orbitRotate1 8s linear infinite;
+}
+.orbit-2 {
+  animation: orbitRotate2 8s linear infinite;
+  transform: rotate(60deg);
+}
+.orbit-3 {
+  animation: orbitRotate3 8s linear infinite;
+  transform: rotate(120deg);
+}
+.bh-btn:hover .orbit-1 {
+  animation: orbitRotate1 3s linear infinite;
+}
+.bh-btn:hover .orbit-2 {
+  animation: orbitRotate2 3s linear infinite;
+}
+.bh-btn:hover .orbit-3 {
+  animation: orbitRotate3 3s linear infinite;
+}
+@keyframes orbitRotate1 {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes orbitRotate2 {
+  from { transform: rotate(60deg); }
+  to { transform: rotate(420deg); }
+}
+@keyframes orbitRotate3 {
+  from { transform: rotate(120deg); }
+  to { transform: rotate(480deg); }
+}
 
-@keyframes bhSuck {
-  0% { opacity: 0; transform: scale(1); }
-  15% { opacity: 1; }
-  85% { opacity: 0.6; }
-  100% { opacity: 0; transform: scale(0); }
+/* 轨道上的光点 */
+.orbit-dot {
+  filter: drop-shadow(0 0 2px white);
+  transform-origin: 50px 50px;
+  transition: filter 0.3s ease;
+}
+.bh-btn:hover .orbit-dot {
+  filter: drop-shadow(0 0 4px white) drop-shadow(0 0 6px rgba(255,255,255,0.8));
+}
+.dot-1 {
+  animation: dotOrbit1 4s linear infinite;
+}
+.dot-2 {
+  animation: dotOrbit2 4s linear infinite;
+}
+.dot-3 {
+  animation: dotOrbit3 4s linear infinite;
+}
+.bh-btn:hover .dot-1 {
+  animation: dotOrbit1 1.5s linear infinite;
+}
+.bh-btn:hover .dot-2 {
+  animation: dotOrbit2 1.5s linear infinite;
+}
+.bh-btn:hover .dot-3 {
+  animation: dotOrbit3 1.5s linear infinite;
+}
+@keyframes dotOrbit1 {
+  from { transform: rotate(0deg) translateX(30px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(30px) rotate(-360deg); }
+}
+@keyframes dotOrbit2 {
+  from { transform: rotate(120deg) translateX(30px) rotate(-120deg); }
+  to { transform: rotate(480deg) translateX(30px) rotate(-480deg); }
+}
+@keyframes dotOrbit3 {
+  from { transform: rotate(240deg) translateX(30px) rotate(-240deg); }
+  to { transform: rotate(600deg) translateX(30px) rotate(-600deg); }
 }
 
 .bh-glow {

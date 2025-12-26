@@ -6,7 +6,6 @@ import { fetchTeamChatMessages, sendTeamChatMessage, subscribeTeamChat } from '@
 import { supabase } from '@/api/client'
 import { Send, Loader2 } from 'lucide-vue-next'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import BlackHoleAIButton from '@/components/common/BlackHoleAIButton.vue'
 
 const props = defineProps<{
   thread: InboxChatThread
@@ -160,14 +159,6 @@ onUnmounted(() => {
     chatChannel.unsubscribe()
   }
 })
-
-// AI 面板状态
-const isAIPanelOpen = ref(false)
-
-function handleAIToggle(isOpen: boolean) {
-  isAIPanelOpen.value = isOpen
-  // 这里可以添加打开/关闭 AI 面板的逻辑
-}
 </script>
 
 <template>
@@ -242,9 +233,6 @@ function handleAIToggle(isOpen: boolean) {
         </button>
       </div>
     </div>
-
-    <!-- AI 悬浮按钮 -->
-    <BlackHoleAIButton :size="56" @toggle="handleAIToggle" />
   </div>
 </template>
 
