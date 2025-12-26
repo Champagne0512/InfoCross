@@ -25,6 +25,7 @@ export interface UserProfile {
   avatarUrl?: string
   bio?: string
   bannerUrl?: string
+  isAdmin?: boolean
 }
 
 export type NotificationCategory = 'forum' | 'team' | 'task' | 'system'

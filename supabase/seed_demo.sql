@@ -21,15 +21,15 @@ delete from profiles
  );
 
 -- 基础档案（需提前在 auth.users 中存在对应 ID）
-insert into profiles (id, email, username, college, major, tags, avatar_url)
+insert into profiles (id, email, username, college, major, tags, avatar_url, is_admin)
 values
-  ('3c558daf-3b1a-4112-919c-eba6b7d34d5c', 'test1@qq.com', 'Focus Pioneer', '计算机学院', '人工智能', '{AI,产品,跨学科}', null),
-  ('3e9d0a6d-b2f8-4f16-954a-49f2b6f17749', 'test2@qq.com', 'Design Catalyst', '艺术学院', '交互设计', '{XR,策展,体验}', null),
-  ('410d2c73-80a5-4087-8e77-61ddacbdc52d', 'test3@qq.com', 'Biz Navigator', '商学院', '金融科技', '{创业,投资,ESG}', null),
-  ('27728f80-435b-4917-bf34-0ca65e00cd92', 'test4@qq.com', 'Sports Viber', '体育学院', '运动康复', '{运动,社交,健康}', null),
-  ('db0a7f58-b056-47c5-9538-52937b235da6', 'test5@qq.com', 'Life Curator', '公共管理学院', '社会创新', '{公益,社区,志愿}', null),
-  ('b854c855-b2c5-4712-ba61-6e5a1a17d9fc', '1483980567@qq.com', 'Data Ranger', '统计学院', '数据科学', '{数据,可视化,政策}', null),
-  ('1290d9c5-9a99-436f-878f-2552eee3a5c0', '691408254@qq.com', 'Bio Hacker', '生命科学院', '合成生物', '{SynBio,食品,实验}', null)
+  ('3c558daf-3b1a-4112-919c-eba6b7d34d5c', 'test1@qq.com', 'Focus Pioneer', '计算机学院', '人工智能', '{AI,产品,跨学科}', null, true),
+  ('3e9d0a6d-b2f8-4f16-954a-49f2b6f17749', 'test2@qq.com', 'Design Catalyst', '艺术学院', '交互设计', '{XR,策展,体验}', null, false),
+  ('410d2c73-80a5-4087-8e77-61ddacbdc52d', 'test3@qq.com', 'Biz Navigator', '商学院', '金融科技', '{创业,投资,ESG}', null, false),
+  ('27728f80-435b-4917-bf34-0ca65e00cd92', 'test4@qq.com', 'Sports Viber', '体育学院', '运动康复', '{运动,社交,健康}', null, false),
+  ('db0a7f58-b056-47c5-9538-52937b235da6', 'test5@qq.com', 'Life Curator', '公共管理学院', '社会创新', '{公益,社区,志愿}', null, false),
+  ('b854c855-b2c5-4712-ba61-6e5a1a17d9fc', '1483980567@qq.com', 'Data Ranger', '统计学院', '数据科学', '{数据,可视化,政策}', null, false),
+  ('1290d9c5-9a99-436f-878f-2552eee3a5c0', '691408254@qq.com', 'Bio Hacker', '生命科学院', '合成生物', '{SynBio,食品,实验}', null, false)
 on conflict (id) do update set
   email = excluded.email,
   username = excluded.username,

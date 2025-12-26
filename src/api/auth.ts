@@ -35,6 +35,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     avatarUrl: row.avatar_url ?? undefined,
     bio: row.bio ?? undefined,
     bannerUrl: (row as any).banner_url ?? undefined,
+    isAdmin: Boolean(row.is_admin),
   }
 }
 

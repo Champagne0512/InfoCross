@@ -12,6 +12,7 @@ export const RouteName = {
   PROFILE: 'profile',
   SETTINGS: 'settings',
   BOOKMARKS: 'bookmarks',
+  ADMIN: 'admin',
 } as const
 
 export const routes: RouteRecordRaw[] = [
@@ -92,5 +93,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'profile-posts',
     component: () => import('@/views/profile/PostsView.vue'),
     meta: { title: '我的帖子', requiresAuth: true },
+  },
+  {
+    path: '/admin',
+    name: RouteName.ADMIN,
+    component: () => import('@/views/admin/AdminDashboardView.vue'),
+    meta: { title: 'InfoCross · 管理后台' },
   },
 ]

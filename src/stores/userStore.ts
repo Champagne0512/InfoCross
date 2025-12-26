@@ -19,6 +19,7 @@ export const useUserStore = defineStore('user', {
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.profile),
+    isAdmin: (state) => Boolean(state.profile?.isAdmin),
   },
   actions: {
     async init() {

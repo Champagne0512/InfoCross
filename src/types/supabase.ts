@@ -8,6 +8,7 @@ type ProfileRow = {
   avatar_url: string | null
   bio: string | null
   created_at: string | null
+  is_admin: boolean | null
 }
 
 type ArticleRow = {

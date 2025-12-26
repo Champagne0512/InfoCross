@@ -1,4 +1,4 @@
-insert into profiles (id, email, username, college, major, tags)
+insert into profiles (id, email, username, college, major, tags, is_admin)
 values
   (
     '11111111-1111-4111-8111-111111111111',
@@ -6,7 +6,8 @@ values
     'InfoCross 体验官',
     '计算机学院',
     '人工智能',
-    '{AI,产品,跨学科}'
+    '{AI,产品,跨学科}',
+    true
   )
 on conflict (id) do nothing;
 
