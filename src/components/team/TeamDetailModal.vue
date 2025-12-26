@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Team, TeamChatMessage } from '@/types/models'
-import { fetchTeamChatMessages, sendTeamChatMessage } from '@/api/teamWorkspace'
+import { fetchTeamInterestMessages, sendTeamInterestMessage } from '@/api/teamInterestChat'
 import TagBadge from '@/components/business/TagBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 
@@ -43,7 +43,7 @@ async function loadMessages() {
   loadingMessages.value = true
   errorText.value = ''
   try {
-    messages.value = await fetchTeamChatMessages(props.team.id, 30, props.currentUserId)
+    messages.value = await fetchTeamInterestMessages(props.team.id, 30, props.currentUserId)
   } catch (error) {
     console.error('加载团队聊天失败', error)
     errorText.value = '暂时无法加载聊天记录，请稍后重试'
@@ -63,7 +63,7 @@ async function handleSend() {
   sending.value = true
   errorText.value = ''
   try {
-    const sent = await sendTeamChatMessage(props.team.id, content, props.currentUserId)
+    const sent = await sendTeamInterestMessage(props.team.id, content, props.currentUserId)
     messages.value = [...messages.value, sent]
     messageInput.value = ''
   } catch (error) {

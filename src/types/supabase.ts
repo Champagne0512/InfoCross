@@ -87,6 +87,16 @@ type TeamChatMessageRow = {
   status: 'sending' | 'delivered' | 'failed'
 }
 
+type TeamInterestMessageRow = {
+  id: number
+  created_at: string
+  team_id: number
+  sender_id: string
+  content: string
+  status: 'sending' | 'delivered' | 'failed'
+  metadata: Record<string, unknown> | null
+}
+
 type TeamTaskRow = {
   id: number
   created_at: string
@@ -214,6 +224,11 @@ export type Database = {
         Row: TeamChatMessageRow
         Insert: Partial<TeamChatMessageRow>
         Update: Partial<TeamChatMessageRow>
+      }
+      team_interest_messages: {
+        Row: TeamInterestMessageRow
+        Insert: Partial<TeamInterestMessageRow>
+        Update: Partial<TeamInterestMessageRow>
       }
       team_tasks: {
         Row: TeamTaskRow

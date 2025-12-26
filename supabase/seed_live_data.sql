@@ -84,12 +84,36 @@ values
   (2305, '27728f80-435b-4917-bf34-0ca65e00cd92', '想帮忙做呼吸带领。', 'rejected', 'vibe', '{"preferred_role":"主持"}'::jsonb)
 on conflict do nothing;
 
-insert into team_contact_messages (team_id, applicant_id, sender_id, sender_role, content, created_at)
+insert into team_interest_messages (team_id, sender_id, content, metadata, created_at)
 values
-  (2301, 'b854c855-b2c5-4712-ba61-6e5a1a17d9fc', 'b854c855-b2c5-4712-ba61-6e5a1a17d9fc', 'applicant', '我可以把情报数据做成多模态雷达图，是否还缺可视化？', now() - interval '2 minutes'),
-  (2301, 'b854c855-b2c5-4712-ba61-6e5a1a17d9fc', '3c558daf-3b1a-4112-919c-eba6b7d34d5c', 'owner', '正好缺这个能力，晚上 9 点前给我两个 sample？', now() - interval '1 minutes'),
-  (2303, '410d2c73-80a5-4087-8e77-61ddacbdc52d', '410d2c73-80a5-4087-8e77-61ddacbdc52d', 'applicant', '我能自带声景直播设备和电源箱。', now() - interval '5 minutes'),
-  (2303, '410d2c73-80a5-4087-8e77-61ddacbdc52d', '27728f80-435b-4917-bf34-0ca65e00cd92', 'owner', '太好了！先加微信，确认露营位置。', now() - interval '4 minutes')
+  (
+    2301,
+    'b854c855-b2c5-4712-ba61-6e5a1a17d9fc',
+    '我可以把情报数据做成多模态雷达图，是否还缺可视化？',
+    '{"sender_role":"applicant","applicant_id":"b854c855-b2c5-4712-ba61-6e5a1a17d9fc"}'::jsonb,
+    now() - interval '2 minutes'
+  ),
+  (
+    2301,
+    '3c558daf-3b1a-4112-919c-eba6b7d34d5c',
+    '正好缺这个能力，晚上 9 点前给我两个 sample？',
+    '{"sender_role":"owner"}'::jsonb,
+    now() - interval '1 minutes'
+  ),
+  (
+    2303,
+    '410d2c73-80a5-4087-8e77-61ddacbdc52d',
+    '我能自带声景直播设备和电源箱。',
+    '{"sender_role":"applicant","applicant_id":"410d2c73-80a5-4087-8e77-61ddacbdc52d"}'::jsonb,
+    now() - interval '5 minutes'
+  ),
+  (
+    2303,
+    '27728f80-435b-4917-bf34-0ca65e00cd92',
+    '太好了！先加微信，确认露营位置。',
+    '{"sender_role":"owner"}'::jsonb,
+    now() - interval '4 minutes'
+  )
 on conflict do nothing;
 
 -- 论坛内容
