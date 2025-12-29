@@ -582,3 +582,83 @@ export async function checkUserCommentLikes(commentIds: number[]): Promise<Set<n
     return new Set()
   }
 }
+
+export async function updateThread(
+  threadId: number,
+  input: Partial<Pick<ForumThread, 'title' | 'contentText' | 'summary' | 'category' | 'aiTags' | 'coverUrl'>>,
+): Promise<ForumThread> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+
+  // 验证是否是作者
+  const { data: existing, error: fetchError } = await supabase
+    .from('forum_threads')
+    .select('author_id')
+    .eq('id', threadId)
+    .single()
+  
+  if (fetchError) throw fetchError
+  if (existing.author_id !== userId) throw new Error('只能编辑自己的帖子')
+
+  const payload: Partial<Database['public']['Tables']['forum_threads']['Update']> = {
+    updated_at: new Date().toISOString(),
+  }
+
+  if (input.title !== undefined) payload.title = input.title
+  if (input.contentText !== undefined) {
+    payload.content_text = input.contentText
+    payload.read_time_minutes = Math.ceil(input.contentText.length / 500)
+  }
+  if (input.summary !== undefined) payload.summary = input.summary
+  if (input.category !== undefined) payload.category = input.category
+  if (input.aiTags !== undefined) payload.ai_tags = input.aiTags
+  if (input.coverUrl !== undefined) payload.cover_url = input.coverUrl
+
+  const { data, error } = await supabase
+    .from('forum_threads')
+    .update(payload)
+    .eq('id', threadId)
+    .select(
+      '*,' +
+        'profiles:profiles!forum_threads_author_id_fkey(id, username, avatar_url, college)',
+    )
+    .single()
+  
+  if (error) throw error
+  return mapThread(data as unknown as ThreadRow)
+}
+
+export async function deleteThread(threadId: number): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) throw new Error('请先登录')
+
+  const { error } = await supabase
+    .from('forum_threads')
+    .delete()
+    .eq('id', threadId)
+    .eq('author_id', userId)
+  
+  if (error) throw error
+}
+
+export async function fetchUserThreads(userId?: string): Promise<ForumThread[]> {
+  const currentUserId = userId ?? await getUserId()
+  if (!currentUserId) throw new Error('请先登录')
+
+  try {
+    const { data, error } = await supabase
+      .from('forum_threads')
+      .select(
+        '*,' +
+          'profiles:profiles!forum_threads_author_id_fkey(id, username, avatar_url, college)',
+      )
+      .eq('author_id', currentUserId)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return (data as unknown as ThreadRow[] | null)?.map(mapThread) ?? []
+  } catch (error) {
+    console.error('[fetchUserThreads] supabase query failed', error)
+    return []
+  }
+}
