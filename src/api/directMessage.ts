@@ -37,16 +37,26 @@ async function requireUserId(): Promise<string> {
 export async function fetchDMConversations(): Promise<DMConversation[]> {
   const userId = await requireUserId()
   
-  // 获取所有相关消息
-  const { data, error } = await supabase
-    .from('direct_messages')
-    .select(`
-      id, sender_id, receiver_id, team_id, content, is_read, created_at
-    `)
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .order('created_at', { ascending: false })
+  // 获取所有相关消息 - 分两次查询然后合并
+  const [sentRes, receivedRes] = await Promise.all([
+    supabase
+      .from('direct_messages')
+      .select('id, sender_id, receiver_id, team_id, content, is_read, created_at')
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('direct_messages')
+      .select('id, sender_id, receiver_id, team_id, content, is_read, created_at')
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: false }),
+  ])
   
-  if (error) throw error
+  if (sentRes.error) throw sentRes.error
+  if (receivedRes.error) throw receivedRes.error
+  
+  // 合并并按时间排序
+  const allMessages = [...(sentRes.data ?? []), ...(receivedRes.data ?? [])]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   
   // 按对话伙伴分组
   const conversationMap = new Map<string, {
@@ -57,7 +67,7 @@ export async function fetchDMConversations(): Promise<DMConversation[]> {
     hasUnread: boolean
   }>()
   
-  for (const msg of data ?? []) {
+  for (const msg of allMessages) {
     const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id
     
     if (!conversationMap.has(partnerId)) {
@@ -121,16 +131,30 @@ export async function fetchDMConversations(): Promise<DMConversation[]> {
 export async function fetchDMMessages(partnerId: string, limit = 50): Promise<DirectMessage[]> {
   const userId = await requireUserId()
   
-  const { data, error } = await supabase
-    .from('direct_messages')
-    .select(`
-      id, sender_id, receiver_id, team_id, content, is_read, created_at
-    `)
-    .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
-    .order('created_at', { ascending: true })
-    .limit(limit)
+  // 分两次查询：我发给对方的 + 对方发给我的
+  const [sentRes, receivedRes] = await Promise.all([
+    supabase
+      .from('direct_messages')
+      .select('id, sender_id, receiver_id, team_id, content, is_read, created_at')
+      .eq('sender_id', userId)
+      .eq('receiver_id', partnerId)
+      .order('created_at', { ascending: true })
+      .limit(limit),
+    supabase
+      .from('direct_messages')
+      .select('id, sender_id, receiver_id, team_id, content, is_read, created_at')
+      .eq('sender_id', partnerId)
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(limit),
+  ])
   
-  if (error) throw error
+  if (sentRes.error) throw sentRes.error
+  if (receivedRes.error) throw receivedRes.error
+  
+  // 合并并按时间排序
+  const allMessages = [...(sentRes.data ?? []), ...(receivedRes.data ?? [])]
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   
   // 获取用户信息
   const { data: profiles } = await supabase
@@ -140,7 +164,7 @@ export async function fetchDMMessages(partnerId: string, limit = 50): Promise<Di
   
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]))
   
-  return (data ?? []).map(msg => ({
+  return allMessages.map(msg => ({
     id: msg.id,
     senderId: msg.sender_id,
     senderName: profileMap.get(msg.sender_id)?.username ?? '用户',

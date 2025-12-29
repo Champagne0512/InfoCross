@@ -3,12 +3,14 @@ import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import type { InboxChatThread, InboxChatMessage, TeamChatMessage } from '@/types/models'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 import { fetchTeamChatMessages, sendTeamChatMessage, subscribeTeamChat } from '@/api/teamWorkspace'
+import { fetchInterestChatWithUser, sendTeamInterestMessage } from '@/api/teamInterestChat'
 import { supabase } from '@/api/client'
 import { Send, Loader2 } from 'lucide-vue-next'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const props = defineProps<{
   thread: InboxChatThread
+  isDirect?: boolean // 是否是私聊（临时聊天）
 }>()
 
 const frequencyStore = useFrequencyStore()
@@ -24,12 +26,25 @@ const currentUserId = ref<string | null>(null)
 // 实时订阅 channel
 let chatChannel: RealtimeChannel | null = null
 
+// 从 thread.id 解析私聊信息
+function parseDirectChatInfo() {
+  // 格式: interest-{teamId}-{partnerId} 或 interest-{teamId}
+  const match = props.thread.id.match(/^interest-(\d+)(?:-(.+))?$/)
+  if (match) {
+    return {
+      teamId: parseInt(match[1] ?? '0'),
+      partnerId: match[2] ?? currentUserId.value ?? '',
+    }
+  }
+  return null
+}
+
 // 将 API 消息转换为本地消息格式
 function mapToLocalMessage(msg: TeamChatMessage): InboxChatMessage {
   const date = new Date(msg.createdAt)
   return {
     id: String(msg.id),
-    author: msg.isOwner ? '我' : msg.senderName,
+    author: msg.senderId === currentUserId.value ? '我' : msg.senderName,
     isMine: msg.senderId === currentUserId.value,
     content: msg.content,
     timestamp: date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
@@ -44,7 +59,22 @@ async function loadMessages() {
     const { data: { user } } = await supabase.auth.getUser()
     currentUserId.value = user?.id ?? null
     
-    // 如果没有 teamId，直接使用 mock 数据
+    // 私聊（临时聊天）
+    if (props.isDirect) {
+      const directInfo = parseDirectChatInfo()
+      if (directInfo && directInfo.teamId) {
+        const messages = await fetchInterestChatWithUser(directInfo.teamId, directInfo.partnerId)
+        localMessages.value = messages.map(mapToLocalMessage)
+        nextTick(scrollToBottom)
+        return
+      }
+      // 如果解析失败，使用 thread 中的消息
+      localMessages.value = [...props.thread.messages]
+      nextTick(scrollToBottom)
+      return
+    }
+    
+    // 群聊
     if (!props.thread.teamId) {
       localMessages.value = [...props.thread.messages]
       nextTick(scrollToBottom)
@@ -53,7 +83,6 @@ async function loadMessages() {
     
     const messages = await fetchTeamChatMessages(props.thread.teamId, 100, currentUserId.value ?? undefined)
     
-    // 如果数据库没有消息，使用 mock 数据
     if (messages.length === 0) {
       localMessages.value = [...props.thread.messages]
     } else {
@@ -62,7 +91,6 @@ async function loadMessages() {
     nextTick(scrollToBottom)
   } catch (error) {
     console.error('加载消息失败:', error)
-    // 如果加载失败，使用 mock 数据
     localMessages.value = [...props.thread.messages]
     nextTick(scrollToBottom)
   } finally {
@@ -102,23 +130,31 @@ async function sendMessage() {
   inputMessage.value = ''
   nextTick(scrollToBottom)
   
-  // 发送到服务器
-  if (props.thread.teamId) {
-    isSending.value = true
-    try {
+  isSending.value = true
+  try {
+    // 私聊（临时聊天）
+    if (props.isDirect) {
+      const directInfo = parseDirectChatInfo()
+      if (directInfo && directInfo.teamId) {
+        const sentMsg = await sendTeamInterestMessage(directInfo.teamId, content, currentUserId.value ?? undefined)
+        const idx = localMessages.value.findIndex(m => m.id === tempId)
+        if (idx !== -1 && localMessages.value[idx]) {
+          localMessages.value[idx].id = String(sentMsg.id)
+        }
+      }
+    } else if (props.thread.teamId) {
+      // 群聊
       const sentMsg = await sendTeamChatMessage(props.thread.teamId, content, currentUserId.value ?? undefined)
-      // 更新临时消息的 ID
       const idx = localMessages.value.findIndex(m => m.id === tempId)
       if (idx !== -1 && localMessages.value[idx]) {
         localMessages.value[idx].id = String(sentMsg.id)
       }
-    } catch (error) {
-      console.error('发送消息失败:', error)
-      // 移除失败的消息
-      localMessages.value = localMessages.value.filter(m => m.id !== tempId)
-    } finally {
-      isSending.value = false
     }
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    localMessages.value = localMessages.value.filter(m => m.id !== tempId)
+  } finally {
+    isSending.value = false
   }
 }
 
@@ -138,7 +174,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 // 监听 thread 变化
-watch(() => props.thread.teamId, async () => {
+watch(() => [props.thread.id, props.isDirect], async () => {
   // 清理旧订阅
   if (chatChannel) {
     chatChannel.unsubscribe()
@@ -146,12 +182,16 @@ watch(() => props.thread.teamId, async () => {
   }
   // 重新加载
   await loadMessages()
-  setupRealtimeSubscription()
+  if (!props.isDirect) {
+    setupRealtimeSubscription()
+  }
 }, { immediate: false })
 
 onMounted(async () => {
   await loadMessages()
-  setupRealtimeSubscription()
+  if (!props.isDirect) {
+    setupRealtimeSubscription()
+  }
 })
 
 onUnmounted(() => {
@@ -166,11 +206,11 @@ onUnmounted(() => {
     <!-- 聊天头部 -->
     <header class="chat-header" :class="frequencyStore.isFocus ? 'header-focus' : 'header-vibe'">
       <div class="header-info">
-        <p class="header-label">Group Chat</p>
+        <p class="header-label">{{ isDirect ? 'Direct Chat' : 'Group Chat' }}</p>
         <h2 class="header-title">{{ thread.name }}</h2>
         <p class="header-status">
           <span class="status-dot" />
-          {{ thread.onlineCount }} 位成员在线
+          {{ isDirect ? '临时沟通' : `${thread.onlineCount} 位成员在线` }}
         </p>
       </div>
     </header>

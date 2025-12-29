@@ -38,9 +38,13 @@ watch(
 
 const detailType = computed(() => props.preview?.category ?? null)
 
+// 群聊和私聊都使用聊天组件
 const chatDetail = computed<InboxChatThread | null>(() =>
-  detailType.value === 'chats' ? (displayedDetail.value as InboxChatThread) : null,
+  detailType.value === 'groups' || detailType.value === 'directs' 
+    ? (displayedDetail.value as InboxChatThread) 
+    : null,
 )
+const isDirectChat = computed(() => detailType.value === 'directs')
 const applicationDetail = computed<InboxApplicationDetail | null>(() =>
   detailType.value === 'applications' ? (displayedDetail.value as InboxApplicationDetail) : null,
 )
@@ -91,7 +95,7 @@ const systemDetail = computed<InboxSystemDetail | null>(() =>
               <div class="page-texture" />
               <!-- 页面内容 -->
               <div class="page-content">
-                <InboxChatRoom v-if="chatDetail" :thread="chatDetail" />
+                <InboxChatRoom v-if="chatDetail" :thread="chatDetail" :is-direct="isDirectChat" />
                 <InboxApplicationDetailCard v-else-if="applicationDetail" :detail="applicationDetail" />
                 <InboxActivityDetailCard v-else-if="activityDetail" :detail="activityDetail" />
                 <InboxSystemDetailCard v-else-if="systemDetail" :detail="systemDetail" />

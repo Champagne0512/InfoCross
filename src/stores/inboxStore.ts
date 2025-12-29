@@ -10,7 +10,7 @@ import type {
 } from '@/types/models'
 import { fetchUserTeams } from '@/api/team'
 import { fetchTeamChatMessages, fetchTeamApplicationQueue } from '@/api/teamWorkspace'
-import { fetchDMConversations, fetchDMMessages } from '@/api/directMessage'
+import { fetchInterestChatConversations, fetchInterestChatWithUser } from '@/api/teamInterestChat'
 import { supabase } from '@/api/client'
 
 export const useInboxStore = defineStore('inbox', () => {
@@ -272,34 +272,35 @@ export const useInboxStore = defineStore('inbox', () => {
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       })
       
-      // 加载私聊会话
+      // 加载私聊会话（临时聊天）
       try {
-        const dmConversations = await fetchDMConversations()
-        for (const conv of dmConversations) {
-          const dmId = `dm-${conv.partnerId}`
+        const interestConversations = await fetchInterestChatConversations()
+        for (const conv of interestConversations) {
+          // 统一格式：interest-{teamId}-{partnerId}
+          const dmId = `interest-${conv.teamId}-${conv.partnerId}`
           
           // 添加私聊预览
           previews.value.push({
             id: dmId,
             category: 'directs',
-            title: conv.partnerName,
+            title: conv.isOwner ? `${conv.partnerName} - ${conv.teamName}` : conv.teamName,
             preview: conv.lastMessage,
             timestamp: conv.lastMessageAt,
-            unread: conv.hasUnread,
+            unread: false,
             avatarUrl: conv.partnerAvatar,
           })
           
           // 加载私聊消息
-          const dmMessages = await fetchDMMessages(conv.partnerId, 20)
+          const messages = await fetchInterestChatWithUser(conv.teamId, conv.partnerId)
           chatThreads.value[dmId] = {
             id: dmId,
-            teamId: conv.teamId ?? 0,
-            name: conv.partnerName,
+            teamId: conv.teamId,
+            name: conv.isOwner ? `${conv.partnerName} - ${conv.teamName}` : conv.teamName,
             onlineCount: 1,
-            messages: dmMessages.map(msg => ({
+            messages: messages.map(msg => ({
               id: String(msg.id),
-              author: msg.isMine ? '我' : msg.senderName ?? '用户',
-              isMine: msg.isMine,
+              author: msg.senderId === user.id ? '我' : msg.senderName,
+              isMine: msg.senderId === user.id,
               content: msg.content,
               timestamp: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             })),
