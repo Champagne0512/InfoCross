@@ -6,21 +6,22 @@ import { useFrequencyStore } from '@/stores/frequencyStore'
 import type { InboxCategory } from '@/types/models'
 import EnvelopeFanList from '@/components/inbox/EnvelopeFanList.vue'
 import PageFlipDetail from '@/components/inbox/PageFlipDetail.vue'
-import { MessageCircle, Inbox, Zap, Bell } from 'lucide-vue-next'
+import { MessageCircle, Inbox, Zap, Bell, Users, User } from 'lucide-vue-next'
 
 const inboxStore = useInboxStore()
 const frequencyStore = useFrequencyStore()
 const { filteredPreviews, activeCategory, selectedPreview, currentDetail, selectedId } = storeToRefs(inboxStore)
 
 const categories: Array<{ label: string; value: InboxCategory; icon: typeof MessageCircle }> = [
-  { label: '聊天', value: 'chats', icon: MessageCircle },
+  { label: '群聊', value: 'groups', icon: Users },
+  { label: '私聊', value: 'directs', icon: User },
   { label: '申请', value: 'applications', icon: Inbox },
   { label: '互动', value: 'activity', icon: Zap },
   { label: '系统', value: 'system', icon: Bell },
 ]
 
 onMounted(async () => {
-  // 加载用户的小组聊天
+  // 加载用户的小组聊天和私聊
   await inboxStore.loadUserChats()
   inboxStore.selectCategory(activeCategory.value)
 })

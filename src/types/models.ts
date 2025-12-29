@@ -48,7 +48,7 @@ export interface NotificationItem {
   }
 }
 
-export type InboxCategory = 'chats' | 'applications' | 'activity' | 'system'
+export type InboxCategory = 'groups' | 'directs' | 'applications' | 'activity' | 'system'
 
 export interface InboxPreview {
   id: string
@@ -90,6 +90,8 @@ export interface InboxApplicationDetail {
   }
   matchScore: number
   message: string
+  applicationId?: number  // 真实申请 ID，用于审批操作
+  teamId?: number         // 小组 ID
 }
 
 export interface InboxActivityDetail {

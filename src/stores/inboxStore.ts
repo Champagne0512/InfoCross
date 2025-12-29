@@ -9,7 +9,8 @@ import type {
   InboxSystemDetail,
 } from '@/types/models'
 import { fetchUserTeams } from '@/api/team'
-import { fetchTeamChatMessages } from '@/api/teamWorkspace'
+import { fetchTeamChatMessages, fetchTeamApplicationQueue } from '@/api/teamWorkspace'
+import { fetchDMConversations, fetchDMMessages } from '@/api/directMessage'
 import { supabase } from '@/api/client'
 
 export const useInboxStore = defineStore('inbox', () => {
@@ -157,8 +158,11 @@ export const useInboxStore = defineStore('inbox', () => {
 
   // 动态加载的聊天线程
   const chatThreads = ref<Record<string, InboxChatThread>>({})
+  
+  // 动态加载的申请详情
+  const dynamicApplicationDetails = ref<Record<string, InboxApplicationDetail>>({})
 
-  // 从数据库加载用户的小组聊天
+  // 从数据库加载用户的小组聊天和申请
   async function loadUserChats() {
     if (isLoading.value) return
     isLoading.value = true
@@ -172,8 +176,8 @@ export const useInboxStore = defineStore('inbox', () => {
       
       const teams = await fetchUserTeams()
       
-      // 移除旧的聊天预览
-      previews.value = previews.value.filter(p => p.category !== 'chats')
+      // 移除旧的聊天预览和申请预览
+      previews.value = previews.value.filter(p => p.category !== 'groups' && p.category !== 'directs' && !p.id.startsWith('app-real-'))
       
       // 为每个小组创建聊天预览和线程
       for (const team of teams) {
@@ -195,7 +199,7 @@ export const useInboxStore = defineStore('inbox', () => {
         // 添加预览
         previews.value.push({
           id: chatId,
-          category: 'chats',
+          category: 'groups',
           title: team.name,
           preview: previewText,
           timestamp: lastTimestamp,
@@ -218,6 +222,48 @@ export const useInboxStore = defineStore('inbox', () => {
             timestamp: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
           })),
         }
+        
+        // 如果用户是队长，加载该小组的申请
+        if (team.ownerId === user.id) {
+          try {
+            const applications = await fetchTeamApplicationQueue(team.id)
+            for (const app of applications) {
+              if (app.status !== 'pending') continue // 只显示待处理的申请
+              
+              const appId = `app-real-${app.id}`
+              
+              // 添加申请预览
+              previews.value.push({
+                id: appId,
+                category: 'applications',
+                title: `${app.applicantName || '用户'} 申请加入 ${team.name}`,
+                preview: app.message || '无附言',
+                timestamp: app.createdAt,
+                unread: true,
+                icon: 'file',
+              })
+              
+              // 添加申请详情
+              dynamicApplicationDetails.value[appId] = {
+                id: appId,
+                projectName: team.name,
+                role: app.preferredRole || '成员',
+                applicant: {
+                  name: app.applicantName || '用户',
+                  college: app.applicantCollege || '未知学院',
+                  avatarUrl: undefined,
+                  skills: [],
+                },
+                matchScore: 0.8,
+                message: app.message || '期待加入团队',
+                applicationId: app.id, // 保存真实的申请 ID 用于审批
+                teamId: team.id,
+              }
+            }
+          } catch (e) {
+            console.error('加载小组申请失败:', e)
+          }
+        }
       }
       
       // 按时间排序预览
@@ -225,6 +271,43 @@ export const useInboxStore = defineStore('inbox', () => {
         if (a.category !== b.category) return 0
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       })
+      
+      // 加载私聊会话
+      try {
+        const dmConversations = await fetchDMConversations()
+        for (const conv of dmConversations) {
+          const dmId = `dm-${conv.partnerId}`
+          
+          // 添加私聊预览
+          previews.value.push({
+            id: dmId,
+            category: 'directs',
+            title: conv.partnerName,
+            preview: conv.lastMessage,
+            timestamp: conv.lastMessageAt,
+            unread: conv.hasUnread,
+            avatarUrl: conv.partnerAvatar,
+          })
+          
+          // 加载私聊消息
+          const dmMessages = await fetchDMMessages(conv.partnerId, 20)
+          chatThreads.value[dmId] = {
+            id: dmId,
+            teamId: conv.teamId ?? 0,
+            name: conv.partnerName,
+            onlineCount: 1,
+            messages: dmMessages.map(msg => ({
+              id: String(msg.id),
+              author: msg.isMine ? '我' : msg.senderName ?? '用户',
+              isMine: msg.isMine,
+              content: msg.content,
+              timestamp: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            })),
+          }
+        }
+      } catch (e) {
+        console.error('加载私聊失败:', e)
+      }
       
       isLoaded.value = true
     } catch (error) {
@@ -380,7 +463,7 @@ export const useInboxStore = defineStore('inbox', () => {
     },
   }
 
-  const activeCategory = ref<InboxCategory>('chats')
+  const activeCategory = ref<InboxCategory>('groups')
   const selectedId = ref(previews.value[0]?.id ?? '')
 
   const filteredPreviews = computed(() =>
@@ -415,10 +498,14 @@ export const useInboxStore = defineStore('inbox', () => {
   const currentDetail = computed(() => {
     const preview = selectedPreview.value
     if (!preview) return null
-    if (preview.category === 'chats') {
+    if (preview.category === 'groups' || preview.category === 'directs') {
       return chatThreads.value[preview.id]
     }
     if (preview.category === 'applications') {
+      // 优先返回动态加载的真实申请
+      if (dynamicApplicationDetails.value[preview.id]) {
+        return dynamicApplicationDetails.value[preview.id]
+      }
       return applicationDetails[preview.id]
     }
     if (preview.category === 'activity') {
@@ -426,6 +513,19 @@ export const useInboxStore = defineStore('inbox', () => {
     }
     return systemDetails[preview.id]
   })
+
+  // 移除已处理的申请
+  function removeApplication(id: string) {
+    previews.value = previews.value.filter(p => p.id !== id)
+    if (dynamicApplicationDetails.value[id]) {
+      delete dynamicApplicationDetails.value[id]
+    }
+    // 选择下一个申请
+    const nextApp = previews.value.find(p => p.category === 'applications')
+    if (nextApp) {
+      selectedId.value = nextApp.id
+    }
+  }
 
   return {
     previews,
@@ -441,5 +541,6 @@ export const useInboxStore = defineStore('inbox', () => {
     selectCategory,
     selectItem,
     markAsRead,
+    removeApplication,
   }
 })
