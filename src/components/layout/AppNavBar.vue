@@ -16,7 +16,8 @@ import {
   Users,
   MessageCircle,
   LayoutGrid,
-  Zap
+  Zap,
+  ShieldCheck
 } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -72,6 +73,11 @@ function goToProfile() {
 function goToSettings() {
   closeUserMenu()
   router.push('/settings')
+}
+
+function goToAdmin() {
+  closeUserMenu()
+  router.push('/admin')
 }
 
 function goAuth() {
@@ -210,6 +216,15 @@ function goAuth() {
               >
                 <Settings :size="16" class="text-slate" />
                 <span>{{ t('nav.settings') }}</span>
+              </button>
+              <!-- 管理后台入口 - 仅管理员可见 -->
+              <button 
+                v-if="profile?.isAdmin"
+                @click="goToAdmin"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-left font-sans text-sm text-charcoal hover:bg-slate/5 transition-colors border-t border-slate/10"
+              >
+                <ShieldCheck :size="16" class="text-slate" />
+                <span>管理后台</span>
               </button>
               <button 
                 @click="handleLogout"

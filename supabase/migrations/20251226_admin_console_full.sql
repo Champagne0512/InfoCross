@@ -1,8 +1,10 @@
--- 平台管理员后台支撑：全局管理员字段 + Dashboard 数据函数
+-- InfoCross 管理后台一体化 SQL（可单次执行）
 
+-- 1. profiles 增加 is_admin 字段
 alter table public.profiles
   add column if not exists is_admin boolean default false;
 
+-- 2. 核心管理员判定函数（带参数）
 create or replace function public.is_platform_admin(p_user_id uuid default auth.uid())
 returns boolean
 language plpgsql
@@ -24,12 +26,22 @@ begin
 end;
 $$;
 
-grant execute on function public.is_platform_admin(uuid) to authenticated;
-grant execute on function public.is_platform_admin(uuid) to anon;
+grant execute on function public.is_platform_admin(uuid) to authenticated, anon;
 
-grant execute on function public.is_platform_admin() to authenticated;
-grant execute on function public.is_platform_admin() to anon;
+-- 3. 无参包装，便于直接调用及 GRANT
+create or replace function public.is_platform_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_platform_admin(auth.uid());
+$$;
 
+grant execute on function public.is_platform_admin() to authenticated, anon;
+
+-- 4. Admin 仪表盘聚合数据
 create or replace function public.admin_dashboard_stats()
 returns table(
   total_articles bigint,
@@ -54,10 +66,9 @@ begin
 end;
 $$;
 
-grant execute on function public.admin_dashboard_stats() to authenticated;
+grant execute on function public.admin_dashboard_stats() to authenticated, anon;
 
-grant execute on function public.admin_dashboard_stats() to anon;
-
+-- 5. Admin 近期申请列表
 create or replace function public.admin_recent_applications(limit_count integer default 8)
 returns table(
   application_id bigint,
@@ -100,5 +111,4 @@ end;
 $$;
 
 grant execute on function public.admin_recent_applications(integer) to authenticated;
-
 grant execute on function public.admin_recent_applications() to authenticated;

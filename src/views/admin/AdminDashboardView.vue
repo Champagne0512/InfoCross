@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import { fetchAdminStats, fetchAdminApplications } from '@/api/admin'
 import { fetchArticles } from '@/api/article'
 import type { Article } from '@/types/models'
 import type { AdminStats, AdminApplicationItem } from '@/api/admin'
 import AppButton from '@/components/common/AppButton.vue'
-import { ShieldCheck, Database, Users, Sparkles, RefreshCw } from 'lucide-vue-next'
+import { ShieldCheck, Database, Users, Sparkles, RefreshCw, Lock, TrendingUp } from 'lucide-vue-next'
 
 const userStore = useUserStore()
+const isLoaded = ref(false)
+
+onMounted(() => {
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+})
 
 const email = ref('')
 const password = ref('')
@@ -79,288 +86,525 @@ const statCards = computed(() => [
     label: '资讯总量',
     value: stats.value?.totalArticles ?? 0,
     icon: Database,
-    accent: 'bg-morandi-green/15 text-morandi-green',
+    gradient: 'from-morandi-green/20 to-morandi-green/5',
+    iconColor: 'text-morandi-green',
   },
   {
     label: '活跃小组',
     value: stats.value?.activeTeams ?? 0,
     icon: Users,
-    accent: 'bg-vibe-primary/10 text-vibe-primary',
+    gradient: 'from-vibe-primary/20 to-vibe-primary/5',
+    iconColor: 'text-vibe-accent',
   },
   {
     label: '待审核申请',
     value: stats.value?.pendingApplications ?? 0,
     icon: ShieldCheck,
-    accent: 'bg-focus-primary/10 text-focus-primary',
+    gradient: 'from-focus-primary/20 to-focus-primary/5',
+    iconColor: 'text-focus-accent',
   },
   {
     label: '近 7 日新用户',
     value: stats.value?.newUsers7d ?? 0,
-    icon: Sparkles,
-    accent: 'bg-charcoal/10 text-charcoal',
+    icon: TrendingUp,
+    gradient: 'from-morandi-blue/20 to-morandi-blue/5',
+    iconColor: 'text-morandi-blue',
   },
 ])
 </script>
 
 <template>
-  <div class="admin-page">
-    <section class="admin-hero">
-      <p class="hero-label">INFOCROSS ADMIN CONSOLE</p>
-      <h1>跨学科情报的指挥舱</h1>
-      <p>
-        这里统一监控 InfoCross 的内容流、招募热度与用户增长。访问前需通过管理员身份验证，保持与主站一致的
-        Nexus Design System 语言。
-      </p>
-    </section>
+  <div class="admin-container">
+    <header class="page-header" :class="{ 'loaded': isLoaded }">
+      <div class="header-content">
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <div class="shield-icon">
+            <ShieldCheck :size="24" />
+          </div>
+          <p class="header-subtitle">ADMIN CONSOLE</p>
+        </div>
+        <h1 class="header-title">
+          <span class="title-text">管理后台</span>
+          <span class="title-underline"></span>
+        </h1>
+        <p class="header-desc">统一监控平台内容流、招募热度与用户增长</p>
+      </div>
+    </header>
 
-    <section class="admin-panel">
-      <div v-if="!userStore.isAdmin" class="login-card">
-        <h2>管理员登录</h2>
-        <p>使用被授予权限的校园邮箱登录，以访问后台面板。</p>
+    <div v-if="!userStore.isAdmin" class="login-section section-animate" :class="{ 'loaded': isLoaded }">
+      <div class="login-card">
+        <div class="login-icon">
+          <Lock :size="32" />
+        </div>
+        <h2 class="login-title">管理员身份验证</h2>
+        <p class="login-desc">使用被授予权限的账号登录以访问后台面板</p>
+        
         <div class="form-group">
           <label>邮箱</label>
-          <input v-model="email" type="email" placeholder="admin@campus.edu" />
+          <input 
+            v-model="email" 
+            type="email" 
+            placeholder="admin@infocross.edu"
+            @keydown.enter="handleLogin"
+          />
         </div>
+        
         <div class="form-group">
           <label>密码</label>
-          <input v-model="password" type="password" placeholder="••••••••" />
+          <input 
+            v-model="password" 
+            type="password" 
+            placeholder="••••••••"
+            @keydown.enter="handleLogin"
+          />
         </div>
+        
         <p v-if="loginError" class="error-text">{{ loginError }}</p>
-        <AppButton class="w-full" :loading="loginLoading" @click="handleLogin">
+        
+        <AppButton 
+          class="w-full" 
+          :loading="loginLoading" 
+          @click="handleLogin"
+        >
           进入控制台
         </AppButton>
       </div>
+    </div>
 
-      <div v-else class="dashboard">
-        <header class="dash-header">
-          <div>
-            <p class="welcome-label">欢迎回来，管理员</p>
-            <h2>平台运行总览</h2>
-          </div>
-          <div class="header-actions">
-            <AppButton variant="ghost" :loading="dataLoading" @click="loadDashboard">
-              <RefreshCw :size="18" /> 刷新
-            </AppButton>
-            <AppButton variant="secondary" @click="handleLogout">退出登录</AppButton>
-          </div>
-        </header>
-        <p v-if="dataError" class="error-text">{{ dataError }}</p>
-
-        <div class="stat-grid">
-          <article v-for="card in statCards" :key="card.label" class="stat-card">
-            <span :class="['stat-icon', card.accent]">
-              <component :is="card.icon" :size="24" />
-            </span>
-            <p class="stat-label">{{ card.label }}</p>
-            <p class="stat-value">{{ card.value }}</p>
-          </article>
+    <div v-else class="dashboard-content">
+      <div class="action-bar section-animate" :class="{ 'loaded': isLoaded }">
+        <div class="welcome-info">
+          <p class="welcome-label">欢迎回来</p>
+          <p class="welcome-name">{{ userStore.profile?.username }}</p>
         </div>
-
-        <div class="panel-grid">
-          <section class="panel-block">
-            <header class="panel-header">
-              <h3>最新入驻与申请</h3>
-              <p>追踪跨小组的协作热度与邀约质量。</p>
-            </header>
-            <div v-if="applications.length === 0" class="empty-state">暂无待处理申请</div>
-            <ul v-else class="application-list">
-              <li v-for="item in applications" :key="item.id" class="application-item">
-                <div>
-                  <p class="applicant">{{ item.applicantName }} · {{ item.applicantCollege || '未标注学院' }}</p>
-                  <p class="message">{{ item.message || '暂无补充说明' }}</p>
-                </div>
-                <div class="meta">
-                  <span class="badge" :class="item.mode === 'focus' ? 'badge-focus' : 'badge-vibe'">{{ item.mode.toUpperCase() }}</span>
-                  <span class="team-name">{{ item.teamName }}</span>
-                  <span class="time">{{ new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) }}</span>
-                </div>
-              </li>
-            </ul>
-          </section>
-
-          <section class="panel-block">
-            <header class="panel-header">
-              <h3>AI 推荐焦点</h3>
-              <p>最近收录的跨学科活动，便于运营精选。</p>
-            </header>
-            <div v-if="spotlightArticles.length === 0" class="empty-state">暂无活动可展示</div>
-            <ul v-else class="article-list">
-              <li v-for="article in spotlightArticles" :key="article.id" class="article-item">
-                <div>
-                  <p class="article-title">{{ article.title }}</p>
-                  <p class="article-summary">{{ article.summary }}</p>
-                </div>
-                <div class="article-meta">
-                  <span>{{ article.college }}</span>
-                  <span>{{ article.category }}</span>
-                </div>
-              </li>
-            </ul>
-          </section>
+        <div class="action-buttons">
+          <AppButton 
+            variant="ghost" 
+            :loading="dataLoading" 
+            @click="loadDashboard"
+          >
+            <RefreshCw :size="18" />
+            刷新数据
+          </AppButton>
+          <AppButton variant="secondary" @click="handleLogout">
+            退出登录
+          </AppButton>
         </div>
       </div>
-    </section>
+
+      <p v-if="dataError" class="error-banner">{{ dataError }}</p>
+
+      <div class="stat-grid section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.1s">
+        <div 
+          v-for="(card, index) in statCards" 
+          :key="card.label" 
+          class="stat-card"
+          :style="{ animationDelay: `${0.1 + index * 0.05}s` }"
+        >
+          <div class="stat-header">
+            <div :class="['stat-icon-wrapper', 'bg-gradient-to-br', card.gradient]">
+              <component :is="card.icon" :size="20" :class="card.iconColor" />
+            </div>
+            <p class="stat-label">{{ card.label }}</p>
+          </div>
+          <p class="stat-value">{{ card.value }}</p>
+        </div>
+      </div>
+
+      <div class="content-grid section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.2s">
+        <section class="content-panel">
+          <header class="panel-header">
+            <div>
+              <h3 class="panel-title">最新申请</h3>
+              <p class="panel-desc">追踪跨小组的协作热度与邀约质量</p>
+            </div>
+          </header>
+          
+          <div v-if="applications.length === 0" class="empty-state">
+            <Users :size="32" class="empty-icon" />
+            <p>暂无待处理申请</p>
+          </div>
+          
+          <ul v-else class="application-list">
+            <li 
+              v-for="(item, index) in applications" 
+              :key="item.id" 
+              class="application-item"
+              :style="{ animationDelay: `${index * 50}ms` }"
+            >
+              <div class="application-content">
+                <div class="application-header">
+                  <p class="applicant-name">{{ item.applicantName }}</p>
+                  <span 
+                    class="mode-badge" 
+                    :class="item.mode === 'focus' ? 'badge-focus' : 'badge-vibe'"
+                  >
+                    {{ item.mode.toUpperCase() }}
+                  </span>
+                </div>
+                <p class="application-detail">
+                  {{ item.applicantCollege || '未标注学院' }} · 申请加入 {{ item.teamName }}
+                </p>
+                <p v-if="item.message" class="application-message">{{ item.message }}</p>
+              </div>
+              <div class="application-meta">
+                <span class="meta-time">
+                  {{ new Date(item.createdAt).toLocaleString('zh-CN', { 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  }) }}
+                </span>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="content-panel">
+          <header class="panel-header">
+            <div>
+              <h3 class="panel-title">推荐内容</h3>
+              <p class="panel-desc">最近收录的跨学科活动</p>
+            </div>
+          </header>
+          
+          <div v-if="spotlightArticles.length === 0" class="empty-state">
+            <Sparkles :size="32" class="empty-icon" />
+            <p>暂无活动可展示</p>
+          </div>
+          
+          <ul v-else class="article-list">
+            <li 
+              v-for="(article, index) in spotlightArticles" 
+              :key="article.id" 
+              class="article-item"
+              :style="{ animationDelay: `${index * 50}ms` }"
+            >
+              <div class="article-content">
+                <p class="article-title">{{ article.title }}</p>
+                <p class="article-summary">{{ article.summary }}</p>
+              </div>
+              <div class="article-meta">
+                <span class="meta-tag">{{ article.college }}</span>
+                <span class="meta-tag">{{ article.category }}</span>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.admin-page {
-  @apply min-h-screen bg-[#0d0f13] text-white px-6 py-10 grid gap-8 lg:grid-cols-[1.1fr_minmax(0,1fr)];
+.admin-container {
+  @apply min-h-screen px-8 py-8 space-y-8;
 }
 
-.admin-hero {
-  @apply rounded-3xl border border-white/10 bg-gradient-to-br from-charcoal via-[#161922] to-black p-8 space-y-6 shadow-morandi-lg;
+.page-header {
+  @apply text-center space-y-6 pb-8;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.hero-label {
-  @apply font-mono text-xs tracking-[0.5em] text-slate/70;
+.page-header.loaded {
+  @apply opacity-100 translate-y-0;
 }
 
-.admin-hero h1 {
-  @apply text-4xl font-semibold;
+.page-header:not(.loaded) {
+  @apply opacity-0 translate-y-6;
 }
 
-.admin-hero p {
-  @apply text-base text-slate/80 leading-relaxed;
+.header-content {
+  @apply max-w-2xl mx-auto;
 }
 
-.admin-panel {
-  @apply rounded-3xl bg-white text-charcoal p-8 shadow-morandi-xl flex flex-col;
+.shield-icon {
+  @apply w-12 h-12 rounded-2xl flex items-center justify-center;
+  @apply bg-gradient-to-br from-focus-primary/20 to-vibe-primary/20;
+  @apply text-focus-accent;
+}
+
+.header-subtitle {
+  @apply font-mono text-xs text-slate tracking-[0.3em];
+}
+
+.header-title {
+  @apply relative inline-block text-display font-sans font-bold text-charcoal mt-4 mb-2;
+}
+
+.title-text {
+  @apply relative z-10;
+}
+
+.title-underline {
+  @apply absolute -bottom-1 left-0 h-1 rounded-full;
+  @apply bg-gradient-to-r from-focus-accent/30 to-vibe-accent/30;
+  @apply w-0 transition-all duration-700 ease-out;
+}
+
+.page-header.loaded .title-underline {
+  @apply w-full;
+  transition-delay: 0.5s;
+}
+
+.header-desc {
+  @apply text-body font-sans text-slate mt-2;
+}
+
+.section-animate {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: var(--delay, 0s);
+}
+
+.section-animate.loaded {
+  @apply opacity-100 translate-y-0;
+}
+
+.section-animate:not(.loaded) {
+  @apply opacity-0 translate-y-8;
+}
+
+.login-section {
+  @apply max-w-md mx-auto;
 }
 
 .login-card {
-  @apply space-y-5;
+  @apply rounded-morandi bg-white border border-slate/10 p-8 shadow-morandi-lg;
+  @apply space-y-6;
 }
 
-.login-card h2 {
-  @apply text-2xl font-semibold;
+.login-icon {
+  @apply w-16 h-16 rounded-2xl mx-auto flex items-center justify-center;
+  @apply bg-gradient-to-br from-slate/10 to-slate/5;
+  @apply text-slate;
+}
+
+.login-title {
+  @apply text-2xl font-sans font-semibold text-charcoal text-center;
+}
+
+.login-desc {
+  @apply text-sm font-sans text-slate text-center;
 }
 
 .form-group {
-  @apply flex flex-col gap-2;
+  @apply space-y-2;
 }
 
 .form-group label {
-  @apply text-sm font-medium text-slate;
+  @apply block text-sm font-sans font-medium text-slate;
 }
 
 .form-group input {
-  @apply rounded-2xl border border-slate/30 px-4 py-3 text-sm focus:border-charcoal focus:outline-none;
+  @apply w-full rounded-soft border border-slate/20 px-4 py-3;
+  @apply font-sans text-sm text-charcoal;
+  @apply transition-all duration-300;
+  @apply focus:outline-none focus:border-focus-primary focus:ring-2 focus:ring-focus-primary/20;
 }
 
 .error-text {
-  @apply text-sm text-red-500;
+  @apply text-sm font-sans text-red-500 text-center;
 }
 
-.dashboard {
-  @apply flex flex-col gap-8;
+.error-banner {
+  @apply rounded-soft bg-red-50 border border-red-200 px-4 py-3;
+  @apply text-sm font-sans text-red-600;
 }
 
-.dash-header {
-  @apply flex flex-col gap-4 md:flex-row md:items-center md:justify-between;
+.dashboard-content {
+  @apply space-y-6;
+}
+
+.action-bar {
+  @apply flex items-center justify-between flex-wrap gap-4;
+  @apply rounded-morandi bg-white border border-slate/10 px-6 py-4 shadow-morandi-sm;
+}
+
+.welcome-info {
+  @apply space-y-1;
 }
 
 .welcome-label {
-  @apply text-sm text-slate;
+  @apply font-mono text-xs text-slate tracking-wider;
 }
 
-.header-actions {
+.welcome-name {
+  @apply font-sans text-lg font-semibold text-charcoal;
+}
+
+.action-buttons {
   @apply flex gap-3 flex-wrap;
 }
 
 .stat-grid {
-  @apply grid gap-4 md:grid-cols-2;
+  @apply grid gap-4 md:grid-cols-2 lg:grid-cols-4;
 }
 
 .stat-card {
-  @apply rounded-2xl border border-slate/10 p-5 bg-slate/5 flex flex-col gap-2;
+  @apply rounded-morandi bg-white border border-slate/10 p-5 shadow-morandi-sm;
+  @apply transition-all duration-300 hover:shadow-morandi hover:-translate-y-1;
+  animation: slideUp 0.5s ease-out both;
 }
 
-.stat-icon {
-  @apply inline-flex h-10 w-10 items-center justify-center rounded-xl;
+.stat-header {
+  @apply flex items-center gap-3 mb-3;
+}
+
+.stat-icon-wrapper {
+  @apply w-10 h-10 rounded-xl flex items-center justify-center;
 }
 
 .stat-label {
-  @apply text-sm text-slate;
+  @apply font-sans text-sm text-slate;
 }
 
 .stat-value {
-  @apply text-3xl font-semibold text-charcoal;
+  @apply font-sans text-3xl font-bold text-charcoal;
 }
 
-.panel-grid {
+.content-grid {
   @apply grid gap-6 lg:grid-cols-2;
 }
 
-.panel-block {
-  @apply rounded-3xl border border-slate/10 p-6 bg-white;
+.content-panel {
+  @apply rounded-morandi bg-white border border-slate/10 p-6 shadow-morandi-sm;
+  @apply transition-all duration-300 hover:shadow-morandi;
 }
 
-.panel-header h3 {
-  @apply text-xl font-semibold;
+.panel-header {
+  @apply flex items-start justify-between mb-6 pb-4 border-b border-slate/10;
 }
 
-.panel-header p {
-  @apply text-sm text-slate mt-1;
+.panel-title {
+  @apply font-sans text-xl font-semibold text-charcoal;
+}
+
+.panel-desc {
+  @apply font-sans text-sm text-slate mt-1;
 }
 
 .empty-state {
-  @apply text-center text-slate/70 py-10;
+  @apply flex flex-col items-center justify-center py-12 gap-3;
+}
+
+.empty-icon {
+  @apply text-slate/30;
+}
+
+.empty-state p {
+  @apply font-sans text-sm text-slate/70;
 }
 
 .application-list {
-  @apply divide-y divide-slate/10 mt-4;
+  @apply space-y-3;
 }
 
 .application-item {
-  @apply py-4 flex flex-col gap-3;
+  @apply rounded-soft border border-slate/10 p-4;
+  @apply bg-slate/5 transition-all duration-300;
+  @apply hover:bg-slate/10 hover:border-slate/20;
+  animation: slideUp 0.5s ease-out both;
 }
 
-.applicant {
-  @apply font-medium text-charcoal;
+.application-content {
+  @apply space-y-2;
 }
 
-.message {
-  @apply text-sm text-slate;
+.application-header {
+  @apply flex items-center justify-between gap-3;
 }
 
-.meta {
-  @apply flex flex-wrap gap-2 items-center text-xs text-slate/80;
+.applicant-name {
+  @apply font-sans font-semibold text-charcoal;
 }
 
-.badge {
-  @apply px-3 py-1 rounded-full font-mono text-[11px] tracking-wide;
+.mode-badge {
+  @apply px-2.5 py-1 rounded-full font-mono text-[10px] tracking-wide;
 }
 
 .badge-focus {
-  @apply bg-focus-primary/15 text-focus-primary;
+  @apply bg-focus-primary/15 text-focus-accent;
 }
 
 .badge-vibe {
-  @apply bg-vibe-primary/15 text-vibe-primary;
+  @apply bg-vibe-primary/15 text-vibe-accent;
 }
 
-.team-name {
-  @apply font-medium text-charcoal;
+.application-detail {
+  @apply font-sans text-sm text-slate;
+}
+
+.application-message {
+  @apply font-sans text-sm text-slate/80 italic;
+}
+
+.application-meta {
+  @apply mt-3 pt-3 border-t border-slate/10;
+}
+
+.meta-time {
+  @apply font-mono text-xs text-slate/70;
 }
 
 .article-list {
-  @apply space-y-4 mt-4;
+  @apply space-y-3;
 }
 
 .article-item {
-  @apply rounded-2xl border border-slate/10 p-4 bg-slate/5;
+  @apply rounded-soft border border-slate/10 p-4;
+  @apply bg-slate/5 transition-all duration-300;
+  @apply hover:bg-slate/10 hover:border-slate/20;
+  animation: slideUp 0.5s ease-out both;
+}
+
+.article-content {
+  @apply space-y-2 mb-3;
 }
 
 .article-title {
-  @apply font-semibold text-charcoal;
+  @apply font-sans font-semibold text-charcoal;
 }
 
 .article-summary {
-  @apply text-sm text-slate mt-1 line-clamp-2;
+  @apply font-sans text-sm text-slate line-clamp-2;
 }
 
 .article-meta {
-  @apply mt-3 text-xs uppercase tracking-wide text-slate flex gap-4;
+  @apply flex gap-3 flex-wrap;
+}
+
+.meta-tag {
+  @apply px-2.5 py-1 rounded-full;
+  @apply bg-slate/10 font-mono text-[10px] text-slate tracking-wide;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-container {
+    @apply px-4 py-6;
+  }
+  
+  .action-bar {
+    @apply flex-col items-stretch;
+  }
+  
+  .action-buttons {
+    @apply w-full;
+  }
+  
+  .action-buttons button {
+    @apply flex-1;
+  }
 }
 </style>
