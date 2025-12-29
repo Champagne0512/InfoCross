@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Clock, Eye, Heart, MessageCircle } from 'lucide-vue-next'
+import { Clock, Eye, Heart, MessageCircle, Pencil } from 'lucide-vue-next'
 import type { ForumThread } from '@/types/models'
 
 const props = defineProps<{
@@ -29,8 +29,27 @@ const readTimeLabel = computed(() => {
   return `${props.thread.readTimeMinutes || 5} min`
 })
 
+// 检查帖子是否被编辑过
+const isEdited = computed(() => {
+  if (!props.thread.updatedAt || !props.thread.createdAt) return false
+  const created = new Date(props.thread.createdAt).getTime()
+  const updated = new Date(props.thread.updatedAt).getTime()
+  return updated - created > 60000
+})
+
 const formattedDate = computed(() => {
   const date = new Date(props.thread.createdAt)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 7) return `${diffDays}天前`
+  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+})
+
+const formattedEditDate = computed(() => {
+  if (!props.thread.updatedAt) return ''
+  const date = new Date(props.thread.updatedAt)
   const now = new Date()
   const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
   if (diffDays === 0) return '今天'
@@ -52,7 +71,13 @@ function handleSelect() {
     <div class="content">
       <div class="meta-row">
         <span class="category-pill font-mono" :class="categoryInfo.color">{{ categoryInfo.label }}</span>
-        <span class="date font-mono">{{ formattedDate }}</span>
+        <div class="date-info">
+          <span class="date font-mono">{{ formattedDate }}</span>
+          <span v-if="isEdited" class="edited-badge font-mono">
+            <Pencil :size="10" />
+            编辑于 {{ formattedEditDate }}
+          </span>
+        </div>
       </div>
       <h3 class="title font-sans">{{ thread.title || '未命名长文' }}</h3>
       <p class="summary font-sans">{{ thread.summary || thread.contentText }}</p>
@@ -116,11 +141,18 @@ function handleSelect() {
 .meta-row {
   @apply flex items-center justify-between;
 }
+.date-info {
+  @apply flex items-center gap-2;
+}
 .category-pill {
   @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs uppercase tracking-wider;
 }
 .date {
   @apply text-xs text-slate;
+}
+.edited-badge {
+  @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full;
+  @apply bg-amber-50 text-amber-600 text-xs;
 }
 .title {
   @apply text-h3 font-semibold text-charcoal line-clamp-1 transition-colors duration-200;

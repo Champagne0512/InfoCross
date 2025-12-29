@@ -12,6 +12,7 @@ import {
   Sparkles,
   Zap,
   TrendingUp,
+  Pencil,
 } from 'lucide-vue-next'
 import { useI18n } from '@/i18n'
 import type { ForumThread, ForumComment } from '@/types/models'
@@ -102,6 +103,30 @@ const relativeTime = computed(() => {
   return `${days}天前`
 })
 
+// 检查帖子是否被编辑过
+const isEdited = computed(() => {
+  if (!props.thread.updatedAt || !props.thread.createdAt) return false
+  const created = new Date(props.thread.createdAt).getTime()
+  const updated = new Date(props.thread.updatedAt).getTime()
+  return updated - created > 60000
+})
+
+// 编辑时间
+const editedTime = computed(() => {
+  if (!props.thread.updatedAt) return ''
+  const now = Date.now()
+  const updated = new Date(props.thread.updatedAt).getTime()
+  const diff = now - updated
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  return `${days}天前`
+})
+
 // 显示名称
 const displayName = computed(() => {
   if (props.thread.isAnonymous) {
@@ -163,7 +188,13 @@ const isTrending = computed(() => {
             </div>
             <div class="user-info">
               <span class="author font-sans">{{ displayName }}</span>
-              <span class="time font-mono">{{ relativeTime }}</span>
+              <div class="time-info">
+                <span class="time font-mono">{{ relativeTime }}</span>
+                <span v-if="isEdited" class="edited-indicator font-mono">
+                  <Pencil :size="9" />
+                  已编辑
+                </span>
+              </div>
             </div>
           </div>
           
@@ -416,12 +447,20 @@ const isTrending = computed(() => {
   @apply flex flex-col;
 }
 
+.time-info {
+  @apply flex items-center gap-1.5;
+}
+
 .author {
   @apply text-sm text-charcoal font-medium leading-tight;
 }
 
 .time {
   @apply text-xs text-slate/70;
+}
+
+.edited-indicator {
+  @apply inline-flex items-center gap-0.5 text-amber-600 text-xs;
 }
 
 /* 标签栏 */

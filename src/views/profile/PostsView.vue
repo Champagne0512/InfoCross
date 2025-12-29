@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Heart, MessageCircle, Bookmark, Eye, Clock, Edit, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, Heart, MessageCircle, Bookmark, Eye, Clock, Edit, Trash2, X, Pencil } from 'lucide-vue-next'
 import { useFrequencyStore } from '@/stores/frequencyStore'
-import type { ForumThread } from '@/types/models'
+import { fetchUserThreads, updateThread, deleteThread } from '@/api/forum'
+import type { ForumThread, DepthCategory } from '@/types/models'
 
 const router = useRouter()
 const frequencyStore = useFrequencyStore()
@@ -11,95 +12,37 @@ const frequencyStore = useFrequencyStore()
 const loading = ref(true)
 const myPosts = ref<ForumThread[]>([])
 
-// 模拟数据
+// 编辑对话框状态
+const editDialog = reactive({
+  open: false,
+  loading: false,
+  thread: null as ForumThread | null,
+  form: {
+    title: '',
+    contentText: '',
+    category: '' as DepthCategory | '',
+    tags: '',
+  },
+})
+
+// 深度文章分类选项
+const depthCategories = [
+  { label: '测评 Review', value: 'review' },
+  { label: '指南 Guide', value: 'guide' },
+  { label: '讨论 Discussion', value: 'discussion' },
+  { label: '辩论 Debate', value: 'debate' },
+  { label: '提问 Question', value: 'question' },
+]
+
 onMounted(async () => {
   loading.value = true
-  await new Promise(resolve => setTimeout(resolve, 500))
-  myPosts.value = [
-    {
-      id: 1,
-      createdAt: '2024-12-21T10:00:00Z',
-      updatedAt: '2024-12-21T10:00:00Z',
-      authorId: 'current-user',
-      authorName: 'ChenChen',
-      isAnonymous: false,
-      type: 'depth',
-      category: 'guide',
-      title: '我的编程学习之路：从零基础到全栈开发',
-      contentText: '分享我这两年的编程学习经验...',
-      summary: '一份完整的编程学习路线图，包含资源推荐和学习方法。',
-      aiTags: ['编程', '学习路线', '经验分享'],
-      sentimentScore: 0.9,
-      readTimeMinutes: 10,
-      viewCount: 3456,
-      likeCount: 567,
-      commentCount: 89,
-      shareCount: 123,
-      bookmarkCount: 234,
-      sourceCollege: '计算机学院',
-    },
-    {
-      id: 2,
-      createdAt: '2024-12-20T15:30:00Z',
-      updatedAt: '2024-12-20T15:30:00Z',
-      authorId: 'current-user',
-      authorName: 'ChenChen',
-      isAnonymous: false,
-      type: 'signal',
-      contentText: '今天在实验室调了一整天的 bug，终于找到问题了！原来是一个小小的拼写错误，教训深刻。',
-      aiTags: ['编程', 'debug', '日常'],
-      sentimentScore: 0.75,
-      readTimeMinutes: 1,
-      viewCount: 456,
-      likeCount: 78,
-      commentCount: 23,
-      shareCount: 5,
-      bookmarkCount: 12,
-      sourceCollege: '计算机学院',
-    },
-    {
-      id: 3,
-      createdAt: '2024-12-19T09:00:00Z',
-      updatedAt: '2024-12-19T09:00:00Z',
-      authorId: 'current-user',
-      authorName: 'ChenChen',
-      isAnonymous: false,
-      type: 'depth',
-      category: 'review',
-      title: 'Vue 3 Composition API 实战总结',
-      contentText: '使用 Vue 3 开发项目的一些心得体会...',
-      summary: 'Vue 3 Composition API 的实战经验和最佳实践。',
-      aiTags: ['Vue3', '前端', '技术分享'],
-      sentimentScore: 0.88,
-      readTimeMinutes: 8,
-      viewCount: 2345,
-      likeCount: 345,
-      commentCount: 56,
-      shareCount: 78,
-      bookmarkCount: 156,
-      sourceCollege: '计算机学院',
-    },
-    {
-      id: 4,
-      createdAt: '2024-12-18T14:00:00Z',
-      updatedAt: '2024-12-18T14:00:00Z',
-      authorId: 'current-user',
-      authorName: 'ChenChen',
-      isAnonymous: false,
-      type: 'signal',
-      contentText: '推荐一个超好用的 VS Code 插件：GitHub Copilot，写代码效率提升了好多！',
-      aiTags: ['工具推荐', 'VSCode', '效率'],
-      sentimentScore: 0.92,
-      readTimeMinutes: 1,
-      viewCount: 678,
-      likeCount: 123,
-      commentCount: 45,
-      shareCount: 34,
-      bookmarkCount: 67,
-      sourceCollege: '计算机学院',
-    },
-  ]
-  loading.value = false
+  try {
+    myPosts.value = await fetchUserThreads()
+  } catch (error) {
+    console.error('获取帖子失败:', error)
+  } finally {
+    loading.value = false
+  }
 })
 
 const filteredPosts = computed(() => {
@@ -120,18 +63,73 @@ const relativeTime = (dateStr: string) => {
   return `${days}天前`
 }
 
+// 检查帖子是否被编辑过
+const isEdited = (thread: ForumThread) => {
+  if (!thread.updatedAt || !thread.createdAt) return false
+  const created = new Date(thread.createdAt).getTime()
+  const updated = new Date(thread.updatedAt).getTime()
+  // 如果更新时间比创建时间晚超过1分钟，认为是编辑过
+  return updated - created > 60000
+}
+
 function goToThread(thread: ForumThread) {
   router.push(`/forum?thread=${thread.id}`)
 }
 
-function editPost(thread: ForumThread) {
-  console.log('编辑帖子:', thread.id)
-  // TODO: 实现编辑功能
+function openEditDialog(thread: ForumThread) {
+  editDialog.thread = thread
+  editDialog.form.title = thread.title || ''
+  editDialog.form.contentText = thread.contentText
+  editDialog.form.category = thread.category || ''
+  editDialog.form.tags = thread.aiTags?.join(', ') || ''
+  editDialog.open = true
 }
 
-function deletePost(thread: ForumThread) {
-  if (confirm('确定要删除这篇帖子吗？')) {
+function closeEditDialog() {
+  editDialog.open = false
+  editDialog.thread = null
+  editDialog.form.title = ''
+  editDialog.form.contentText = ''
+  editDialog.form.category = ''
+  editDialog.form.tags = ''
+}
+
+async function submitEdit() {
+  if (!editDialog.thread) return
+  
+  editDialog.loading = true
+  try {
+    const updatedThread = await updateThread(editDialog.thread.id, {
+      title: editDialog.form.title || undefined,
+      contentText: editDialog.form.contentText,
+      category: editDialog.form.category as DepthCategory || undefined,
+      aiTags: editDialog.form.tags.split(',').map(t => t.trim()).filter(Boolean),
+    })
+    
+    // 更新本地数据
+    const index = myPosts.value.findIndex(p => p.id === updatedThread.id)
+    if (index !== -1) {
+      myPosts.value[index] = updatedThread
+    }
+    
+    closeEditDialog()
+  } catch (error) {
+    console.error('编辑失败:', error)
+    alert('编辑失败，请重试')
+  } finally {
+    editDialog.loading = false
+  }
+}
+
+async function handleDeletePost(thread: ForumThread) {
+  if (!confirm('确定要删除这篇帖子吗？删除后无法恢复。')) return
+  
+  try {
+    await deleteThread(thread.id)
     myPosts.value = myPosts.value.filter(p => p.id !== thread.id)
+  } catch (error) {
+    console.error('删除失败:', error)
+    alert('删除失败，请重试')
   }
 }
 </script>
@@ -193,7 +191,13 @@ function deletePost(thread: ForumThread) {
               <span class="category-badge">
                 {{ thread.category === 'guide' ? 'Guide' : thread.category === 'review' ? 'Review' : 'Post' }}
               </span>
-              <span class="depth-time">发布于 {{ relativeTime(thread.createdAt) }}</span>
+              <div class="depth-time-info">
+                <span class="depth-time">发布于 {{ relativeTime(thread.createdAt) }}</span>
+                <span v-if="isEdited(thread)" class="edited-badge">
+                  <Pencil :size="10" />
+                  编辑于 {{ relativeTime(thread.updatedAt) }}
+                </span>
+              </div>
             </div>
             <h3 class="depth-title">{{ thread.title }}</h3>
             <p class="depth-summary">{{ thread.summary || thread.contentText }}</p>
@@ -223,11 +227,11 @@ function deletePost(thread: ForumThread) {
             </div>
           </div>
           <div class="depth-actions">
-            <button class="action-btn edit-btn" @click="editPost(thread)">
+            <button class="action-btn edit-btn" @click="openEditDialog(thread)">
               <Edit :size="16" />
               编辑
             </button>
-            <button class="action-btn delete-btn" @click="deletePost(thread)">
+            <button class="action-btn delete-btn" @click="handleDeletePost(thread)">
               <Trash2 :size="16" />
               删除
             </button>
@@ -248,7 +252,13 @@ function deletePost(thread: ForumThread) {
                 <div class="author-avatar-vibe">{{ thread.authorName?.charAt(0) || 'U' }}</div>
                 <div class="author-info">
                   <span class="author-name-vibe">{{ thread.authorName }}</span>
-                  <span class="signal-time">{{ relativeTime(thread.createdAt) }}</span>
+                  <div class="signal-time-info">
+                    <span class="signal-time">{{ relativeTime(thread.createdAt) }}</span>
+                    <span v-if="isEdited(thread)" class="edited-badge-small">
+                      <Pencil :size="9" />
+                      已编辑
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -276,16 +286,92 @@ function deletePost(thread: ForumThread) {
             </div>
           </div>
           <div class="signal-actions">
-            <button class="action-btn-small edit-btn" @click="editPost(thread)">
+            <button class="action-btn-small edit-btn" @click="openEditDialog(thread)" title="编辑">
               <Edit :size="14" />
             </button>
-            <button class="action-btn-small delete-btn" @click="deletePost(thread)">
+            <button class="action-btn-small delete-btn" @click="handleDeletePost(thread)" title="删除">
               <Trash2 :size="14" />
             </button>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- 编辑对话框 -->
+    <Transition name="fade">
+      <div
+        v-if="editDialog.open"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4"
+        @click.self="closeEditDialog"
+      >
+        <div class="edit-dialog">
+          <div class="dialog-header">
+            <h3 class="dialog-title">编辑{{ editDialog.thread?.type === 'depth' ? '文章' : '动态' }}</h3>
+            <button class="close-btn" @click="closeEditDialog">
+              <X :size="20" />
+            </button>
+          </div>
+          
+          <form class="dialog-form" @submit.prevent="submitEdit">
+            <!-- 深度文章显示标题和分类 -->
+            <template v-if="editDialog.thread?.type === 'depth'">
+              <div class="form-group">
+                <label class="form-label">标题</label>
+                <input
+                  v-model="editDialog.form.title"
+                  type="text"
+                  class="form-input"
+                  placeholder="文章标题"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">分类</label>
+                <select v-model="editDialog.form.category" class="form-select">
+                  <option value="">选择分类</option>
+                  <option v-for="cat in depthCategories" :key="cat.value" :value="cat.value">
+                    {{ cat.label }}
+                  </option>
+                </select>
+              </div>
+            </template>
+            
+            <div class="form-group">
+              <label class="form-label">内容</label>
+              <textarea
+                v-model="editDialog.form.contentText"
+                class="form-textarea"
+                :rows="editDialog.thread?.type === 'depth' ? 8 : 4"
+                placeholder="写点什么..."
+              />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">标签 (逗号分隔)</label>
+              <input
+                v-model="editDialog.form.tags"
+                type="text"
+                class="form-input"
+                placeholder="标签1, 标签2, 标签3"
+              />
+            </div>
+            
+            <div class="dialog-footer">
+              <button type="button" class="btn-cancel" @click="closeEditDialog">
+                取消
+              </button>
+              <button 
+                type="submit" 
+                class="btn-submit"
+                :disabled="editDialog.loading || !editDialog.form.contentText.trim()"
+              >
+                {{ editDialog.loading ? '保存中...' : '保存修改' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -389,7 +475,7 @@ function deletePost(thread: ForumThread) {
 }
 
 .depth-header {
-  @apply flex items-center gap-3 mb-3;
+  @apply flex items-center justify-between gap-3 mb-3;
 }
 
 .category-badge {
@@ -397,8 +483,23 @@ function deletePost(thread: ForumThread) {
   @apply font-mono text-xs uppercase tracking-wider;
 }
 
+.depth-time-info {
+  @apply flex items-center gap-2;
+}
+
 .depth-time {
   @apply font-mono text-xs text-slate;
+}
+
+.edited-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full;
+  @apply bg-amber-50 text-amber-600;
+  @apply font-mono text-xs;
+}
+
+.edited-badge-small {
+  @apply inline-flex items-center gap-0.5 text-amber-600;
+  @apply font-mono text-xs;
 }
 
 .depth-title {
@@ -479,6 +580,10 @@ function deletePost(thread: ForumThread) {
   @apply font-sans text-sm font-medium text-charcoal;
 }
 
+.signal-time-info {
+  @apply flex items-center gap-2;
+}
+
 .signal-time {
   @apply font-mono text-xs text-slate;
 }
@@ -522,5 +627,82 @@ function deletePost(thread: ForumThread) {
 
 .action-btn-small.delete-btn {
   @apply text-slate bg-slate/5 hover:bg-red-50 hover:text-red-500;
+}
+
+/* 编辑对话框 */
+.edit-dialog {
+  @apply w-full max-w-lg rounded-2xl bg-white shadow-morandi overflow-hidden;
+}
+
+.dialog-header {
+  @apply flex items-center justify-between px-6 py-4 border-b border-slate/10;
+}
+
+.dialog-title {
+  @apply font-sans text-lg font-semibold text-charcoal;
+}
+
+.close-btn {
+  @apply p-1.5 rounded-full text-slate hover:bg-slate/10 transition-colors;
+}
+
+.dialog-form {
+  @apply p-6 space-y-4;
+}
+
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block font-sans text-xs font-medium text-slate uppercase tracking-wider;
+}
+
+.form-input {
+  @apply w-full px-4 py-2.5 rounded-xl border border-slate/20 bg-white;
+  @apply font-sans text-sm text-charcoal;
+  @apply focus:outline-none focus:border-focus-primary focus:ring-2 focus:ring-focus-primary/10;
+  @apply transition-all;
+}
+
+.form-select {
+  @apply w-full px-4 py-2.5 rounded-xl border border-slate/20 bg-white;
+  @apply font-sans text-sm text-charcoal;
+  @apply focus:outline-none focus:border-focus-primary focus:ring-2 focus:ring-focus-primary/10;
+  @apply transition-all;
+}
+
+.form-textarea {
+  @apply w-full px-4 py-3 rounded-xl border border-slate/20 bg-white resize-none;
+  @apply font-sans text-sm text-charcoal leading-relaxed;
+  @apply focus:outline-none focus:border-focus-primary focus:ring-2 focus:ring-focus-primary/10;
+  @apply transition-all;
+}
+
+.dialog-footer {
+  @apply flex items-center justify-end gap-3 pt-4 border-t border-slate/10;
+}
+
+.btn-cancel {
+  @apply px-4 py-2 rounded-full font-sans text-sm text-slate;
+  @apply hover:bg-slate/5 transition-colors;
+}
+
+.btn-submit {
+  @apply px-5 py-2 rounded-full font-sans text-sm font-medium text-white;
+  @apply bg-focus-accent hover:bg-focus-accent/90;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply transition-all;
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
