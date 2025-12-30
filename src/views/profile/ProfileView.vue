@@ -88,6 +88,31 @@ async function handleLogout() {
         <ActionGrid @action="handleAction" />
       </div>
     </div>
+
+    <!-- ✨ 底部宽屏动效：跨界心流 -->
+    <div class="footer-wave-container">
+      <!-- 渐变遮罩：让波浪顶部渐变消失 -->
+      <div class="wave-gradient-mask"></div>
+      
+      <!-- 波浪容器 SVG -->
+      <svg class="wave-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 1440 320">
+        <!-- 波浪 1 (慢速，莫兰迪蓝) -->
+        <g class="animate-wave-slow">
+          <path fill="rgba(147, 168, 172, 0.2)" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+        </g>
+        
+        <!-- 波浪 2 (中速，莫兰迪粉) -->
+        <g class="animate-wave-medium">
+          <path fill="rgba(217, 166, 159, 0.2)" d="M0,96L48,112C96,128,192,160,288,186.7C384,213,480,235,576,213.3C672,192,768,128,864,128C960,128,1056,192,1152,208C1248,224,1344,192,1392,176L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+        </g>
+        
+        <!-- 装饰：漂浮的连接点 -->
+        <circle cx="10%" cy="60%" r="3" class="wave-node animate-float-1" />
+        <circle cx="25%" cy="70%" r="2" class="wave-node animate-float-2" />
+        <circle cx="60%" cy="50%" r="4" class="wave-node-accent-blue animate-float-3" />
+        <circle cx="85%" cy="65%" r="3" class="wave-node-accent-pink animate-float-1" />
+      </svg>
+    </div>
   </div>
 
   <!-- 未登录状态 -->
@@ -342,5 +367,68 @@ async function handleLogout() {
   .particle-5 {
     @apply opacity-10;
   }
+  
+  .footer-wave-container {
+    @apply h-40;
+  }
 }
+
+/* ✨ 底部波浪动效样式 */
+.footer-wave-container {
+  @apply absolute left-0 w-full pointer-events-none overflow-hidden;
+  bottom: 80px;
+  height: 320px;
+  z-index: 0;
+  opacity: 0.65;
+}
+
+.wave-gradient-mask {
+  @apply absolute top-0 left-0 w-full h-1/2 z-10;
+  background: linear-gradient(to bottom, #F9F7F4 0%, transparent 100%);
+}
+
+.wave-svg {
+  @apply w-full h-full;
+}
+
+.wave-node {
+  fill: #B8BFC4;
+}
+
+.wave-node-accent-blue {
+  fill: #93A8AC;
+  opacity: 0.6;
+}
+
+.wave-node-accent-pink {
+  fill: #D9A69F;
+  opacity: 0.6;
+}
+
+/* 波浪流动动画 - 只上下浮动，避免左右移动导致边缘问题 */
+@keyframes wave-flow {
+  0% { transform: scaleY(1) translateY(0); }
+  50% { transform: scaleY(1.08) translateY(-8px); }
+  100% { transform: scaleY(1) translateY(0); }
+}
+
+.animate-wave-slow {
+  animation: wave-flow 6s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.animate-wave-medium {
+  animation: wave-flow 4s ease-in-out infinite reverse;
+  transform-origin: bottom;
+}
+
+/* 漂浮点动画 - 更明显 */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-25px); opacity: 1; }
+}
+
+.animate-float-1 { animation: float-particle 3s ease-in-out infinite; }
+.animate-float-2 { animation: float-particle 4s ease-in-out infinite; animation-delay: 0.5s; }
+.animate-float-3 { animation: float-particle 3.5s ease-in-out infinite; animation-delay: 1s; }
 </style>
