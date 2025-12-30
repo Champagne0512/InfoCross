@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/api/client'
 
@@ -8,6 +8,7 @@ interface ChatMessage { role: Role; content: string }
 
 const router = useRouter()
 const STORAGE_KEY = 'infocross-ai-assistant-store'
+const POSITION_KEY = 'infocross-ai-assistant-position'
 const EDGE_FUNCTION_NAME = 'global-ai-assistant'
 const ALIYUN_API_KEY = import.meta.env.VITE_ALIYUN_API_KEY || ''
 
@@ -48,7 +49,33 @@ const inputValue = ref('')
 const messages = ref<ChatMessage[]>([])
 const messageListRef = ref<HTMLDivElement | null>(null)
 
+// 拖拽相关
+const isDragging = ref(false)
+const hasDragged = ref(false)
+const position = ref({ x: 24, y: 24 }) // 距离右下角的偏移
+const dragStart = ref({ x: 0, y: 0 })
+
+// 计算面板位置 - 面板在悬浮球的左上方展开
+const panelStyle = computed(() => {
+  const panelWidth = 380
+  const panelHeight = 600
+  const btnSize = 64
+  const gap = 16
+  
+  // 面板右边缘与悬浮球右边缘对齐
+  const panelRight = position.value.x
+  
+  // 面板底部在悬浮球顶部上方
+  const panelBottom = position.value.y + btnSize + gap
+  
+  return {
+    bottom: `${panelBottom}px`,
+    right: `${panelRight}px`,
+  }
+})
+
 onMounted(() => {
+  // 加载聊天历史
   const cached = localStorage.getItem(STORAGE_KEY)
   if (cached) {
     try {
@@ -56,6 +83,30 @@ onMounted(() => {
       if (Array.isArray(parsed)) messages.value = parsed
     } catch (e) { console.error('Failed to parse history', e) }
   }
+  
+  // 加载位置
+  const savedPosition = localStorage.getItem(POSITION_KEY)
+  if (savedPosition) {
+    try {
+      const parsed = JSON.parse(savedPosition)
+      if (parsed.x !== undefined && parsed.y !== undefined) {
+        position.value = parsed
+      }
+    } catch (e) { console.error('Failed to parse position', e) }
+  }
+  
+  // 添加全局事件监听
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  document.addEventListener('touchmove', handleTouchMove, { passive: false })
+  document.addEventListener('touchend', handleTouchEnd)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+  document.removeEventListener('touchmove', handleTouchMove)
+  document.removeEventListener('touchend', handleTouchEnd)
 })
 
 watch(messages, (val) => {
@@ -63,7 +114,99 @@ watch(messages, (val) => {
   nextTick(() => { if (messageListRef.value) messageListRef.value.scrollTop = messageListRef.value.scrollHeight })
 }, { deep: true })
 
+// 拖拽处理
+function handleMouseDown(e: MouseEvent) {
+  isDragging.value = true
+  hasDragged.value = false
+  dragStart.value = { x: e.clientX, y: e.clientY }
+  e.preventDefault()
+}
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 1) {
+    isDragging.value = true
+    hasDragged.value = false
+    const touch = e.touches[0]
+    if (touch) {
+      dragStart.value = { x: touch.clientX, y: touch.clientY }
+    }
+  }
+}
+
+function handleMouseMove(e: MouseEvent) {
+  if (!isDragging.value) return
+  
+  const deltaX = dragStart.value.x - e.clientX
+  const deltaY = dragStart.value.y - e.clientY
+  
+  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+    hasDragged.value = true
+  }
+  
+  const newX = position.value.x + deltaX
+  const newY = position.value.y + deltaY
+  
+  // 限制在视口内
+  const maxX = window.innerWidth - 80
+  const maxY = window.innerHeight - 80
+  
+  position.value = {
+    x: Math.max(16, Math.min(newX, maxX)),
+    y: Math.max(16, Math.min(newY, maxY))
+  }
+  
+  dragStart.value = { x: e.clientX, y: e.clientY }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (!isDragging.value || e.touches.length !== 1) return
+  e.preventDefault()
+  
+  const touch = e.touches[0]
+  if (!touch) return
+  
+  const deltaX = dragStart.value.x - touch.clientX
+  const deltaY = dragStart.value.y - touch.clientY
+  
+  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+    hasDragged.value = true
+  }
+  
+  const newX = position.value.x + deltaX
+  const newY = position.value.y + deltaY
+  
+  const maxX = window.innerWidth - 80
+  const maxY = window.innerHeight - 80
+  
+  position.value = {
+    x: Math.max(16, Math.min(newX, maxX)),
+    y: Math.max(16, Math.min(newY, maxY))
+  }
+  
+  dragStart.value = { x: touch.clientX, y: touch.clientY }
+}
+
+function handleMouseUp() {
+  if (isDragging.value) {
+    isDragging.value = false
+    // 保存位置
+    localStorage.setItem(POSITION_KEY, JSON.stringify(position.value))
+  }
+}
+
+function handleTouchEnd() {
+  if (isDragging.value) {
+    isDragging.value = false
+    localStorage.setItem(POSITION_KEY, JSON.stringify(position.value))
+  }
+}
+
 function toggleAssistant() {
+  // 如果刚拖拽过，不触发点击
+  if (hasDragged.value) {
+    hasDragged.value = false
+    return
+  }
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     nextTick(() => {
@@ -134,9 +277,9 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 </script>
 
 <template>
-  <div class="ai-assistant">
+  <div class="ai-assistant" :style="{ right: position.x + 'px', bottom: position.y + 'px' }">
     <transition name="fade">
-      <div v-if="isOpen" class="panel">
+      <div v-if="isOpen" class="panel" :style="panelStyle">
         <div class="header">
           <div>
             <p class="label">CrossBot</p>
@@ -160,7 +303,13 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
         </div>
       </div>
     </transition>
-    <button class="bh-btn" :class="{ 'bh-active': isOpen }" @click="toggleAssistant">
+    <button 
+      class="bh-btn" 
+      :class="{ 'bh-active': isOpen, 'bh-dragging': isDragging }" 
+      @click="toggleAssistant"
+      @mousedown="handleMouseDown"
+      @touchstart="handleTouchStart"
+    >
       <!-- 默认状态 -->
       <div class="bh-state bh-default">
         <svg viewBox="0 0 100 100">
@@ -209,13 +358,11 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 </template>
 
 <style scoped>
-.ai-assistant { position: fixed; right: 24px; bottom: 24px; z-index: 50; }
+.ai-assistant { position: fixed; z-index: 50; }
 
-/* 悬浮窗 - 绝对定位在按钮上方 */
+/* 悬浮窗 - 固定定位，位置由 JS 计算 */
 .panel { 
-  position: absolute;
-  bottom: 80px;
-  right: 0;
+  position: fixed;
   width: 380px; 
   height: 600px; 
   border-radius: 1.5rem; 
@@ -225,7 +372,8 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
   box-shadow: 0 25px 80px rgba(15,23,42,0.25); 
   display: flex; 
   flex-direction: column; 
-  animation: pop 0.4s ease; 
+  animation: pop 0.4s ease;
+  z-index: 49;
 }
 .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid rgba(15,23,42,0.08); }
 .label { font-family: 'DM Mono', monospace; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.1em; color: #0f172a; }
@@ -261,6 +409,12 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 .bh-btn:hover { 
   transform: scale(1.1); 
   box-shadow: 0 6px 40px rgba(0,0,0,0.8), 0 0 60px rgba(255,255,255,0.2);
+}
+
+.bh-btn.bh-dragging {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 0 8px 50px rgba(0,0,0,0.9), 0 0 80px rgba(255,255,255,0.3);
 }
 
 .bh-state {
@@ -443,11 +597,12 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 
 /* 响应式 - 小屏幕时悬浮窗自适应 */
 @media (max-width: 640px) { 
-  .ai-assistant { right: 16px; bottom: 16px; }
   .panel { 
     width: calc(100vw - 32px); 
     height: calc(100vh - 120px);
-    right: -8px;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 90px !important;
   } 
 }
 
@@ -455,7 +610,6 @@ function clearHistory() { messages.value = []; localStorage.removeItem(STORAGE_K
 @media (max-height: 750px) {
   .panel {
     height: calc(100vh - 120px);
-    bottom: 80px;
   }
 }
 </style>
