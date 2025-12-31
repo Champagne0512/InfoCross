@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from '@/i18n'
 import { useRouter } from 'vue-router'
 import { 
-  Users, MessageCircle, 
-  ArrowRight, Clock, MapPin, Sparkles
+  Search, LayoutDashboard, Activity, ArrowRight
 } from 'lucide-vue-next'
-import ArticleCard from '@/components/business/ArticleCard.vue'
-import { fetchArticles, fetchRecommendedArticles } from '@/api/article'
-import { fetchTeams } from '@/api/team'
-import { fetchForumThreads } from '@/api/forum'
-import type { Article, Team, ForumThread } from '@/types/models'
 import { useAuth } from '@/composables/useAuth'
-import { recordInteraction } from '@/api/interaction'
 import { useFrequencyStore } from '@/stores/frequencyStore'
 
 const router = useRouter()
@@ -20,14 +13,10 @@ const frequencyStore = useFrequencyStore()
 const { t } = useI18n()
 const { profile } = useAuth()
 
-const articles = ref<Article[]>([])
-const recommended = ref<Article[]>([])
-const teams = ref<Team[]>([])
-const forumThreads = ref<ForumThread[]>([])
 const searchQuery = ref('')
-const loading = ref(true)
 const isLoaded = ref(false)
 const searchFocused = ref(false)
+const hoveredCard = ref<number | null>(null)
 
 // 页面配置
 const displayName = computed(() => profile.value?.username || 'Explorer')
@@ -38,79 +27,45 @@ const pageConfig = computed(() => {
       greeting: `${t('home.greeting.focus')}, ${displayName.value}`,
       desc: t('home.desc.focus'),
       searchPlaceholder: t('home.searchPlaceholder.focus'),
-      sectionTitles: {
-        recommended: t('home.aiRecommend.focus'),
-        teams: t('team.recruiting'),
-        forum: t('forum.hotTopics'),
-      }
     }
   }
   return {
     greeting: `${t('home.greeting.vibe')}, ${displayName.value}`,
     desc: t('home.desc.vibe'),
     searchPlaceholder: t('home.searchPlaceholder.vibe'),
-    sectionTitles: {
-      recommended: t('home.aiRecommend.vibe'),
-      teams: t('team.types.meal'),
-      forum: t('home.insightTitle.vibe'),
-    }
   }
 })
 
-// 筛选当前模式的数据
-const focusCategories = ['lecture', 'competition', 'research', 'notice']
-const vibeCategories = ['meal', 'sports', 'carpool', 'chat']
-
-const modeArticles = computed(() => {
-  const allowed = frequencyStore.isFocus ? focusCategories : vibeCategories
-  return articles.value.filter(a => allowed.includes(a.category))
-})
-
-const modeRecommended = computed(() => {
-  const allowed = frequencyStore.isFocus ? focusCategories : vibeCategories
-  return recommended.value.filter(a => allowed.includes(a.category))
-})
-
-const modeTeams = computed(() => 
-  teams.value.filter(t => frequencyStore.isFocus ? !t.isVibe : t.isVibe).slice(0, 4)
-)
-
-const latestArticles = computed(() => modeArticles.value.slice(0, 6))
-const aiRecommended = computed(() => modeRecommended.value.slice(0, 3))
-
-onMounted(async () => {
-  // 触发加载动画
-  setTimeout(() => {
-    isLoaded.value = true
-  }, 100)
-  await loadData()
-})
-
-watch(() => frequencyStore.mode, () => {
-  // 模式切换时可以重新加载数据
-})
-
-async function loadData() {
-  loading.value = true
-  try {
-    const [articlesData, recommendedData, teamsData, forumData] = await Promise.all([
-      fetchArticles(),
-      fetchRecommendedArticles(profile.value?.tags ?? []),
-      fetchTeams(),
-      fetchForumThreads({ type: 'signal' }),
-    ])
-    articles.value = articlesData
-    recommended.value = recommendedData
-    teams.value = teamsData
-    forumThreads.value = forumData
-  } finally {
-    loading.value = false
+// 手风琴导航模块配置
+const navigationModules = [
+  {
+    id: 1,
+    title: '寻觅',
+    subtitle: '寻找志同道合的队友',
+    description: '打破学科壁垒，发现跨学科合作机会',
+    route: '/team',
+    bgColor: '#F8FAFC',
+    icon: Search
+  },
+  {
+    id: 2,
+    title: '协作',
+    subtitle: '项目管理与进度同步',
+    description: '高效管理团队项目，实时掌握进展',
+    route: '/collab',
+    bgColor: '#F8FAFC',
+    icon: LayoutDashboard
+  },
+  {
+    id: 3,
+    title: '论坛',
+    subtitle: '校园生活与情报分享',
+    description: '获取最新校园资讯，参与深度讨论',
+    route: '/forum',
+    bgColor: '#F8FAFC',
+    icon: Activity
   }
-}
-
-async function handleBookmark(article: Article) {
-  await recordInteraction({ articleId: article.id, type: 'bookmark' })
-}
+]
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
@@ -120,6 +75,21 @@ function handleSearch() {
 function navigateTo(path: string) {
   router.push(path)
 }
+
+function handleCardHover(cardId: number) {
+  hoveredCard.value = cardId
+}
+
+function handleCardLeave() {
+  hoveredCard.value = null
+}
+
+onMounted(() => {
+  // 触发加载动画
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+})
 </script>
 
 <template>
@@ -166,187 +136,47 @@ function navigateTo(path: string) {
             </svg>
           </button>
         </div>
-
       </div>
     </section>
 
-    <!-- 主内容区域 -->
-    <section class="main-content">
-      <!-- AI 推荐区块 -->
-      <div class="content-section section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.2s">
-        <header class="section-header">
-          <div class="section-title-group">
-            <div class="icon-wrapper" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
-              <Sparkles :size="20" />
-            </div>
-            <h2 class="section-title">{{ pageConfig.sectionTitles.recommended }}</h2>
+    <!-- 交互式手风琴导航区 -->
+    <section class="accordion-section section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.2s">
+      <div class="accordion-container">
+        <div
+          v-for="module in navigationModules"
+          :key="module.id"
+          class="accordion-card"
+          :class="{ 'expanded': hoveredCard === module.id }"
+          :style="{ 
+            backgroundColor: module.bgColor,
+            flex: hoveredCard === module.id ? 3 : 1
+          }"
+          @mouseenter="handleCardHover(module.id)"
+          @mouseleave="handleCardLeave"
+          @click="navigateTo(module.route)"
+        >
+          <!-- 背景装饰图标 -->
+          <div class="card-background-icon">
+            <component :is="module.icon" :size="160" />
           </div>
-          <button class="see-more-btn group" @click="navigateTo('/team')">
-            {{ t('common.more') }}
-            <ArrowRight :size="16" class="transition-transform duration-300 group-hover:translate-x-1" />
-          </button>
-        </header>
-        
-        <div v-if="loading" class="loading-grid">
-          <div v-for="i in 3" :key="i" class="skeleton-card" />
-        </div>
-        <div v-else class="article-grid">
-          <div 
-            v-for="(article, index) in aiRecommended" 
-            :key="article.id"
-            class="article-card-wrapper"
-            :style="{ animationDelay: `${index * 100}ms` }"
-          >
-            <ArticleCard
-              :article="article"
-              :mode="frequencyStore.mode"
-              @bookmark="handleBookmark"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- 双栏布局：团队招募 + 论坛热议 -->
-      <div class="two-column-section section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.4s">
-        <!-- 团队招募 -->
-        <div class="column-card">
-          <div class="card-shine"></div>
-          <header class="column-header">
-            <div class="section-title-group">
-              <div class="icon-wrapper" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
-                <Users :size="20" />
-              </div>
-              <h2 class="section-title">{{ pageConfig.sectionTitles.teams }}</h2>
-            </div>
-            <button class="see-more-btn group" @click="navigateTo('/team')">
-              {{ t('common.more') }}
-              <ArrowRight :size="14" class="transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-          </header>
           
-          <div v-if="loading" class="team-loading">
-            <div v-for="i in 3" :key="i" class="skeleton-team" />
-          </div>
-          <div v-else class="team-list">
-            <div
-              v-for="(team, index) in modeTeams"
-              :key="team.id"
-              class="team-item"
-              :style="{ animationDelay: `${index * 80}ms` }"
-              @click="navigateTo(`/team/${team.id}`)"
-            >
-              <div 
-                class="team-avatar"
-                :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-              >
-                {{ team.name.charAt(0) }}
-              </div>
-              <div class="team-info">
-                <h3 class="team-name">{{ team.name }}</h3>
-                <p class="team-meta">
-                  <span class="meta-item">
-                    <Users :size="12" />
-                    {{ team.currentMembers }}/{{ team.maxMembers }}
-                  </span>
-                  <span class="meta-item">
-                    <MapPin :size="12" />
-                    {{ team.college }}
-                  </span>
-                </p>
-              </div>
-              <ArrowRight :size="16" class="team-arrow" />
-            </div>
-            
-            <div v-if="!modeTeams.length" class="empty-hint">
-              {{ t('common.noData') }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 论坛热议 -->
-        <div class="column-card">
-          <div class="card-shine"></div>
-          <header class="column-header">
-            <div class="section-title-group">
-              <div class="icon-wrapper" :class="frequencyStore.isFocus ? 'icon-focus' : 'icon-vibe'">
-                <MessageCircle :size="20" />
-              </div>
-              <h2 class="section-title">{{ pageConfig.sectionTitles.forum }}</h2>
-            </div>
-            <button class="see-more-btn group" @click="navigateTo('/forum')">
-              {{ t('common.more') }}
-              <ArrowRight :size="14" class="transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-          </header>
-          
-          <div v-if="loading" class="forum-loading">
-            <div v-for="i in 4" :key="i" class="skeleton-forum" />
-          </div>
-          <div v-else class="forum-list">
-            <div
-              v-for="(thread, index) in forumThreads.slice(0, 5)"
-              :key="thread.id"
-              class="forum-item"
-              :style="{ animationDelay: `${index * 80}ms` }"
-              @click="navigateTo('/forum')"
-            >
-              <div class="forum-content">
-                <p class="forum-text">{{ thread.contentText }}</p>
-                <div class="forum-meta">
-                  <span>{{ thread.authorName }}</span>
-                  <span>{{ thread.likeCount }} {{ t('common.like') }}</span>
-                </div>
+          <!-- 卡片内容 -->
+          <div class="card-content">
+            <!-- 文字内容 -->
+            <div class="text-section">
+              <h3 class="module-title">{{ module.title }}</h3>
+              <p class="module-subtitle">{{ module.subtitle }}</p>
+              
+              <!-- 展开时显示的内容 -->
+              <div class="expanded-content" :class="{ 'show': hoveredCard === module.id }">
+                <p class="module-description">{{ module.description }}</p>
+                <button class="navigate-btn">
+                  <span>前往</span>
+                  <ArrowRight :size="16" />
+                </button>
               </div>
             </div>
-            
-            <div v-if="!forumThreads.length" class="empty-hint">
-              {{ t('common.noData') }}
-            </div>
           </div>
-        </div>
-      </div>
-
-      <!-- 最新动态流 -->
-      <div class="content-section section-animate" :class="{ 'loaded': isLoaded }" style="--delay: 0.6s">
-        <header class="section-header">
-          <div class="section-title-group">
-            <div class="icon-wrapper icon-neutral">
-              <Clock :size="20" />
-            </div>
-            <h2 class="section-title">{{ frequencyStore.isFocus ? t('home.stats.newActivities') : t('home.stats.newDynamics') }}</h2>
-          </div>
-          <div class="filter-tabs">
-            <button 
-              class="filter-tab active"
-              :class="frequencyStore.isFocus ? 'tab-focus' : 'tab-vibe'"
-            >
-              {{ t('common.all') }}
-            </button>
-          </div>
-        </header>
-        
-        <div v-if="loading" class="loading-grid loading-grid-2">
-          <div v-for="i in 4" :key="i" class="skeleton-card" />
-        </div>
-        <div v-else class="article-grid article-grid-2">
-          <div 
-            v-for="(article, index) in latestArticles" 
-            :key="article.id"
-            class="article-card-wrapper"
-            :style="{ animationDelay: `${index * 80}ms` }"
-          >
-            <ArticleCard
-              :article="article"
-              :mode="frequencyStore.mode"
-              @bookmark="handleBookmark"
-            />
-          </div>
-        </div>
-        
-        <div v-if="latestArticles.length" class="load-more">
-          <button class="load-more-btn">
-            <span>{{ t('common.more') }}</span>
-          </button>
         </div>
       </div>
     </section>
@@ -517,9 +347,125 @@ function navigateTo(path: string) {
   @apply absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors;
 }
 
-/* 主内容区域 */
-.main-content {
-  @apply space-y-10 relative z-10;
+/* 手风琴导航区 */
+.accordion-section {
+  @apply py-8 relative z-10;
+}
+
+.accordion-container {
+  @apply flex w-full h-[400px] rounded-2xl overflow-hidden;
+  @apply shadow-xl border border-slate/10;
+  @apply bg-white;
+}
+
+.accordion-card {
+  @apply relative flex-1 cursor-pointer transition-all duration-500 ease-in-out;
+  @apply flex items-center justify-center p-6;
+  @apply overflow-hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.accordion-card:last-child {
+  @apply border-r-0;
+}
+
+.accordion-card:hover {
+  @apply shadow-xl;
+}
+
+/* 背景装饰图标 */
+.card-background-icon {
+  @apply absolute inset-0 flex items-center justify-center;
+  @apply pointer-events-none;
+}
+
+.card-background-icon svg {
+  @apply transition-transform duration-700 ease-in-out;
+  @apply opacity-15;
+  color: currentColor;
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.accordion-card:hover .card-background-icon svg {
+  transform: translate(-50%, -50%) scale(1.02);
+  @apply opacity-20;
+}
+
+/* 为所有卡片设置统一的图标颜色 */
+.card-background-icon svg {
+  color: #64748B; /* Slate 500 */
+}
+
+/* 卡片内容 */
+.card-content {
+  @apply relative z-10 flex flex-col items-center justify-end;
+  @apply text-center space-y-3;
+  @apply transition-all duration-500 ease-in-out;
+  width: 100%;
+  height: 100%;
+  padding-top: 3rem;
+  padding-bottom: 2rem;
+  transform: translateY(20px);
+}
+
+.accordion-card.expanded .card-content {
+  @apply items-start text-left;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  transform: translateY(0);
+}
+
+
+
+/* 文字区域 */
+.text-section {
+  @apply space-y-2 flex flex-col;
+}
+
+.module-title {
+  @apply text-2xl font-bold text-charcoal font-sans;
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.module-subtitle {
+  @apply text-sm text-slate/60 font-sans leading-relaxed;
+  @apply transition-all duration-300 ease-in-out;
+  max-width: 220px;
+}
+
+.accordion-card:hover .module-title {
+  @apply text-3xl;
+}
+
+.accordion-card:hover .module-subtitle {
+  @apply text-slate/70;
+}
+
+/* 展开内容 */
+.expanded-content {
+  @apply space-y-4 opacity-0 transform translate-y-4;
+  @apply transition-all duration-500 ease-in-out;
+  @apply pointer-events-none mt-4;
+}
+
+.expanded-content.show {
+  @apply opacity-100 translate-y-0 pointer-events-auto;
+}
+
+.module-description {
+  @apply text-sm text-slate/70 leading-relaxed font-sans;
+  @apply max-w-xs;
+}
+
+.navigate-btn {
+  @apply flex items-center gap-2 px-4 py-2 rounded-xl;
+  @apply bg-white/90 backdrop-blur-sm border border-slate/30;
+  @apply text-sm font-medium text-charcoal;
+  @apply transition-all duration-300 ease-in-out;
+  @apply hover:bg-white hover:shadow-md hover:-translate-y-0.5;
 }
 
 /* 区块动画 */
@@ -531,242 +477,6 @@ function navigateTo(path: string) {
 
 .section-animate.loaded {
   @apply opacity-100 translate-y-0;
-}
-
-/* 区块通用样式 */
-.content-section {
-  @apply space-y-6;
-}
-
-.section-header {
-  @apply flex items-center justify-between;
-}
-
-.section-title-group {
-  @apply flex items-center gap-3;
-}
-
-.icon-wrapper {
-  @apply w-9 h-9 rounded-xl flex items-center justify-center;
-  @apply transition-all duration-300;
-}
-
-.icon-focus {
-  @apply bg-focus-primary/15 text-focus-accent;
-}
-
-.icon-vibe {
-  @apply bg-vibe-primary/15 text-vibe-accent;
-}
-
-.icon-neutral {
-  @apply bg-slate/10 text-slate;
-}
-
-.section-title {
-  @apply text-h2 font-sans font-semibold text-charcoal;
-}
-
-.see-more-btn {
-  @apply flex items-center gap-1 font-sans text-sm text-slate hover:text-charcoal transition-colors;
-}
-
-/* 文章网格 */
-.article-grid {
-  @apply grid gap-6 md:grid-cols-2 lg:grid-cols-3;
-}
-
-.article-grid-2 {
-  @apply lg:grid-cols-2;
-}
-
-.article-card-wrapper {
-  animation: slideUp 0.6s ease-out both;
-}
-
-/* 双栏布局 */
-.two-column-section {
-  @apply grid gap-6 lg:grid-cols-2;
-}
-
-.column-card {
-  @apply relative rounded-2xl bg-white border border-slate/10 p-6;
-  @apply transition-all duration-500;
-  @apply flex flex-col overflow-hidden;
-}
-
-.column-card:hover {
-  @apply shadow-morandi-lg -translate-y-1;
-}
-
-.card-shine {
-  @apply absolute inset-0 opacity-0 transition-opacity duration-500;
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
-}
-
-.column-card:hover .card-shine {
-  @apply opacity-100;
-}
-
-.column-card .team-list,
-.column-card .forum-list {
-  @apply flex-1;
-}
-
-.column-header {
-  @apply flex items-center justify-between mb-4 pb-4 border-b border-slate/10;
-}
-
-/* 团队列表 */
-.team-list {
-  @apply space-y-3;
-}
-
-.team-item {
-  @apply flex items-center gap-3 p-3 rounded-xl;
-  @apply cursor-pointer transition-all duration-300;
-  @apply hover:bg-slate/5;
-  animation: slideUp 0.5s ease-out both;
-}
-
-.team-item:hover {
-  @apply translate-x-1;
-}
-
-.team-avatar {
-  @apply w-10 h-10 rounded-xl flex items-center justify-center;
-  @apply font-sans font-bold text-white text-sm;
-  @apply transition-transform duration-300;
-}
-
-.team-item:hover .team-avatar {
-  @apply scale-110;
-}
-
-.avatar-focus {
-  @apply bg-gradient-to-br from-focus-primary to-focus-accent;
-}
-
-.avatar-vibe {
-  @apply bg-gradient-to-br from-vibe-primary to-vibe-accent;
-}
-
-.team-info {
-  @apply flex-1 min-w-0;
-}
-
-.team-name {
-  @apply font-sans text-sm font-medium text-charcoal truncate;
-  @apply transition-colors duration-300;
-}
-
-.team-item:hover .team-name {
-  @apply text-charcoal;
-}
-
-.team-meta {
-  @apply flex items-center gap-3 mt-0.5;
-}
-
-.meta-item {
-  @apply flex items-center gap-1 font-mono text-xs text-slate;
-}
-
-.team-arrow {
-  @apply text-slate/30 transition-all duration-300;
-}
-
-.team-item:hover .team-arrow {
-  @apply text-slate translate-x-1;
-}
-
-/* 论坛列表 */
-.forum-list {
-  @apply space-y-3;
-}
-
-.forum-item {
-  @apply p-3 rounded-xl cursor-pointer transition-all duration-300;
-  @apply hover:bg-slate/5;
-  animation: slideUp 0.5s ease-out both;
-}
-
-.forum-item:hover {
-  @apply translate-x-1;
-}
-
-.forum-text {
-  @apply font-sans text-sm text-charcoal line-clamp-2;
-  @apply transition-colors duration-300;
-}
-
-.forum-item:hover .forum-text {
-  @apply text-charcoal;
-}
-
-.forum-meta {
-  @apply flex items-center gap-3 mt-2 font-mono text-xs text-slate;
-}
-
-/* 筛选标签 */
-.filter-tabs {
-  @apply flex gap-2;
-}
-
-.filter-tab {
-  @apply px-3 py-1.5 rounded-full font-sans text-sm transition-all duration-300;
-  @apply bg-slate/5 text-slate hover:bg-slate/10;
-}
-
-.filter-tab.active.tab-focus {
-  @apply bg-focus-accent text-white;
-}
-
-.filter-tab.active.tab-vibe {
-  @apply bg-vibe-accent text-white;
-}
-
-/* 加载更多 */
-.load-more {
-  @apply flex justify-center pt-4;
-}
-
-.load-more-btn {
-  @apply relative px-6 py-2 rounded-full border border-slate/20;
-  @apply font-sans text-sm text-slate transition-all duration-300;
-  @apply hover:bg-slate/5 hover:border-slate/30 hover:-translate-y-0.5;
-  @apply overflow-hidden;
-}
-
-/* 空状态 */
-.empty-hint {
-  @apply text-center py-8 font-sans text-sm text-slate;
-}
-
-/* 骨架屏 */
-.loading-grid {
-  @apply grid gap-6 md:grid-cols-2 lg:grid-cols-3;
-}
-
-.loading-grid-2 {
-  @apply lg:grid-cols-2;
-}
-
-.skeleton-card {
-  @apply h-64 rounded-2xl bg-slate/10 animate-pulse;
-}
-
-.team-loading,
-.forum-loading {
-  @apply space-y-3;
-}
-
-.skeleton-team {
-  @apply h-16 rounded-xl bg-slate/10 animate-pulse;
-}
-
-.skeleton-forum {
-  @apply h-20 rounded-xl bg-slate/10 animate-pulse;
 }
 
 /* 动画定义 */
@@ -796,17 +506,6 @@ function navigateTo(path: string) {
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* 响应式调整 */
 @media (max-width: 768px) {
   .orb-1,
@@ -816,6 +515,32 @@ function navigateTo(path: string) {
   
   .floating-particle {
     @apply opacity-10;
+  }
+
+  .accordion-container {
+    @apply flex-col h-auto rounded-2xl;
+  }
+
+  .accordion-card {
+    @apply border-r-0 border-b border-slate/10 p-6;
+    min-height: 160px;
+  }
+
+  .accordion-card:last-child {
+    @apply border-b-0;
+  }
+
+  .accordion-card:hover,
+  .accordion-card.expanded {
+    flex: 1;
+  }
+
+  .card-content {
+    @apply flex-row items-center justify-between;
+  }
+
+  .accordion-card.expanded .card-content {
+    @apply flex-col items-start text-left;
   }
 }
 </style>
