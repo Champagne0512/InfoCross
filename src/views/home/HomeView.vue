@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from '@/i18n'
 import { useRouter } from 'vue-router'
 import { 
-  Search, LayoutDashboard, Activity, ArrowRight
+  Search, LayoutDashboard, Activity
 } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useFrequencyStore } from '@/stores/frequencyStore'
@@ -170,10 +170,6 @@ onMounted(() => {
               <!-- 展开时显示的内容 -->
               <div class="expanded-content" :class="{ 'show': hoveredCard === module.id }">
                 <p class="module-description">{{ module.description }}</p>
-                <button class="navigate-btn">
-                  <span>前往</span>
-                  <ArrowRight :size="16" />
-                </button>
               </div>
             </div>
           </div>
@@ -412,8 +408,8 @@ onMounted(() => {
 }
 
 .accordion-card.expanded .card-content {
-  @apply items-start text-left;
-  padding-top: 2rem;
+  @apply items-center text-center;
+  padding-top: 5rem;
   padding-bottom: 2rem;
   transform: translateY(0);
 }
@@ -448,7 +444,7 @@ onMounted(() => {
 .expanded-content {
   @apply space-y-4 opacity-0 transform translate-y-4;
   @apply transition-all duration-500 ease-in-out;
-  @apply pointer-events-none mt-4;
+  @apply pointer-events-none mt-12;
 }
 
 .expanded-content.show {
@@ -458,14 +454,6 @@ onMounted(() => {
 .module-description {
   @apply text-sm text-slate/70 leading-relaxed font-sans;
   @apply max-w-xs;
-}
-
-.navigate-btn {
-  @apply flex items-center gap-2 px-4 py-2 rounded-xl;
-  @apply bg-white/90 backdrop-blur-sm border border-slate/30;
-  @apply text-sm font-medium text-charcoal;
-  @apply transition-all duration-300 ease-in-out;
-  @apply hover:bg-white hover:shadow-md hover:-translate-y-0.5;
 }
 
 /* 区块动画 */
