@@ -183,11 +183,11 @@ async function revokeApplication(applicationId: number) {
                     <h3 class="team-name-compact">{{ team.name }}</h3>
                     <div class="team-meta-compact">
                       <span class="member-count-compact">
-                        <Users :size="12" />
+                        <Users :size="14" />
                         {{ team.currentMembers }}/{{ team.maxMembers }}
                       </span>
                       <span class="date-tag-compact">
-                        <Clock :size="10" />
+                        <Clock :size="12" />
                         {{ team.createdAt.slice(5, 10) }}
                       </span>
                     </div>
@@ -255,7 +255,7 @@ async function revokeApplication(applicationId: number) {
                     <h3 class="team-name-compact">{{ team.name }}</h3>
                     <div class="team-meta-compact">
                       <span class="member-count-compact">
-                        <Users :size="12" />
+                        <Users :size="14" />
                         {{ team.currentMembers }}/{{ team.maxMembers }}
                       </span>
                       <span class="college-tag-compact">{{ team.college }}</span>
@@ -533,7 +533,7 @@ async function revokeApplication(applicationId: number) {
 
 /* 滚动容器 */
 .teams-scroll-container {
-  @apply h-80 overflow-y-auto pr-2;
+  @apply max-h-80 overflow-y-auto pr-2;
 }
 
 /* 自定义滚动条样式 */
@@ -693,8 +693,8 @@ async function revokeApplication(applicationId: number) {
 }
 
 .team-avatar-compact {
-  @apply w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center;
-  @apply font-sans font-bold text-white text-sm;
+  @apply w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center;
+  @apply font-sans font-bold text-white text-base;
   @apply transition-transform duration-200;
 }
 
@@ -707,19 +707,19 @@ async function revokeApplication(applicationId: number) {
 }
 
 .team-name-compact {
-  @apply text-sm font-sans font-semibold text-charcoal truncate;
+  @apply text-base font-sans font-semibold text-charcoal truncate;
 }
 
 .team-meta-compact {
-  @apply flex items-center gap-2 mt-0.5;
+  @apply flex items-center gap-2 mt-1;
 }
 
 .member-count-compact {
-  @apply flex items-center gap-1 text-xs text-slate;
+  @apply flex items-center gap-1 text-sm text-slate;
 }
 
 .college-tag-compact {
-  @apply px-1.5 py-0.5 rounded bg-slate/10 font-mono text-[10px] text-slate truncate max-w-[60px];
+  @apply px-2 py-0.5 rounded bg-slate/10 font-mono text-xs text-slate truncate max-w-[80px];
 }
 
 .action-arrow-compact {
@@ -755,7 +755,7 @@ async function revokeApplication(applicationId: number) {
 }
 
 .date-tag-compact {
-  @apply flex items-center gap-0.5 text-[10px] text-slate;
+  @apply flex items-center gap-1 text-xs text-slate;
 }
 
 /* 申请记录 */
@@ -850,7 +850,7 @@ async function revokeApplication(applicationId: number) {
 /* 骨架屏 */
 .teams-skeleton,
 .applications-skeleton {
-  @apply h-80 overflow-hidden space-y-4 pr-2;
+  @apply max-h-80 overflow-hidden space-y-4 pr-2;
 }
 
 .skeleton-card {
