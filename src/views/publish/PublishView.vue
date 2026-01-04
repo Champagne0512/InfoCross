@@ -7,6 +7,7 @@ import TagBadge from '@/components/business/TagBadge.vue'
 import { createArticle } from '@/api/article'
 import { createTeam } from '@/api/team'
 import { useFrequencyStore } from '@/stores/frequencyStore'
+import { generateContent } from '@/api/aiGenerator'
 import type { ArticleCategory, Team } from '@/types/models'
 
 const frequencyStore = useFrequencyStore()
@@ -75,6 +76,12 @@ const successDialog = reactive({
   actionLabel: '',
   actionTo: '',
 })
+
+// AI生成功能状态
+const showAIGenerator = ref(false)
+const aiTheme = ref('')
+const aiGenerating = ref(false)
+const aiGeneratedContent = ref<any>(null)
 
 // Focus 模式分类
 const focusCategories = [
@@ -273,16 +280,7 @@ async function submit() {
   }
 }
 
-function useAiAssist() {
-  if (!form.content) {
-    form.content = frequencyStore.isFocus 
-      ? '上传海报后，AI 将自动识别时间、地点并生成摘要与标签。'
-      : '今晚 6 点，二食堂门口集合，一起吃饭聊天！'
-  }
-  if (!form.eventTime) {
-    form.eventTime = new Date().toISOString().slice(0, 16)
-  }
-}
+
 
 function resetForm() {
   form.title = ''
@@ -320,6 +318,80 @@ function confirmSuccessAction() {
     router.push(target)
   }
 }
+
+// AI生成功能
+function openAIGenerator() {
+  showAIGenerator.value = true
+  aiTheme.value = ''
+  aiGeneratedContent.value = null
+}
+
+function closeAIGenerator() {
+  showAIGenerator.value = false
+  aiTheme.value = ''
+  aiGeneratedContent.value = null
+}
+
+async function handleAIGenerate() {
+  if (!aiTheme.value.trim()) return
+  
+  aiGenerating.value = true
+  try {
+    const content = await generateContent({
+      theme: aiTheme.value,
+      mode: frequencyStore.mode,
+      isTeam: isTeamMode.value
+    })
+    
+    aiGeneratedContent.value = content
+  } catch (error) {
+    console.error('AI生成失败:', error)
+    alert('AI生成失败，请稍后重试')
+  } finally {
+    aiGenerating.value = false
+  }
+}
+
+function applyAIGeneratedContent() {
+  if (!aiGeneratedContent.value) return
+  
+  // 填充表单
+  if (aiGeneratedContent.value.title) {
+    form.title = aiGeneratedContent.value.title
+  }
+  
+  if (aiGeneratedContent.value.description) {
+    form.content = aiGeneratedContent.value.description
+  }
+  
+  if (aiGeneratedContent.value.tags && Array.isArray(aiGeneratedContent.value.tags)) {
+    form.tags = aiGeneratedContent.value.tags.join(', ')
+  }
+  
+  if (aiGeneratedContent.value.category) {
+    form.category = aiGeneratedContent.value.category
+  }
+  
+  if (aiGeneratedContent.value.location) {
+    form.location = aiGeneratedContent.value.location
+  }
+  
+  if (isTeamMode.value) {
+    if (aiGeneratedContent.value.skills && Array.isArray(aiGeneratedContent.value.skills)) {
+      form.skills = aiGeneratedContent.value.skills.join(', ')
+    }
+    
+    if (aiGeneratedContent.value.suggestedDeadline) {
+      form.deadline = aiGeneratedContent.value.suggestedDeadline
+    }
+  }
+  
+  if (aiGeneratedContent.value.suggestedEventTime) {
+    form.eventTime = aiGeneratedContent.value.suggestedEventTime
+  }
+  
+  closeAIGenerator()
+}
 </script>
 
 <template>
@@ -345,6 +417,38 @@ function confirmSuccessAction() {
           ? 'bg-card-focus border border-focus-primary/20' 
           : 'bg-card-vibe border border-vibe-primary/20'"
       >
+        <!-- AI提示区域 -->
+        <div 
+          class="mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-300"
+          :class="frequencyStore.isFocus 
+            ? 'border-focus-primary/30 bg-focus-primary/5' 
+            : 'border-vibe-primary/30 bg-vibe-primary/10'"
+        >
+          <div class="flex items-center gap-3">
+            <div 
+              class="w-10 h-10 rounded-full flex items-center justify-center"
+              :class="frequencyStore.isFocus 
+                ? 'bg-focus-primary/20 text-focus-accent' 
+                : 'bg-vibe-primary/20 text-vibe-accent'"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 
+                class="font-sans font-semibold mb-1"
+                :class="frequencyStore.isFocus ? 'text-focus-accent' : 'text-vibe-accent'"
+              >
+                AI 智能生成助手
+              </h3>
+              <p class="text-sm text-slate">
+                不知道怎么写？点击上方的"AI智能生成"按钮，输入一个主题，AI会为您自动生成完整的内容！
+              </p>
+            </div>
+          </div>
+        </div>
+
         <form class="space-y-6" @submit.prevent="submit">
           <div class="grid gap-4 md:grid-cols-2">
             <AppInput 
@@ -433,8 +537,17 @@ function confirmSuccessAction() {
             >
               {{ pageConfig.submitText }}
             </AppButton>
-            <AppButton variant="ghost" type="button" @click="useAiAssist">
-              {{ pageConfig.aiText }}
+            <AppButton 
+              variant="primary" 
+              type="button" 
+              @click="openAIGenerator"
+              class="ai-generate-button"
+              :class="frequencyStore.isVibe ? 'vibe-ai-button' : 'focus-ai-button'"
+            >
+              <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              AI智能生成
             </AppButton>
           </div>
           
@@ -534,10 +647,132 @@ function confirmSuccessAction() {
       </div>
     </div>
   </Transition>
+
+  <!-- AI生成弹窗 -->
+  <Transition name="modal">
+    <div v-if="showAIGenerator" class="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4">
+      <div class="w-full max-w-lg rounded-3xl bg-white p-8 shadow-morandi">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-h2 font-sans font-semibold text-charcoal">AI智能生成</h3>
+          <button class="w-8 h-8 rounded-full hover:bg-slate/10 flex items-center justify-center text-slate transition-colors" @click="closeAIGenerator">✕</button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-charcoal mb-2">项目主题</label>
+            <input
+              v-model="aiTheme"
+              type="text"
+              class="w-full px-4 py-3 rounded-soft border border-slate/20 bg-white text-charcoal focus:outline-none focus:border-slate transition-colors"
+              placeholder="例如：AI研究、校园活动、技术分享..."
+              @keydown.enter="handleAIGenerate"
+            />
+          </div>
+          
+          <div class="flex gap-3">
+            <AppButton
+              variant="primary"
+              :loading="aiGenerating"
+              :disabled="!aiTheme.trim()"
+              class="flex-1"
+              @click="handleAIGenerate"
+            >
+              {{ aiGenerating ? '生成中...' : '生成内容' }}
+            </AppButton>
+            <AppButton variant="ghost" @click="closeAIGenerator">取消</AppButton>
+          </div>
+          
+          <!-- 生成结果 -->
+          <div v-if="aiGeneratedContent" class="mt-6 p-4 rounded-soft bg-slate/5 border border-slate/10">
+            <h4 class="font-semibold text-charcoal mb-3">生成结果</h4>
+            
+            <div class="space-y-3 text-sm">
+              <div>
+                <span class="font-medium text-slate">标题：</span>
+                <span class="text-charcoal">{{ aiGeneratedContent.title }}</span>
+              </div>
+              
+              <div>
+                <span class="font-medium text-slate">描述：</span>
+                <p class="text-charcoal mt-1">{{ aiGeneratedContent.description }}</p>
+              </div>
+              
+              <div v-if="aiGeneratedContent.tags && aiGeneratedContent.tags.length">
+                <span class="font-medium text-slate">标签：</span>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span v-for="tag in aiGeneratedContent.tags" :key="tag" class="px-2 py-1 rounded-full bg-slate/10 text-slate text-xs">
+                    {{ tag }}
+                  </span>
+                </div>
+              </div>
+              
+              <div v-if="aiGeneratedContent.location">
+                <span class="font-medium text-slate">建议地点：</span>
+                <span class="text-charcoal">{{ aiGeneratedContent.location }}</span>
+              </div>
+              
+              <div v-if="isTeamMode && aiGeneratedContent.skills && aiGeneratedContent.skills.length">
+                <span class="font-medium text-slate">需要技能：</span>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span v-for="skill in aiGeneratedContent.skills" :key="skill" class="px-2 py-1 rounded-full bg-slate/10 text-slate text-xs">
+                    {{ skill }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex gap-3 mt-4">
+              <AppButton variant="primary" class="flex-1" @click="applyAIGeneratedContent">
+                应用到表单
+              </AppButton>
+              <AppButton variant="ghost" @click="handleAIGenerate">重新生成</AppButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
 .vibe-button {
   @apply bg-vibe-accent hover:bg-vibe-accent/90;
+}
+
+/* AI智能生成按钮样式 */
+.ai-generate-button {
+  @apply relative overflow-hidden transition-all duration-300;
+  @apply hover:scale-105 hover:shadow-lg;
+}
+
+.ai-generate-button::before {
+  @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+  content: '';
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+  background-size: 200% 200%;
+}
+
+.ai-generate-button:hover::before {
+  @apply opacity-100;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.focus-ai-button {
+  @apply bg-gradient-to-r from-focus-primary to-focus-accent hover:from-focus-primary/90 hover:to-focus-accent/90;
+  @apply text-white font-medium shadow-md;
+}
+
+.vibe-ai-button {
+  @apply bg-gradient-to-r from-vibe-primary to-vibe-accent hover:from-vibe-primary/90 hover:to-vibe-accent/90;
+  @apply text-white font-medium shadow-md;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 </style>

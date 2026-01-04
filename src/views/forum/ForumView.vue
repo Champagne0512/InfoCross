@@ -964,7 +964,7 @@ function scrollToComments() {
               <textarea
                 v-model="postContent"
                 class="form-textarea font-sans"
-                :rows="mode === 'signal' ? 4 : 8"
+                :rows="mode === 'signal' ? 4 : 12"
                 :placeholder="
                   mode === 'signal'
                     ? '分享你知道的校园情报...'
@@ -1351,7 +1351,7 @@ function scrollToComments() {
 }
 
 .modal-content {
-  @apply bg-white rounded-morandi shadow-morandi-lg w-full max-w-lg border-2 overflow-hidden;
+  @apply bg-white rounded-morandi shadow-morandi-lg w-full max-w-2xl border-2 overflow-hidden;
 }
 
 .modal-header {
