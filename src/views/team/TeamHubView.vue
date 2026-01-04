@@ -150,59 +150,54 @@ async function revokeApplication(applicationId: number) {
             </div>
           </div>
 
-          <div v-if="loading" class="teams-skeleton">
-            <div v-for="i in 2" :key="i" class="skeleton-card"></div>
+          <div v-if="loading" class="teams-skeleton joined-skeleton">
+            <div v-for="i in 6" :key="i" class="skeleton-card-compact"></div>
           </div>
 
           <div v-else-if="ownedTeams.length" class="teams-scroll-container">
-            <div class="teams-grid-column">
+            <div class="teams-grid-compact">
               <div
                 v-for="(team, index) in ownedTeams"
                 :key="team.id"
-                class="team-card premium-card"
-                :style="{ animationDelay: `${index * 150}ms` }"
+                class="team-card-compact owned-card-compact"
+                :style="{ animationDelay: `${index * 80}ms` }"
                 @mouseenter="hoveredTeamId = team.id"
                 @mouseleave="hoveredTeamId = null"
                 @click="router.push(`/team/${team.id}`)"
               >
-                <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
-                <div class="card-content">
-                  <div class="team-header">
+                <div class="card-glow-compact" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
+                <div class="card-content-compact">
+                  <div class="avatar-wrapper-compact">
                     <div 
-                      class="team-avatar large-avatar"
+                      class="team-avatar-compact"
                       :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
                     >
                       {{ team.name.charAt(0).toUpperCase() }}
-                      <div class="avatar-pulse"></div>
                     </div>
-                    <div class="crown-badge">
-                      <Crown :size="14" />
+                    <div class="crown-badge-compact">
+                      <Crown :size="10" />
                     </div>
                   </div>
                   
-                  <div class="team-info">
-                    <h3 class="team-name">{{ team.name }}</h3>
-                    <p class="team-desc">{{ team.description }}</p>
-                    
-                    <div class="team-metrics">
-                      <div class="metric">
-                        <Users :size="16" />
-                        <span>{{ team.currentMembers }}/{{ team.maxMembers }} 成员</span>
-                      </div>
-                      <div class="metric">
-                        <Clock :size="16" />
-                        <span>{{ team.createdAt.slice(5, 10) }}</span>
-                      </div>
+                  <div class="team-info-compact">
+                    <h3 class="team-name-compact">{{ team.name }}</h3>
+                    <div class="team-meta-compact">
+                      <span class="member-count-compact">
+                        <Users :size="12" />
+                        {{ team.currentMembers }}/{{ team.maxMembers }}
+                      </span>
+                      <span class="date-tag-compact">
+                        <Clock :size="10" />
+                        {{ team.createdAt.slice(5, 10) }}
+                      </span>
                     </div>
                   </div>
 
-                  <div class="card-action">
-                    <ChevronRight 
-                      :size="20" 
-                      class="action-arrow"
-                      :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
-                    />
-                  </div>
+                  <ChevronRight 
+                    :size="16" 
+                    class="action-arrow-compact"
+                    :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
+                  />
                 </div>
               </div>
             </div>
@@ -232,54 +227,46 @@ async function revokeApplication(applicationId: number) {
             </div>
           </div>
 
-          <div v-if="loading" class="teams-skeleton">
-            <div v-for="i in 3" :key="i" class="skeleton-card"></div>
+          <div v-if="loading" class="teams-skeleton joined-skeleton">
+            <div v-for="i in 6" :key="i" class="skeleton-card-compact"></div>
           </div>
 
           <div v-else-if="joinedTeams.length" class="teams-scroll-container">
-            <div class="teams-grid-column">
+            <div class="teams-grid-compact">
               <div
                 v-for="(team, index) in joinedTeams"
                 :key="team.id"
-                class="team-card member-card"
-                :style="{ animationDelay: `${index * 150}ms` }"
+                class="team-card-compact"
+                :style="{ animationDelay: `${index * 80}ms` }"
                 @mouseenter="hoveredTeamId = team.id"
                 @mouseleave="hoveredTeamId = null"
                 @click="router.push(`/team/${team.id}`)"
               >
-                <div class="card-glow" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
-                <div class="card-content">
-                  <div class="team-header">
-                    <div 
-                      class="team-avatar"
-                      :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
-                    >
-                      {{ team.name.charAt(0).toUpperCase() }}
-                    </div>
+                <div class="card-glow-compact" :class="frequencyStore.isFocus ? 'glow-focus' : 'glow-vibe'"></div>
+                <div class="card-content-compact">
+                  <div 
+                    class="team-avatar-compact"
+                    :class="frequencyStore.isFocus ? 'avatar-focus' : 'avatar-vibe'"
+                  >
+                    {{ team.name.charAt(0).toUpperCase() }}
                   </div>
                   
-                  <div class="team-info">
-                    <h3 class="team-name">{{ team.name }}</h3>
-                    <p class="team-desc">{{ team.description }}</p>
-                    
-                    <div class="team-metrics">
-                      <div class="metric">
-                        <Users :size="16" />
-                        <span>{{ team.currentMembers }}/{{ team.maxMembers }}</span>
-                      </div>
-                      <div class="metric">
-                        <span class="college-tag">{{ team.college }}</span>
-                      </div>
+                  <div class="team-info-compact">
+                    <h3 class="team-name-compact">{{ team.name }}</h3>
+                    <div class="team-meta-compact">
+                      <span class="member-count-compact">
+                        <Users :size="12" />
+                        {{ team.currentMembers }}/{{ team.maxMembers }}
+                      </span>
+                      <span class="college-tag-compact">{{ team.college }}</span>
                     </div>
                   </div>
 
-                  <div class="card-action">
-                    <ChevronRight 
-                      :size="20" 
-                      class="action-arrow"
-                      :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
-                    />
-                  </div>
+                  <ChevronRight 
+                    :size="16" 
+                    class="action-arrow-compact"
+                    :class="hoveredTeamId === team.id ? 'arrow-active' : ''"
+                  />
                 </div>
               </div>
             </div>
@@ -677,6 +664,98 @@ async function revokeApplication(applicationId: number) {
 
 .arrow-active {
   @apply text-slate/70 scale-125;
+}
+
+/* 紧凑型卡片样式 - 已加入的团队 */
+.teams-grid-compact {
+  @apply grid grid-cols-2 gap-2;
+}
+
+.team-card-compact {
+  @apply relative rounded-xl bg-white border border-slate/10 p-3;
+  @apply cursor-pointer transition-all duration-200;
+  @apply hover:shadow-lg hover:-translate-y-0.5;
+  animation: slideUp 0.4s ease-out both;
+  overflow: hidden;
+}
+
+.card-glow-compact {
+  @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+  @apply rounded-xl pointer-events-none;
+}
+
+.team-card-compact:hover .card-glow-compact {
+  @apply opacity-100;
+}
+
+.card-content-compact {
+  @apply relative z-10 flex items-center gap-2.5;
+}
+
+.team-avatar-compact {
+  @apply w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center;
+  @apply font-sans font-bold text-white text-sm;
+  @apply transition-transform duration-200;
+}
+
+.team-card-compact:hover .team-avatar-compact {
+  @apply scale-105;
+}
+
+.team-info-compact {
+  @apply flex-1 min-w-0;
+}
+
+.team-name-compact {
+  @apply text-sm font-sans font-semibold text-charcoal truncate;
+}
+
+.team-meta-compact {
+  @apply flex items-center gap-2 mt-0.5;
+}
+
+.member-count-compact {
+  @apply flex items-center gap-1 text-xs text-slate;
+}
+
+.college-tag-compact {
+  @apply px-1.5 py-0.5 rounded bg-slate/10 font-mono text-[10px] text-slate truncate max-w-[60px];
+}
+
+.action-arrow-compact {
+  @apply text-slate/30 transition-all duration-200 flex-shrink-0;
+}
+
+.team-card-compact:hover .action-arrow-compact {
+  @apply text-slate/60;
+}
+
+.joined-skeleton {
+  @apply grid grid-cols-2 gap-2;
+}
+
+.skeleton-card-compact {
+  @apply h-14 rounded-xl bg-slate/10 animate-pulse;
+}
+
+/* 创建团队的紧凑卡片特殊样式 */
+.owned-card-compact {
+  @apply border-2;
+  border-color: rgba(147, 168, 172, 0.2);
+}
+
+.avatar-wrapper-compact {
+  @apply relative flex-shrink-0;
+}
+
+.crown-badge-compact {
+  @apply absolute -top-1 -right-1 w-4 h-4 rounded-full;
+  @apply bg-amber-100 text-amber-600 flex items-center justify-center;
+  @apply border border-white;
+}
+
+.date-tag-compact {
+  @apply flex items-center gap-0.5 text-[10px] text-slate;
 }
 
 /* 申请记录 */
