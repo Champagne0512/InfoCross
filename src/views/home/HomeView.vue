@@ -17,22 +17,85 @@ const searchQuery = ref('')
 const isLoaded = ref(false)
 const searchFocused = ref(false)
 const hoveredCard = ref<number | null>(null)
+const currentPlaceholderIndex = ref(0)
+const displayPlaceholder = ref('')
+const isTyping = ref(true)
+const charIndex = ref(0)
 
 // 页面配置
 const displayName = computed(() => profile.value?.username || 'Explorer')
 
-const pageConfig = computed(() => {
+const heroConfig = computed(() => {
   if (frequencyStore.isFocus) {
     return {
-      greeting: `${t('home.greeting.focus')}, ${displayName.value}`,
+      mainTitle: '打破壁垒，连接无限可能',
+      subTitle: `${t('home.greeting.focus')}, ${displayName.value}`,
       desc: t('home.desc.focus'),
-      searchPlaceholder: t('home.searchPlaceholder.focus'),
     }
   }
   return {
-    greeting: `${t('home.greeting.vibe')}, ${displayName.value}`,
+    mainTitle: '打破壁垒，连接无限可能',
+    subTitle: `${t('home.greeting.vibe')}, ${displayName.value}`,
     desc: t('home.desc.vibe'),
-    searchPlaceholder: t('home.searchPlaceholder.vibe'),
+  }
+})
+
+// 打字机效果搜索提示词
+const placeholderTexts = [
+  "尝试搜索：第十届互联网+...",
+  "尝试搜索：缺少 UI 设计师的队伍...",
+  "尝试搜索：如何跨专业考研...",
+  "尝试搜索：寻找会剪辑视频的队友...",
+  "尝试搜索：计算机学院保研讲座..."
+]
+
+// 打字机效果
+function typeWriter() {
+  const currentText = placeholderTexts[currentPlaceholderIndex.value]
+  
+  if (isTyping.value) {
+    // 正在输入
+    if (charIndex.value < currentText.length) {
+      displayPlaceholder.value = currentText.substring(0, charIndex.value + 1)
+      charIndex.value++
+      setTimeout(typeWriter, 80)
+    } else {
+      // 输入完成，等待2秒后删除
+      isTyping.value = false
+      setTimeout(typeWriter, 2000)
+    }
+  } else {
+    // 正在删除
+    if (charIndex.value > 0) {
+      displayPlaceholder.value = currentText.substring(0, charIndex.value - 1)
+      charIndex.value--
+      setTimeout(typeWriter, 40)
+    } else {
+      // 删除完成，切换到下一个文本
+      isTyping.value = true
+      currentPlaceholderIndex.value = (currentPlaceholderIndex.value + 1) % placeholderTexts.length
+      setTimeout(typeWriter, 500)
+    }
+  }
+}
+
+// 启动打字机效果
+onMounted(() => {
+  typeWriter()
+  // 触发加载动画
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+})
+
+const pageConfig = computed(() => {
+  if (frequencyStore.isFocus) {
+    return {
+      searchPlaceholder: displayPlaceholder.value || t('home.searchPlaceholder.focus'),
+    }
+  }
+  return {
+    searchPlaceholder: displayPlaceholder.value || t('home.searchPlaceholder.vibe'),
   }
 })
 
@@ -72,6 +135,20 @@ function handleSearch() {
   console.log('搜索:', searchQuery.value)
 }
 
+// 智能快捷胶囊标签数据
+const smartChips = [
+  { id: 1, label: '本周热榜', color: 'bg-clay/10 text-clay border-clay/20', query: '本周热榜' },
+  { id: 2, label: '竞赛组队', color: 'bg-morandi-blue/10 text-morandi-blue border-morandi-blue/20', query: '竞赛组队' },
+  { id: 3, label: '寻找搭子', color: 'bg-morandi-green/10 text-morandi-green border-morandi-green/20', query: '寻找搭子' },
+  { id: 4, label: '学术讲座', color: 'bg-morandi-lavender/10 text-morandi-lavender border-morandi-lavender/20', query: '学术讲座' }
+]
+
+function handleChipClick(chip: { query: string }) {
+  searchQuery.value = chip.query
+  // 可以在这里添加搜索逻辑
+  handleSearch()
+}
+
 function navigateTo(path: string) {
   router.push(path)
 }
@@ -84,12 +161,7 @@ function handleCardLeave() {
   hoveredCard.value = null
 }
 
-onMounted(() => {
-  // 触发加载动画
-  setTimeout(() => {
-    isLoaded.value = true
-  }, 100)
-})
+
 </script>
 
 <template>
@@ -104,13 +176,17 @@ onMounted(() => {
     </div>
 
     <!-- Hero 区域 -->
-    <section class="hero-section" :class="{ 'loaded': isLoaded }">
+    <section class="hero-section mb-20" :class="{ 'loaded': isLoaded }">
       <div class="hero-content">
-        <h1 class="hero-title">
-          <span class="title-text">{{ pageConfig.greeting }}</span>
-          <span class="title-underline" :class="frequencyStore.isFocus ? 'underline-focus' : 'underline-vibe'"></span>
+        <!-- 顶层问候 -->
+        <div class="hero-eyebrow">
+          <span class="eyebrow-text">Hello, {{ displayName }}</span>
+        </div>
+        
+        <!-- 主标题 -->
+        <h1 class="hero-main-title font-sans font-bold text-gray-800">
+          {{ heroConfig.mainTitle }}
         </h1>
-        <p class="hero-desc">{{ pageConfig.desc }}</p>
         
         <!-- 搜索栏 -->
         <div class="search-wrapper" :class="{ 'search-active': searchFocused }">
@@ -135,6 +211,21 @@ onMounted(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+        
+        <!-- 智能快捷胶囊标签 -->
+        <div class="smart-chips-container">
+          <div class="smart-chips">
+            <button
+              v-for="chip in smartChips"
+              :key="chip.id"
+              class="smart-chip"
+              :class="chip.color"
+              @click="handleChipClick(chip)"
+            >
+              <span class="chip-label font-sans">{{ chip.label }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -245,48 +336,46 @@ onMounted(() => {
 }
 
 .hero-content {
-  @apply max-w-xl text-center space-y-5 mx-auto;
+  @apply max-w-xl text-center mx-auto;
 }
 
-.hero-title {
-  @apply relative inline-block text-hero font-sans font-bold text-charcoal leading-tight;
-}
-
-.title-text {
-  @apply relative z-10;
-}
-
-.title-underline {
-  @apply absolute -bottom-1 left-0 h-1 rounded-full;
-  @apply w-0 transition-all duration-700 ease-out;
-}
-
-.hero-section.loaded .title-underline {
-  @apply w-full;
-  transition-delay: 0.5s;
-}
-
-.underline-focus {
-  @apply bg-focus-accent/30;
-}
-
-.underline-vibe {
-  @apply bg-vibe-accent/30;
-}
-
-.hero-desc {
-  @apply text-body font-sans text-slate leading-relaxed;
+/* 顶层问候 */
+.hero-eyebrow {
+  @apply mb-4;
   @apply opacity-0 translate-y-4;
-  transition: all 0.6s ease-out 0.3s;
+  transition: all 0.6s ease-out 0.1s;
 }
 
-.hero-section.loaded .hero-desc {
+.hero-section.loaded .hero-eyebrow {
+  @apply opacity-100 translate-y-0;
+}
+
+.eyebrow-text {
+  @apply text-sm font-mono text-gray-400 uppercase tracking-widest;
+}
+
+/* 主标题 */
+.hero-main-title {
+  @apply text-4xl md:text-5xl font-bold text-gray-800 tracking-tight mb-8;
+  @apply opacity-0 translate-y-6;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+  white-space: nowrap;
+}
+
+.hero-section.loaded .hero-main-title {
   @apply opacity-100 translate-y-0;
 }
 
 /* 搜索栏 */
 .search-wrapper {
-  @apply relative max-w-lg mx-auto;
+  @apply relative max-w-lg mx-auto mt-10;
+  @apply opacity-0 translate-y-4;
+  transition: all 0.6s ease-out 0.4s;
+}
+
+/* 搜索栏 */
+.search-wrapper {
+  @apply relative max-w-lg mx-auto mt-10;
   @apply opacity-0 translate-y-4;
   transition: all 0.6s ease-out 0.4s;
 }
@@ -325,6 +414,7 @@ onMounted(() => {
   @apply relative w-full pl-12 pr-10 py-3 rounded-full border bg-white/80 backdrop-blur-sm;
   @apply font-sans text-body text-charcoal placeholder:text-slate/60;
   @apply transition-all duration-300 focus:outline-none focus:ring-2;
+  @apply shadow-xl shadow-gray-200/50;
 }
 
 .search-focus {
@@ -341,6 +431,35 @@ onMounted(() => {
 
 .search-clear {
   @apply absolute inset-y-0 right-4 flex items-center text-slate hover:text-charcoal transition-colors;
+}
+
+/* 智能快捷胶囊标签 */
+.smart-chips-container {
+  @apply max-w-2xl mx-auto mt-4;
+  @apply opacity-0 translate-y-4;
+  transition: all 0.6s ease-out 0.5s;
+}
+
+.hero-section.loaded .smart-chips-container {
+  @apply opacity-100 translate-y-0;
+}
+
+.smart-chips {
+  @apply flex flex-wrap justify-center gap-2;
+}
+
+.smart-chip {
+  @apply inline-flex items-center px-3 py-1.5 rounded-full;
+  @apply transition-all duration-300 ease-in-out;
+  @apply hover:shadow-sm hover:scale-105;
+}
+
+.smart-chip:hover {
+  @apply bg-white shadow-md;
+}
+
+.chip-label {
+  @apply text-sm font-medium;
 }
 
 /* 手风琴导航区 */
