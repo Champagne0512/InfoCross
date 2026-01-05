@@ -50,10 +50,20 @@ function handleSelect() {
         </div>
       </div>
       <h3 class="title font-sans">{{ thread.title || '未命名长文' }}</h3>
-      <div class="stats-row">
-        <span class="stat font-mono"><Eye :size="14" />{{ thread.viewCount }}</span>
-        <span class="stat font-mono"><Heart :size="14" />{{ thread.likeCount }}</span>
-        <span class="stat font-mono"><MessageCircle :size="14" />{{ thread.commentCount }}</span>
+      <p class="summary font-sans">{{ thread.summary || thread.contentText.substring(0, 100) + '...' }}</p>
+      
+      <div class="author-row">
+        <div class="author-info">
+          <div class="author-avatar">
+            {{ (thread.authorName || '匿').charAt(0).toUpperCase() }}
+          </div>
+          <span class="author-name font-mono">{{ thread.authorName || '匿名用户' }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stat font-mono"><Eye :size="14" />{{ thread.viewCount }}</span>
+          <span class="stat font-mono"><Heart :size="14" />{{ thread.likeCount }}</span>
+          <span class="stat font-mono"><MessageCircle :size="14" />{{ thread.commentCount }}</span>
+        </div>
       </div>
     </div>
   </article>
@@ -61,7 +71,8 @@ function handleSelect() {
 
 <style scoped>
 .depth-card {
-  @apply flex flex-col cursor-pointer py-4 px-5 transition-all duration-300 border-b border-slate/10 relative overflow-hidden;
+  @apply flex flex-col cursor-pointer py-4 px-5 transition-all duration-300 border-b border-gray-100 relative overflow-hidden;
+  @apply hover:bg-white/50;
 }
 .depth-card::before {
   content: '';
@@ -71,16 +82,16 @@ function handleSelect() {
   @apply border-b-0;
 }
 .depth-card:hover {
-  @apply bg-focus-primary/5;
+  @apply bg-white/50;
 }
 .depth-card:hover::before {
-  @apply bg-focus-primary;
+  @apply bg-focus-primary/50;
 }
 .depth-active {
-  @apply bg-focus-primary/10;
+  @apply bg-white shadow-sm;
 }
 .depth-active::before {
-  @apply bg-focus-accent;
+  @apply bg-[#93A8AC] border-l-4;
 }
 .content {
   @apply flex flex-col gap-3;
@@ -100,6 +111,21 @@ function handleSelect() {
 .depth-card:hover .title,
 .depth-active .title {
   @apply text-focus-accent;
+}
+.summary {
+  @apply text-sm text-slate line-clamp-1 leading-relaxed;
+}
+.author-row {
+  @apply flex items-center justify-between mt-2;
+}
+.author-info {
+  @apply flex items-center gap-2;
+}
+.author-avatar {
+  @apply w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600;
+}
+.author-name {
+  @apply text-xs text-slate;
 }
 .stats-row {
   @apply flex items-center gap-4;

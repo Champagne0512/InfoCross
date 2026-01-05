@@ -1106,6 +1106,13 @@ function scrollToComments() {
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.signal-feed::-webkit-scrollbar {
+  display: none;
 }
 
 .signal-aside {
@@ -1113,6 +1120,13 @@ function scrollToComments() {
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.signal-aside::-webkit-scrollbar {
+  display: none;
 }
 
 .hot-topic-card,
@@ -1186,7 +1200,14 @@ function scrollToComments() {
   @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
   width: 100%;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.depth-list::-webkit-scrollbar {
+  display: none;
 }
 
 @media (min-width: 1024px) {
@@ -1201,6 +1222,13 @@ function scrollToComments() {
   @apply h-full;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.depth-detail::-webkit-scrollbar {
+  display: none;
 }
 
 .detail-header {
